@@ -12,6 +12,7 @@ var host = Host.CreateDefaultBuilder(args)
         
         services.AddMediator();
         
+        services.AddSingleton<PacketHandler>();
         services.AddSingleton<MinecraftServer>();
         services.AddHostedService<MinecraftServerHostedService>();
     });

@@ -39,14 +39,14 @@ public class StatusRequestHandler : ICommandHandler<StatusRequest>
                 Protocol = ServerConstants.ProtocolVersion
             }
         };
- 
+
         var statusBytes = JsonSerializer.Serialize(status).ToVarString();
 
         var socket = command.Client.SocketWrapper;
         
-        await socket.WriteVarInt(statusBytes.Length + 1);
-        await socket.WriteVarInt(0);
-        socket.WriteBytes(statusBytes);
+        await socket.WriteVarIntAsync(statusBytes.Length + 1);
+        await socket.WriteVarIntAsync(0);
+        await socket.WriteBytesAsync(statusBytes);
         
         return Unit.Value;
     }

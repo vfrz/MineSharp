@@ -9,7 +9,7 @@ public static class IntExtensions
     
     public static Memory<byte> ToVarInt(this int value)
     {
-        var memoryOwner = MemoryPool<byte>.Shared.Rent(5);
+        using var memoryOwner = MemoryPool<byte>.Shared.Rent(5);
         var span = memoryOwner.Memory.Span;
 
         var length = 0;

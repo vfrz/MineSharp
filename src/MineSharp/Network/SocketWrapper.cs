@@ -1,3 +1,4 @@
+using System.Buffers;
 using System.Buffers.Binary;
 using System.Net.Sockets;
 using System.Text;
@@ -7,9 +8,6 @@ namespace MineSharp.Network;
 
 public class SocketWrapper : IDisposable
 {
-    private const int SegmentBits = 0x7F;
-    private const int ContinueBit = 0x80;
-    
     public Socket Socket { get; }
     public NetworkStream NetworkStream { get; }
     
@@ -19,29 +17,29 @@ public class SocketWrapper : IDisposable
         NetworkStream = new NetworkStream(socket, true);
     }
 
-    public void WriteLong(long value)
+    public async Task WriteLongAsync(long value)
     {
-        Span<byte> span = stackalloc byte[8];
-        BinaryPrimitives.WriteInt64BigEndian(span, value);
-        NetworkStream.Write(span);
+        using var memoryOwner = MemoryPool<byte>.Shared.Rent(8);
+        BinaryPrimitives.WriteInt64BigEndian(memoryOwner.Memory.Span, value);
+        await NetworkStream.WriteAsync(memoryOwner.Memory[..8]);
     }
     
-    public async ValueTask WriteString(string value)
+    public async ValueTask WriteStringAsync(string value)
     {
         var bytes = Encoding.UTF8.GetBytes(value);
-        await WriteVarInt(bytes.Length);
+        await WriteVarIntAsync(bytes.Length);
         NetworkStream.Write(bytes, 0, bytes.Length);
     }
 
-    public async ValueTask WriteVarInt(int value)
+    public async ValueTask WriteVarIntAsync(int value)
     {
         var bytes = value.ToVarInt();
         await NetworkStream.WriteAsync(bytes);
     }
 
-    public void WriteBytes(byte[] bytes)
+    public async Task WriteBytesAsync(byte[] bytes)
     {
-        NetworkStream.Write(bytes, 0, bytes.Length);
+        await NetworkStream.WriteAsync(bytes, 0, bytes.Length);
     }
 
     public async ValueTask CloseSocketConnectionAsync()
