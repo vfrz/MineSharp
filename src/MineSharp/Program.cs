@@ -8,6 +8,8 @@ using MineSharp.Services;
 var host = Host.CreateDefaultBuilder(args)
     .ConfigureServices((context, services) =>
     {
+        services.Configure<ConsoleLifetimeOptions>(options => options.SuppressStatusMessages = true);
+        
         services.Configure<ServerConfiguration>(context.Configuration);
         
         services.AddMediator();

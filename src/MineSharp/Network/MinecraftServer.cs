@@ -3,7 +3,10 @@ using System.IO.Pipelines;
 using System.Net;
 using System.Net.Sockets;
 using Mediator;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using MineSharp.Commands;
+using MineSharp.Core;
 using MineSharp.Extensions;
 using MineSharp.Notifications;
 
@@ -14,35 +17,50 @@ public class MinecraftServer
     public IReadOnlyList<MinecraftClient> Clients => _clients;
     private readonly List<MinecraftClient> _clients;
 
-    private readonly TcpListener _listener;
+    private readonly Socket _listener;
     private readonly IMediator _mediator;
     private readonly PacketHandler _packetHandler;
+    private readonly IOptions<ServerConfiguration> _configuration;
+    private readonly ILogger<MinecraftServer> _logger;
 
-    public MinecraftServer(IMediator mediator, PacketHandler packetHandler)
+    public MinecraftServer(IMediator mediator, PacketHandler packetHandler, IOptions<ServerConfiguration> configuration, 
+        ILogger<MinecraftServer> logger)
     {
         _mediator = mediator;
         _packetHandler = packetHandler;
+        _configuration = configuration;
+        _logger = logger;
         _clients = new List<MinecraftClient>();
-        _listener = new TcpListener(IPAddress.Any, 25565);
+        var ip = new IPEndPoint(IPAddress.Any, configuration.Value.Port);
+        _listener = new Socket(ip.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
+        _listener.Bind(ip);
     }
 
     public void Start(CancellationToken cancellationToken)
     {
-        _listener.Start();
+        _logger.LogInformation("Server starting...");
+        
+        _listener.Listen();
 
         Task.Run(async () =>
         {
             while (!cancellationToken.IsCancellationRequested)
             {
-                var socket = await _listener.AcceptSocketAsync(cancellationToken).ConfigureAwait(false);
+                var socket = await _listener.AcceptAsync(cancellationToken); // await _listener.AcceptSocketAsync(cancellationToken).ConfigureAwait(false);
                 var _ = HandleClientAsync(socket, cancellationToken);
             }
         }, cancellationToken);
+        
+        _logger.LogInformation("Server started on port: {0}", _configuration.Value.Port);
     }
 
     public void Stop()
     {
-        _listener.Stop();
+        _logger.LogInformation("Server stoping...");
+        _listener.Shutdown(SocketShutdown.Both);
+        _listener.Close();
+        _listener.Dispose();
+        _logger.LogInformation("Server stopped");
     }
 
     private async Task HandleClientAsync(Socket socket, CancellationToken cancellationToken)
@@ -62,7 +80,7 @@ public class MinecraftServer
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Exception: {ex.Message}");
+            _logger.LogError("Exception({0}): {1}", ex.GetType().ToString(), ex.Message);
             if (!socket.Connected)
                 throw ex;
         }

@@ -1,5 +1,4 @@
 using System.Buffers;
-using System.IO.Pipelines;
 using Mediator;
 using MineSharp.Commands;
 using MineSharp.Extensions;
@@ -9,16 +8,12 @@ namespace MineSharp.Network;
 public class PacketHandler
 {
     private readonly IMediator _mediator;
-    
+
     public PacketHandler(IMediator mediator)
     {
         _mediator = mediator;
     }
 
-    public async Task HandlePacketAsync(MinecraftClient client, ReadOnlySequence<byte> packet)
-    {
-    }
-    
     public void HandlePacket(MinecraftClient client, ReadOnlySequence<byte> packet)
     {
         var packetReader = new SequenceReader<byte>(packet);

@@ -9,10 +9,13 @@ public class PingRequestHandler : ICommandHandler<PingRequest>
     {
         var socket = command.Client.SocketWrapper;
 
-        await socket.WriteVarIntAsync(9);
-        await socket.WriteVarIntAsync(1);
-        await socket.WriteLongAsync(command.Payload);
-
+        using (var session = socket.StartWriting())
+        {
+            await session.WriteVarIntAsync(9);
+            await session.WriteVarIntAsync(1);
+            await session.WriteLongAsync(command.Payload);
+        }
+        
         await command.Client.DisconnectAsync();
         
         return Unit.Value;

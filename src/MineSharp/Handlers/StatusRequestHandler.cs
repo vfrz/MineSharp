@@ -13,7 +13,7 @@ public class StatusRequestHandler : ICommandHandler<StatusRequest>
 {
     private readonly MinecraftServer _server;
     private readonly IOptions<ServerConfiguration> _configuration;
-    
+
     public StatusRequestHandler(MinecraftServer server, IOptions<ServerConfiguration> configuration)
     {
         _server = server;
@@ -43,11 +43,14 @@ public class StatusRequestHandler : ICommandHandler<StatusRequest>
         var statusBytes = JsonSerializer.Serialize(status).ToVarString();
 
         var socket = command.Client.SocketWrapper;
-        
-        await socket.WriteVarIntAsync(statusBytes.Length + 1);
-        await socket.WriteVarIntAsync(0);
-        await socket.WriteBytesAsync(statusBytes);
-        
+
+        using (var session = socket.StartWriting())
+        {
+            await session.WriteVarIntAsync(statusBytes.Length + 1);
+            await session.WriteVarIntAsync(0);
+            await session.WriteBytesAsync(statusBytes);
+        }
+
         return Unit.Value;
     }
 }
