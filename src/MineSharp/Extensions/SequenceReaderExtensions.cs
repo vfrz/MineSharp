@@ -25,7 +25,7 @@ public static class SequenceReaderExtensions
             return value;
         throw new Exception("Failed to read varint");
     }
-    
+
     public static bool TryReadVarInt(ref this SequenceReader<byte> reader, out int output)
         => TryReadVarInt(ref reader, out output, out _);
 
@@ -73,7 +73,7 @@ public static class SequenceReaderExtensions
         {
             if (!reader.TryRead(out var currentByte))
                 throw new Exception("Failed to read byte");
-                
+
             value |= (long) (currentByte & SegmentBits) << position;
 
             if ((currentByte & ContinueBit) == 0)
@@ -87,14 +87,14 @@ public static class SequenceReaderExtensions
 
         return value;
     }
-    
+
     public static long ReadLong(ref this SequenceReader<byte> reader)
     {
         if (reader.TryReadBigEndian(out long value))
             return value;
         throw new Exception("Failed to read long");
     }
-    
+
     public static ushort ReadUInt16(ref this SequenceReader<byte> reader)
     {
         var buffer = reader.ReadBytes(2);
@@ -106,5 +106,23 @@ public static class SequenceReaderExtensions
         var size = reader.ReadVarInt();
         var bytes = reader.ReadBytes(size);
         return Encoding.UTF8.GetString(bytes);
+    }
+
+    public static Guid ReadGuid(ref this SequenceReader<byte> reader)
+    {
+        var bytes = reader.ReadBytes(16);
+        return new Guid(bytes.FirstSpan);
+    }
+
+    public static byte ReadByte(ref this SequenceReader<byte> reader)
+    {
+        if (reader.TryRead(out var output))
+            return output;
+        throw new Exception("Failed to read byte");
+    }
+
+    public static bool ReadBool(ref this SequenceReader<byte> reader)
+    {
+        return reader.ReadByte() == 0x01;
     }
 }

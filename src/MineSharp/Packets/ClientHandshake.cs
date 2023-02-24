@@ -7,5 +7,5 @@ namespace MineSharp.Packets;
 public record ClientHandshake(MinecraftClient Client,
     int ProtocolVersion,
     string ServerAddress,
-    int ServerPort,
-    int NextState) : IPacket;
+    int ServerPort, 
+    MinecraftClientState NextState) : IPacket;

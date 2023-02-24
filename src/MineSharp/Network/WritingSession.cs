@@ -24,7 +24,7 @@ public readonly struct WritingSession : IDisposable
         BinaryPrimitives.WriteInt64BigEndian(memoryOwner.Memory.Span, value);
         await _networkStream.WriteAsync(memoryOwner.Memory[..8]);
     }
-    
+
     public async ValueTask WriteStringAsync(string value)
     {
         var bytes = Encoding.UTF8.GetBytes(value);
@@ -42,7 +42,12 @@ public readonly struct WritingSession : IDisposable
     {
         await _networkStream.WriteAsync(bytes, 0, bytes.Length);
     }
-    
+
+    public async Task WriteGuidAsync(Guid guid)
+    {
+        await WriteBytesAsync(guid.ToByteArray());
+    }
+
     public void Dispose()
     {
         _semaphoreSlim.Release();

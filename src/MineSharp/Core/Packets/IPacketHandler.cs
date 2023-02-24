@@ -2,7 +2,7 @@ using Mediator;
 
 namespace MineSharp.Core.Packets;
 
-public interface IPacketHandler<in T> : ICommandHandler<T> where T : ICommand
+public interface IPacketHandler<in T> : ICommandHandler<T> where T : IPacket
 {
     ValueTask HandleAsync(T command, CancellationToken cancellationToken);
     

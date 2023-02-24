@@ -1,5 +1,6 @@
 using System.Buffers;
 using Mediator;
+using MineSharp.Core;
 using MineSharp.Extensions;
 using MineSharp.Packets;
 
@@ -25,7 +26,7 @@ public class PacketHandler
         switch (packetId)
         {
             case 0:
-                HandleStatusRequestPacket(ref packetReader, client, dataSize);
+                HandleStatusOrLoginRequestPacket(ref packetReader, client, dataSize);
                 break;
             case 1:
                 HandlePingRequestPacket(ref packetReader, client);
@@ -36,20 +37,36 @@ public class PacketHandler
         }
     }
 
-    private void HandleStatusRequestPacket(ref SequenceReader<byte> reader, MinecraftClient client, int dataSize)
+    private void HandleStatusOrLoginRequestPacket(ref SequenceReader<byte> reader, MinecraftClient client, int dataSize)
     {
-        if (dataSize > 0)
+        if (client.State is MinecraftClientState.Default)
         {
             var protocolVersion = reader.ReadVarInt();
             var serverAddress = reader.ReadString();
             var serverPort = reader.ReadUInt16();
-            var nextState = reader.ReadVarInt();
+            var nextState = (MinecraftClientState) reader.ReadVarInt();
             _mediator.Send(new ClientHandshake(client, protocolVersion, serverAddress, serverPort, nextState));
+            return;
         }
-        else
+        
+        if (client.State is MinecraftClientState.Status)
         {
             _mediator.Send(new StatusRequest(client));
+            return;
         }
+
+        if (client.State is MinecraftClientState.Login)
+        {
+            var name = reader.ReadString();
+            var hasUniqueId = reader.ReadBool();
+            Guid? uniqueId = null;
+            if (hasUniqueId)
+                uniqueId = reader.ReadGuid();
+            _mediator.Send(new LoginStart(client, name, hasUniqueId, uniqueId));
+            return;
+        }
+
+        throw new Exception($"Client state is invalid: {client.State}");
     }
 
     private void HandlePingRequestPacket(ref SequenceReader<byte> reader, MinecraftClient client)

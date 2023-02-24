@@ -1,4 +1,3 @@
-using MineSharp.Core;
 using MineSharp.Core.Packets;
 using MineSharp.Network;
 

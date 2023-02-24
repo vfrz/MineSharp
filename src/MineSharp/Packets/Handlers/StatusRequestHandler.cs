@@ -1,4 +1,3 @@
-using System.Text.Json;
 using Microsoft.Extensions.Options;
 using MineSharp.Configuration;
 using MineSharp.Core;
@@ -24,10 +23,7 @@ public class StatusRequestHandler : IPacketHandler<StatusRequest>
     {
         var status = new ServerStatusResponse
         {
-            Description = new ServerStatusDescription
-            {
-                Text = _configuration.Value.Description
-            },
+            Description = new Chat(_configuration.Value.Description),
             Players = new ServerStatusPlayers
             {
                 Max = _configuration.Value.MaxPlayers,
@@ -41,7 +37,7 @@ public class StatusRequestHandler : IPacketHandler<StatusRequest>
             Favicon = _server.FaviconBase64
         };
 
-        var statusBytes = JsonSerializer.Serialize(status).ToVarString();
+        var statusBytes = status.ToString().ToVarString();
 
         var socket = command.Client.SocketWrapper;
 

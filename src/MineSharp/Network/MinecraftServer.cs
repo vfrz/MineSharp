@@ -7,7 +7,6 @@ using Mediator;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MineSharp.Configuration;
-using MineSharp.Core;
 using MineSharp.Extensions;
 using MineSharp.Notifications;
 
