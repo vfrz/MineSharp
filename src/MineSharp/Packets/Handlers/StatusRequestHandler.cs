@@ -1,15 +1,15 @@
 using System.Text.Json;
-using Mediator;
 using Microsoft.Extensions.Options;
-using MineSharp.Commands;
+using MineSharp.Configuration;
 using MineSharp.Core;
+using MineSharp.Core.Packets;
 using MineSharp.Extensions;
 using MineSharp.Network;
 using MineSharp.ServerStatus;
 
-namespace MineSharp.Handlers;
+namespace MineSharp.Packets.Handlers;
 
-public class StatusRequestHandler : ICommandHandler<StatusRequest>
+public class StatusRequestHandler : IPacketHandler<StatusRequest>
 {
     private readonly MinecraftServer _server;
     private readonly IOptions<ServerConfiguration> _configuration;
@@ -20,7 +20,7 @@ public class StatusRequestHandler : ICommandHandler<StatusRequest>
         _configuration = configuration;
     }
 
-    public async ValueTask<Unit> Handle(StatusRequest command, CancellationToken cancellationToken)
+    public async ValueTask HandleAsync(StatusRequest command, CancellationToken cancellationToken)
     {
         var status = new ServerStatusResponse
         {
@@ -37,20 +37,17 @@ public class StatusRequestHandler : ICommandHandler<StatusRequest>
             {
                 Name = ServerConstants.VersionName,
                 Protocol = ServerConstants.ProtocolVersion
-            }
+            },
+            Favicon = _server.FaviconBase64
         };
 
         var statusBytes = JsonSerializer.Serialize(status).ToVarString();
 
         var socket = command.Client.SocketWrapper;
 
-        using (var session = socket.StartWriting())
-        {
-            await session.WriteVarIntAsync(statusBytes.Length + 1);
-            await session.WriteVarIntAsync(0);
-            await session.WriteBytesAsync(statusBytes);
-        }
-
-        return Unit.Value;
+        using var session = socket.StartWriting();
+        await session.WriteVarIntAsync(statusBytes.Length + 1);
+        await session.WriteVarIntAsync(0);
+        await session.WriteBytesAsync(statusBytes);
     }
 }

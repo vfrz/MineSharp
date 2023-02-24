@@ -1,11 +1,12 @@
 using System.Buffers;
+using System.Collections.Concurrent;
 using System.IO.Pipelines;
 using System.Net;
 using System.Net.Sockets;
 using Mediator;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using MineSharp.Commands;
+using MineSharp.Configuration;
 using MineSharp.Core;
 using MineSharp.Extensions;
 using MineSharp.Notifications;
@@ -14,8 +15,8 @@ namespace MineSharp.Network;
 
 public class MinecraftServer
 {
-    public IReadOnlyList<MinecraftClient> Clients => _clients;
-    private readonly List<MinecraftClient> _clients;
+    public IEnumerable<MinecraftClient> Clients => _clients.Values;
+    private readonly ConcurrentDictionary<string, MinecraftClient> _clients;
 
     private readonly Socket _listener;
     private readonly IMediator _mediator;
@@ -23,14 +24,16 @@ public class MinecraftServer
     private readonly IOptions<ServerConfiguration> _configuration;
     private readonly ILogger<MinecraftServer> _logger;
 
-    public MinecraftServer(IMediator mediator, PacketHandler packetHandler, IOptions<ServerConfiguration> configuration, 
+    public string? FaviconBase64 { get; private set; }
+
+    public MinecraftServer(IMediator mediator, PacketHandler packetHandler, IOptions<ServerConfiguration> configuration,
         ILogger<MinecraftServer> logger)
     {
         _mediator = mediator;
         _packetHandler = packetHandler;
         _configuration = configuration;
         _logger = logger;
-        _clients = new List<MinecraftClient>();
+        _clients = new ConcurrentDictionary<string, MinecraftClient>();
         var ip = new IPEndPoint(IPAddress.Any, configuration.Value.Port);
         _listener = new Socket(ip.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
         _listener.Bind(ip);
@@ -39,18 +42,23 @@ public class MinecraftServer
     public void Start(CancellationToken cancellationToken)
     {
         _logger.LogInformation("Server starting...");
-        
+
+        if (File.Exists("icon.png"))
+        {
+            FaviconBase64 = Convert.ToBase64String(File.ReadAllBytes("icon.png"));
+        }
+
         _listener.Listen();
 
         Task.Run(async () =>
         {
             while (!cancellationToken.IsCancellationRequested)
             {
-                var socket = await _listener.AcceptAsync(cancellationToken); // await _listener.AcceptSocketAsync(cancellationToken).ConfigureAwait(false);
+                var socket = await _listener.AcceptAsync(cancellationToken);
                 var _ = HandleClientAsync(socket, cancellationToken);
             }
         }, cancellationToken);
-        
+
         _logger.LogInformation("Server started on port: {0}", _configuration.Value.Port);
     }
 
@@ -65,9 +73,7 @@ public class MinecraftServer
 
     private async Task HandleClientAsync(Socket socket, CancellationToken cancellationToken)
     {
-        var client = new MinecraftClient(socket);
-        _clients.Add(client);
-        await _mediator.Publish(new MinecraftClientConnected(client), cancellationToken);
+        var client = await CreateAndRegisterMinecraftClientAsync(socket);
 
         var pipe = new Pipe();
 
@@ -82,15 +88,28 @@ public class MinecraftServer
         {
             _logger.LogError("Exception({0}): {1}", ex.GetType().ToString(), ex.Message);
             if (!socket.Connected)
-                throw ex;
+                throw;
         }
         finally
         {
-            _clients.Remove(client);
+            _logger.LogInformation("Client (socket) disconnected with network id: {0}", client.NetworkId);
+            _clients.Remove(client.NetworkId, out _);
             client.Dispose();
         }
     }
 
+    private async Task<MinecraftClient> CreateAndRegisterMinecraftClientAsync(Socket socket)
+    {
+        var client = new MinecraftClient(socket);
+        if (!_clients.TryAdd(client.NetworkId, client))
+            throw new Exception("Failed to add client to list");
+        
+        _logger.LogInformation("Client (socket) connected with network id: {0}", client.NetworkId);
+        await _mediator.Publish(new MinecraftClientConnected(client));
+
+        return client;
+    }
+    
     private async Task FillPipeAsync(MinecraftClient client, Pipe pipe, CancellationToken cancellationToken)
     {
         const int minimumBufferSize = 512;
@@ -124,7 +143,7 @@ public class MinecraftServer
         {
             var result = await pipe.Reader.ReadAsync(cancellationToken);
             var buffer = result.Buffer;
-            
+
             while (TryReadPacket(ref buffer, out var packet))
             {
                 _packetHandler.HandlePacket(client, packet);

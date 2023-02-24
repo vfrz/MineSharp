@@ -12,4 +12,7 @@ public class ServerStatusResponse
     
     [JsonPropertyName("description")]
     public ServerStatusDescription? Description { get; set; }
+    
+    [JsonPropertyName("favicon")]
+    public string? Favicon { get; set; }
 }

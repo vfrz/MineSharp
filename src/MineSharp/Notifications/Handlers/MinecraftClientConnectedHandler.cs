@@ -1,7 +1,6 @@
 using Mediator;
-using MineSharp.Notifications;
 
-namespace MineSharp.Handlers;
+namespace MineSharp.Notifications.Handlers;
 
 public class MinecraftClientConnectedHandler : INotificationHandler<MinecraftClientConnected>
 {

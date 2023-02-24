@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using MineSharp.Configuration;
 using MineSharp.Core;
 using MineSharp.Network;
 using MineSharp.Services;

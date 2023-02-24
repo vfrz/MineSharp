@@ -1,4 +1,4 @@
-namespace MineSharp.Core;
+namespace MineSharp.Configuration;
 
 public class ServerConfiguration
 {

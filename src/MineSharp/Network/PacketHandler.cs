@@ -1,7 +1,7 @@
 using System.Buffers;
 using Mediator;
-using MineSharp.Commands;
 using MineSharp.Extensions;
+using MineSharp.Packets;
 
 namespace MineSharp.Network;
 

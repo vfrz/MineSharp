@@ -1,11 +1,10 @@
-using Mediator;
-using MineSharp.Commands;
+using MineSharp.Core.Packets;
 
-namespace MineSharp.Handlers;
+namespace MineSharp.Packets.Handlers;
 
-public class PingRequestHandler : ICommandHandler<PingRequest>
+public class PingRequestHandler : IPacketHandler<PingRequest>
 {
-    public async ValueTask<Unit> Handle(PingRequest command, CancellationToken cancellationToken)
+    public async ValueTask HandleAsync(PingRequest command, CancellationToken cancellationToken)
     {
         var socket = command.Client.SocketWrapper;
 
@@ -17,7 +16,5 @@ public class PingRequestHandler : ICommandHandler<PingRequest>
         }
         
         await command.Client.DisconnectAsync();
-        
-        return Unit.Value;
     }
 }
