@@ -1,4 +1,3 @@
-using System.Net.Sockets;
 using MineSharp.Core;
 
 namespace MineSharp.Network;
@@ -13,10 +12,18 @@ public class MinecraftClient : IDisposable
     public string? Username { get; set; }
     public Guid? Id { get; set; }
 
-    public MinecraftClient(Socket socket)
+    public MinecraftClient(SocketWrapper socketWrapper)
     {
-        SocketWrapper = new SocketWrapper(socket);
-        NetworkId = socket.RemoteEndPoint?.ToString() ?? throw new Exception();
+        SocketWrapper = socketWrapper;
+        NetworkId = socketWrapper.Socket.RemoteEndPoint?.ToString() ?? throw new Exception();
+    }
+
+    public void InitializePlayer()
+    {
+        Player = new MinecraftPlayer
+        {
+            Health = 20
+        };
     }
 
     public async Task DisconnectAsync()

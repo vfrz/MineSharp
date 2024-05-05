@@ -2,7 +2,6 @@ using System.Buffers;
 using System.Buffers.Binary;
 using System.Net.Sockets;
 using System.Text;
-using MineSharp.Extensions;
 
 namespace MineSharp.Network;
 
@@ -25,27 +24,59 @@ public readonly struct WritingSession : IDisposable
         await _networkStream.WriteAsync(memoryOwner.Memory[..8]);
     }
 
-    public async ValueTask WriteStringAsync(string value)
+    public async Task WriteShortAsync(short value)
     {
-        var bytes = Encoding.UTF8.GetBytes(value);
-        await WriteVarIntAsync(bytes.Length);
-        _networkStream.Write(bytes, 0, bytes.Length);
+        using var memoryOwner = MemoryPool<byte>.Shared.Rent(2);
+        BinaryPrimitives.WriteInt16BigEndian(memoryOwner.Memory.Span, value);
+        await _networkStream.WriteAsync(memoryOwner.Memory[..2]);
+    }
+    
+    public async Task WriteUInt16Async(ushort value)
+    {
+        using var memoryOwner = MemoryPool<byte>.Shared.Rent(2);
+        BinaryPrimitives.WriteUInt16BigEndian(memoryOwner.Memory.Span, value);
+        await _networkStream.WriteAsync(memoryOwner.Memory[..2]);
     }
 
-    public async ValueTask WriteVarIntAsync(int value)
+    public async ValueTask WriteStringAsync(string value)
     {
-        var bytes = value.ToVarInt();
+        var bytes = Encoding.BigEndianUnicode.GetBytes(value);
+        await WriteUInt16Async((ushort) (bytes.Length / 2));
+        if (bytes.Length > 0)
+            await WriteBytesAsync(bytes);
+    }
+
+    public async ValueTask WriteIntAsync(int value)
+    {
+        var bytes = BitConverter.GetBytes(value).Reverse().ToArray();
         await _networkStream.WriteAsync(bytes);
     }
 
+    public async ValueTask WriteDoubleAsync(double value)
+    {
+        var bytes = BitConverter.GetBytes(value).Reverse().ToArray();
+        await _networkStream.WriteAsync(bytes);
+    }
+
+    public async ValueTask WriteFloatAsync(float value)
+    {
+        var bytes = BitConverter.GetBytes(value).Reverse().ToArray();
+        await _networkStream.WriteAsync(bytes);
+    }
+
+    public void WriteByte(byte value)
+    {
+        _networkStream.WriteByte(value);
+    }
+
+    public void WriteSByte(sbyte value)
+    {
+        _networkStream.WriteByte((byte) value);
+    }
+    
     public async Task WriteBytesAsync(byte[] bytes)
     {
         await _networkStream.WriteAsync(bytes, 0, bytes.Length);
-    }
-
-    public async Task WriteGuidAsync(Guid guid)
-    {
-        await WriteBytesAsync(guid.ToByteArray());
     }
 
     public void Dispose()

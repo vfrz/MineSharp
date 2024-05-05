@@ -6,9 +6,6 @@ namespace MineSharp.Extensions;
 
 public static class SequenceReaderExtensions
 {
-    private const int SegmentBits = 0x7F;
-    private const int ContinueBit = 0x80;
-
     public static ReadOnlySequence<byte> ReadBytes(ref this SequenceReader<byte> reader, int count)
     {
         if (reader.TryReadExact(count, out var bytes))
@@ -19,80 +16,18 @@ public static class SequenceReaderExtensions
     public static byte[] ReadBytesArray(ref this SequenceReader<byte> reader, int count)
         => ReadBytes(ref reader, count).ToArray();
 
-    public static int ReadVarInt(ref this SequenceReader<byte> reader)
+    public static int ReadInt(ref this SequenceReader<byte> reader)
     {
-        if (TryReadVarInt(ref reader, out var value))
+        if (reader.TryReadBigEndian(out int value))
             return value;
-        throw new Exception("Failed to read varint");
-    }
-
-    public static bool TryReadVarInt(ref this SequenceReader<byte> reader, out int output)
-        => TryReadVarInt(ref reader, out output, out _);
-
-    public static bool TryReadVarInt(ref this SequenceReader<byte> reader, out int output, out int bytesRead)
-    {
-        var value = 0;
-        var position = 0;
-        bytesRead = 0;
-
-        while (true)
-        {
-            if (reader.TryRead(out var currentByte))
-            {
-                bytesRead++;
-                value |= (currentByte & SegmentBits) << position;
-
-                if ((currentByte & ContinueBit) == 0)
-                    break;
-
-                position += 7;
-
-                if (position >= 32)
-                {
-                    output = default;
-                    return false;
-                }
-            }
-            else
-            {
-                output = default;
-                return false;
-            }
-        }
-
-        output = value;
-        return true;
-    }
-
-    public static long ReadVarLong(ref this SequenceReader<byte> reader)
-    {
-        long value = 0;
-        var position = 0;
-
-        while (true)
-        {
-            if (!reader.TryRead(out var currentByte))
-                throw new Exception("Failed to read byte");
-
-            value |= (long) (currentByte & SegmentBits) << position;
-
-            if ((currentByte & ContinueBit) == 0)
-                break;
-
-            position += 7;
-
-            if (position >= 64)
-                throw new Exception("VarLong is too big");
-        }
-
-        return value;
+        throw new Exception("Failed to read Int");
     }
 
     public static long ReadLong(ref this SequenceReader<byte> reader)
     {
         if (reader.TryReadBigEndian(out long value))
             return value;
-        throw new Exception("Failed to read long");
+        throw new Exception("Failed to read Long");
     }
 
     public static ushort ReadUInt16(ref this SequenceReader<byte> reader)
@@ -101,23 +36,32 @@ public static class SequenceReaderExtensions
         return BinaryPrimitives.ReadUInt16BigEndian(buffer.FirstSpan);
     }
 
-    public static string ReadString(ref this SequenceReader<byte> reader)
+    public static short ReadShort(ref this SequenceReader<byte> reader)
     {
-        var size = reader.ReadVarInt();
-        var bytes = reader.ReadBytes(size);
-        return Encoding.UTF8.GetString(bytes);
+        var buffer = reader.ReadBytes(2);
+        return BinaryPrimitives.ReadInt16BigEndian(buffer.FirstSpan);
     }
 
-    public static Guid ReadGuid(ref this SequenceReader<byte> reader)
+    public static string ReadString(ref this SequenceReader<byte> reader)
     {
-        var bytes = reader.ReadBytes(16);
-        return new Guid(bytes.FirstSpan);
+        var length = reader.ReadUInt16();
+        if (length == 0)
+            return string.Empty;
+        var data = reader.ReadBytes(length * 2);
+        return Encoding.BigEndianUnicode.GetString(data);
     }
 
     public static byte ReadByte(ref this SequenceReader<byte> reader)
     {
         if (reader.TryRead(out var output))
             return output;
+        throw new Exception("Failed to read byte");
+    }
+    
+    public static sbyte ReadSByte(ref this SequenceReader<byte> reader)
+    {
+        if (reader.TryRead(out var output))
+            return (sbyte) output;
         throw new Exception("Failed to read byte");
     }
 

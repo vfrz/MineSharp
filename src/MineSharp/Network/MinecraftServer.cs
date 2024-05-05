@@ -1,4 +1,3 @@
-using System.Buffers;
 using System.Collections.Concurrent;
 using System.IO.Pipelines;
 using System.Net;
@@ -7,7 +6,7 @@ using Mediator;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MineSharp.Configuration;
-using MineSharp.Extensions;
+using MineSharp.Core;
 using MineSharp.Notifications;
 
 namespace MineSharp.Network;
@@ -23,7 +22,7 @@ public class MinecraftServer
     private readonly IOptions<ServerConfiguration> _configuration;
     private readonly ILogger<MinecraftServer> _logger;
 
-    public string? FaviconBase64 { get; private set; }
+    public World World { get; }
 
     public MinecraftServer(IMediator mediator, PacketHandler packetHandler, IOptions<ServerConfiguration> configuration,
         ILogger<MinecraftServer> logger)
@@ -33,6 +32,10 @@ public class MinecraftServer
         _configuration = configuration;
         _logger = logger;
         _clients = new ConcurrentDictionary<string, MinecraftClient>();
+
+        World = new World();
+        World.InitializeDefault();
+
         var ip = new IPEndPoint(IPAddress.Any, configuration.Value.Port);
         _listener = new Socket(ip.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
         _listener.Bind(ip);
@@ -42,11 +45,6 @@ public class MinecraftServer
     {
         _logger.LogInformation("Server starting...");
 
-        if (File.Exists("icon.png"))
-        {
-            FaviconBase64 = Convert.ToBase64String(File.ReadAllBytes("icon.png"));
-        }
-
         _listener.Listen();
 
         Task.Run(async () =>
@@ -54,15 +52,17 @@ public class MinecraftServer
             while (!cancellationToken.IsCancellationRequested)
             {
                 var socket = await _listener.AcceptAsync(cancellationToken);
-                var _ = HandleClientAsync(socket, cancellationToken);
+                _ = HandleClientAsync(socket, cancellationToken);
             }
         }, cancellationToken);
 
         _logger.LogInformation("Server started on port: {0}", _configuration.Value.Port);
     }
 
-    public void Stop()
+    public async Task StopAsync()
     {
+        await DisconnectAllPlayersAsync("Server stopped.");
+
         _logger.LogInformation("Server stoping...");
         _listener.Shutdown(SocketShutdown.Both);
         _listener.Close();
@@ -70,9 +70,40 @@ public class MinecraftServer
         _logger.LogInformation("Server stopped");
     }
 
+    public async Task DisconnectAllPlayersAsync(string message)
+    {
+        await Parallel.ForEachAsync(Clients, async (client, token) =>
+        {
+            using var session = client.SocketWrapper.StartWriting();
+            session.WriteByte(0xFF);
+            await session.WriteStringAsync(message);
+        });
+    }
+
+    public async Task BroadcastMessageAsync(string message)
+    {
+        await Parallel.ForEachAsync(Clients, async (client, token) =>
+        {
+            using var session = client.SocketWrapper.StartWriting();
+            session.WriteByte(0x03);
+            await session.WriteStringAsync(message);
+        });
+    }
+
     private async Task HandleClientAsync(Socket socket, CancellationToken cancellationToken)
     {
-        var client = await CreateAndRegisterMinecraftClientAsync(socket);
+        var socketWrapper = new SocketWrapper(socket);
+
+        if (_clients.Count >= _configuration.Value.MaxPlayers)
+        {
+            using var session = socketWrapper.StartWriting();
+            session.WriteByte(0xFF);
+            await session.WriteStringAsync($"Server is full: {_clients.Count}/{_configuration.Value.MaxPlayers}");
+            socketWrapper.Dispose();
+            return;
+        }
+        
+        var client = await CreateAndRegisterMinecraftClientAsync(socketWrapper);
 
         var pipe = new Pipe();
 
@@ -97,18 +128,18 @@ public class MinecraftServer
         }
     }
 
-    private async Task<MinecraftClient> CreateAndRegisterMinecraftClientAsync(Socket socket)
+    private async Task<MinecraftClient> CreateAndRegisterMinecraftClientAsync(SocketWrapper socketWrapper)
     {
-        var client = new MinecraftClient(socket);
+        var client = new MinecraftClient(socketWrapper);
         if (!_clients.TryAdd(client.NetworkId, client))
             throw new Exception("Failed to add client to list");
-        
+
         _logger.LogInformation("Client (socket) connected with network id: {0}", client.NetworkId);
         await _mediator.Publish(new MinecraftClientConnected(client));
 
         return client;
     }
-    
+
     private async Task FillPipeAsync(MinecraftClient client, Pipe pipe, CancellationToken cancellationToken)
     {
         const int minimumBufferSize = 512;
@@ -143,13 +174,11 @@ public class MinecraftServer
             var result = await pipe.Reader.ReadAsync(cancellationToken);
             var buffer = result.Buffer;
 
-            while (TryReadPacket(ref buffer, out var packet))
-            {
-                _packetHandler.HandlePacket(client, packet);
-            }
+            if (buffer.Length > 0)
+                _packetHandler.HandlePacket(client, buffer);
 
             // Tell the PipeReader how much of the buffer has been consumed.
-            pipe.Reader.AdvanceTo(buffer.Start, buffer.End);
+            pipe.Reader.AdvanceTo(buffer.End);
 
             // Stop reading if there's no more data coming.
             if (result.IsCompleted)
@@ -160,21 +189,5 @@ public class MinecraftServer
 
         // Mark the PipeReader as complete.
         await pipe.Reader.CompleteAsync();
-    }
-
-    private bool TryReadPacket(ref ReadOnlySequence<byte> buffer, out ReadOnlySequence<byte> packet)
-    {
-        var reader = new SequenceReader<byte>(buffer);
-
-        if (!reader.TryReadVarInt(out var packetSize, out var packetSizeBytesRead)
-            || buffer.Length < packetSizeBytesRead + packetSize)
-        {
-            packet = default;
-            return false;
-        }
-
-        packet = buffer.Slice(0, packetSizeBytesRead + packetSize);
-        buffer = buffer.Slice(packetSizeBytesRead + packetSize);
-        return true;
     }
 }

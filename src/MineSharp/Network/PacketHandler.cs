@@ -17,67 +17,88 @@ public class PacketHandler
 
     public void HandlePacket(MinecraftClient client, ReadOnlySequence<byte> packet)
     {
-        var packetReader = new SequenceReader<byte>(packet);
-        packetReader.TryReadVarInt(out var packetSize);
-        packetReader.TryReadVarInt(out var packetId, out var packetIdBytesRead);
-
-        var dataSize = packetSize - packetIdBytesRead;
-
+        var reader = new SequenceReader<byte>(packet);
+        var packetId = reader.ReadByte();
         switch (packetId)
         {
-            case 0:
-                HandleStatusOrLoginRequestPacket(ref packetReader, client, dataSize);
+            case 0x01:
+                HandleLoginRequestPacket(ref reader, client);
                 break;
-            case 1:
-                HandlePingRequestPacket(ref packetReader, client);
+            case 0x02:
+                HandleHandshakeRequestPacket(ref reader, client);
+                break;
+            case 0x03:
+                HandleChatMessagePacket(ref reader, client);
+                break;
+            case 0x0E:
+                HandlePlayerDigging(ref reader, client);
+                break;
+            case 0x0F:
+                HandlePlayerBlockPlacement(ref reader, client);
+                break;
+            case 0xFF:
+                HandlePlayerDisconnect(client);
                 break;
             default:
-                HandleUnknownPacket(ref packetReader, client, packetId, dataSize);
+                HandleUnknownPacket(ref reader, client, packetId);
                 break;
         }
     }
 
-    private void HandleStatusOrLoginRequestPacket(ref SequenceReader<byte> reader, MinecraftClient client, int dataSize)
+    private void HandleHandshakeRequestPacket(ref SequenceReader<byte> reader, MinecraftClient client)
     {
-        if (client.State is MinecraftClientState.Default)
-        {
-            var protocolVersion = reader.ReadVarInt();
-            var serverAddress = reader.ReadString();
-            var serverPort = reader.ReadUInt16();
-            var nextState = (MinecraftClientState) reader.ReadVarInt();
-            _mediator.Send(new ClientHandshake(client, protocolVersion, serverAddress, serverPort, nextState));
-            return;
-        }
-        
-        if (client.State is MinecraftClientState.Status)
-        {
-            _mediator.Send(new StatusRequest(client));
-            return;
-        }
-
-        if (client.State is MinecraftClientState.Login)
-        {
-            var name = reader.ReadString();
-            var hasUniqueId = reader.ReadBool();
-            Guid? uniqueId = null;
-            if (hasUniqueId)
-                uniqueId = reader.ReadGuid();
-            _mediator.Send(new LoginStart(client, name, hasUniqueId, uniqueId));
-            return;
-        }
-
-        throw new Exception($"Client state is invalid: {client.State}");
+        var username = reader.ReadString();
+        _mediator.Send(new HandshakeRequest(client, username, MinecraftClientState.Handshake));
     }
 
-    private void HandlePingRequestPacket(ref SequenceReader<byte> reader, MinecraftClient client)
+    private void HandleLoginRequestPacket(ref SequenceReader<byte> reader, MinecraftClient client)
     {
-        var payload = reader.ReadLong();
-        _mediator.Send(new PingRequest(client, payload));
+        var protocolVersion = reader.ReadInt();
+        var username = reader.ReadString();
+        // Unused mapSeed and dimension
+        reader.ReadLong();
+        reader.ReadByte();
+        _mediator.Send(new LoginRequest(client, protocolVersion, username));
     }
 
-    private void HandleUnknownPacket(ref SequenceReader<byte> reader, MinecraftClient client, int packetId, int dataSize)
+    private void HandleChatMessagePacket(ref SequenceReader<byte> reader, MinecraftClient client)
     {
-        var packetData = dataSize > 0 ? reader.ReadBytesArray(dataSize) : Array.Empty<byte>();
+        var message = reader.ReadString();
+        _mediator.Send(new ChatMessage(client, message));
+    }
+
+    private void HandlePlayerBlockPlacement(ref SequenceReader<byte> reader, MinecraftClient client)
+    {
+        var x = reader.ReadInt();
+        var y = reader.ReadSByte();
+        var z = reader.ReadInt();
+        var direction = reader.ReadSByte();
+        var blockId = reader.ReadShort();
+        byte? amount = blockId != -1 ? reader.ReadByte() : null;
+        short? damage = blockId != -1 ? reader.ReadShort() : null;
+        _mediator.Send(new PlayerBlockPlacement(client, x, y, z, direction, blockId, amount, damage));
+    }
+
+    private void HandlePlayerDigging(ref SequenceReader<byte> reader, MinecraftClient client)
+    {
+        var status = (PlayerDiggingStatus) reader.ReadSByte();
+        var x = reader.ReadInt();
+        var y = reader.ReadSByte();
+        var z = reader.ReadInt();
+        var face = reader.ReadSByte();
+        _mediator.Send(new PlayerDigging(client, status, x, y, z, face));
+    }
+
+    private void HandlePlayerDisconnect(MinecraftClient client)
+    {
+        //TODO this is ugly but for testing
+        client.DisconnectAsync().GetAwaiter().GetResult();
+    }
+    
+    private void HandleUnknownPacket(ref SequenceReader<byte> reader, MinecraftClient client, int packetId)
+    {
+        var packetLength = (int) reader.Length - 1;
+        var packetData = packetLength > 0 ? reader.ReadBytesArray(packetLength) : Array.Empty<byte>();
         _mediator.Send(new UnknownPacket(client, packetId, packetData));
     }
 }

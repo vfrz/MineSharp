@@ -2,6 +2,8 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MineSharp", "MineSharp\MineSharp.csproj", "{47D81793-B950-48E7-BB29-DA1DFBB41496}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MineSharp.Tests", "MineSharp.Tests\MineSharp.Tests.csproj", "{4286098A-C0EA-4D3E-9848-4075A1A81434}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -12,5 +14,9 @@ Global
 		{47D81793-B950-48E7-BB29-DA1DFBB41496}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{47D81793-B950-48E7-BB29-DA1DFBB41496}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{47D81793-B950-48E7-BB29-DA1DFBB41496}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4286098A-C0EA-4D3E-9848-4075A1A81434}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4286098A-C0EA-4D3E-9848-4075A1A81434}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4286098A-C0EA-4D3E-9848-4075A1A81434}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4286098A-C0EA-4D3E-9848-4075A1A81434}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

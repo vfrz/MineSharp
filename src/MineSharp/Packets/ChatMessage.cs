@@ -3,4 +3,4 @@ using MineSharp.Network;
 
 namespace MineSharp.Packets;
 
-public record StatusRequest(MinecraftClient Client) : IPacket;
+public record ChatMessage(MinecraftClient Client, string Message) : IPacket;
