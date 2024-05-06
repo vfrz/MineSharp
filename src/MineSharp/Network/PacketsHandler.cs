@@ -8,6 +8,7 @@ namespace MineSharp.Network;
 public class PacketsHandler
 {
     private readonly IClientPacketHandler<ChatMessagePacket> _chatMessagePacketHandler;
+    private readonly IClientPacketHandler<EntityActionPacket> _entityActionPacketHandler;
     private readonly IClientPacketHandler<HandshakeRequestPacket> _handshakeRequestPacketHandler;
     private readonly IClientPacketHandler<LoginRequestPacket> _loginRequestPacketHandler;
     private readonly IClientPacketHandler<PlayerBlockPlacementPacket> _playerBlockPlacementPacketHandler;
@@ -19,6 +20,7 @@ public class PacketsHandler
     private readonly IClientPacketHandler<PlayerPositionPacket> _playerPositionPacketHandler;
 
     public PacketsHandler(IClientPacketHandler<ChatMessagePacket> chatMessagePacketHandler,
+        IClientPacketHandler<EntityActionPacket> entityActionPacketHandler,
         IClientPacketHandler<HandshakeRequestPacket> handshakeRequestPacketHandler,
         IClientPacketHandler<LoginRequestPacket> loginRequestPacketHandler,
         IClientPacketHandler<PlayerBlockPlacementPacket> playerBlockPlacementPacketHandler,
@@ -30,6 +32,7 @@ public class PacketsHandler
         IClientPacketHandler<PlayerPositionPacket> playerPositionPacketHandler)
     {
         _chatMessagePacketHandler = chatMessagePacketHandler;
+        _entityActionPacketHandler = entityActionPacketHandler;
         _handshakeRequestPacketHandler = handshakeRequestPacketHandler;
         _loginRequestPacketHandler = loginRequestPacketHandler;
         _playerBlockPlacementPacketHandler = playerBlockPlacementPacketHandler;
@@ -49,6 +52,7 @@ public class PacketsHandler
         var task = packetId switch
         {
             ChatMessagePacket.Id => HandleChatMessagePacket(ref reader, context),
+            EntityActionPacket.Id => HandleEntityActionPacket(ref reader, context),
             HandshakeRequestPacket.Id => HandleHandshakeRequestPacket(ref reader, context),
             LoginRequestPacket.Id => HandleLoginRequestPacket(ref reader, context),
             PlayerBlockPlacementPacket.Id => HandlePlayerBlockPlacementPacket(ref reader, context),
@@ -71,6 +75,13 @@ public class PacketsHandler
         var packet = new ChatMessagePacket();
         packet.Read(ref reader);
         return _chatMessagePacketHandler.HandleAsync(packet, context);
+    }
+
+    private Task HandleEntityActionPacket(ref SequenceReader<byte> reader, ClientPacketHandlerContext context)
+    {
+        var packet = new EntityActionPacket();
+        packet.Read(ref reader);
+        return _entityActionPacketHandler.HandleAsync(packet, context);
     }
 
     private Task HandleHandshakeRequestPacket(ref SequenceReader<byte> reader, ClientPacketHandlerContext context)
@@ -152,12 +163,6 @@ public class PacketsHandler
         }
 
         if (packetId == 0x12)
-        {
-            reader.Advance(5);
-            return Task.CompletedTask;
-        }
-
-        if (packetId == 0x13)
         {
             reader.Advance(5);
             return Task.CompletedTask;

@@ -7,8 +7,20 @@ public class PlayerBlockPlacementPacketHandler : IClientPacketHandler<PlayerBloc
 {
     public async Task HandleAsync(PlayerBlockPlacementPacket packet, ClientPacketHandlerContext context)
     {
-        if (packet.BlockId == -1 || packet.Direction == -1)
+        if (packet.Direction == -1)
             return;
+
+        if (packet.BlockId == -1)
+        {
+            await context.Server.BroadcastPacketAsync(new ThunderboltPacket
+            {
+                X = packet.X * 32,
+                Y = packet.Y * 32,
+                Z = packet.Z * 32,
+                EntityId = 42
+            });
+            return;
+        }
 
         var coordinates = new Coordinates3D(packet.X, packet.Z, packet.Y);
         ApplyDirectionToCoordinates(ref coordinates, packet.Direction);

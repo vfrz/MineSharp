@@ -39,7 +39,7 @@ public class LoginRequestPacketHandler : IClientPacketHandler<LoginRequestPacket
                 Yaw = 0,
                 PositionDirty = false
             };
-            
+
             context.RemoteClient.InitializePlayer(currentPlayer);
 
             await context.RemoteClient.SendPacketAsync(new LoginResponsePacket
@@ -94,6 +94,7 @@ public class LoginRequestPacketHandler : IClientPacketHandler<LoginRequestPacket
                 OnGround = currentPlayer.OnGround
             });
 
+            // Might have a bug around here, sometime the client crashes on joining
             foreach (var remoteClient in context.Server.RemoteClients)
             {
                 if (remoteClient.Player is null || remoteClient == context.RemoteClient)
@@ -102,9 +103,9 @@ public class LoginRequestPacketHandler : IClientPacketHandler<LoginRequestPacket
                 await context.RemoteClient.SendPacketAsync(new NamedEntitySpawnPacket
                 {
                     EntityId = player.EntityId,
-                    X = (int) player.X,
-                    Z = (int) player.Z,
-                    Y = (int) player.Y,
+                    X = (int) (player.X * 32),
+                    Z = (int) (player.Z * 32),
+                    Y = (int) (player.Y * 32),
                     Pitch = MinecraftMath.RotationFloatToSByte(player.Pitch),
                     Yaw = MinecraftMath.RotationFloatToSByte(player.Yaw),
                     Username = remoteClient.Username!,
@@ -121,7 +122,7 @@ public class LoginRequestPacketHandler : IClientPacketHandler<LoginRequestPacket
                     Yaw = MinecraftMath.RotationFloatToSByte(player.Yaw)
                 });
             }
-            
+
             await context.Server.BroadcastPacketAsync(new NamedEntitySpawnPacket
             {
                 EntityId = currentPlayer.EntityId,
@@ -133,7 +134,7 @@ public class LoginRequestPacketHandler : IClientPacketHandler<LoginRequestPacket
                 Username = context.RemoteClient.Username!,
                 CurrentItem = 0
             }, context.RemoteClient);
-            
+
             await context.Server.BroadcastPacketAsync(new EntityTeleportPacket
             {
                 EntityId = currentPlayer.EntityId,
@@ -154,7 +155,7 @@ public class LoginRequestPacketHandler : IClientPacketHandler<LoginRequestPacket
                 ItemCount = 64,
                 ItemUses = 0
             });
-            
+
             await context.RemoteClient.SendPacketAsync(new SetSlotPacket
             {
                 WindowId = 0,
