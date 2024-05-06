@@ -5,9 +5,14 @@ namespace MineSharp.Network;
 public class SocketWrapper : IDisposable
 {
     public Socket Socket { get; }
+
+    public bool Connected => Socket.Connected;
+    
     private NetworkStream NetworkStream { get; }
     private readonly SemaphoreSlim _semaphore;
     
+    //TODO Remove this class and use Socket.SendAsync with a memorystream to write packet data beforehand
+    //Then test the thread safety
     public SocketWrapper(Socket socket)
     {
         Socket = socket;

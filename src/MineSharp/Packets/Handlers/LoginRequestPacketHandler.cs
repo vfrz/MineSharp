@@ -1,32 +1,31 @@
 using MineSharp.Core;
 using MineSharp.Core.Packets;
-using MineSharp.Network;
 
 namespace MineSharp.Packets.Handlers;
 
-public class LoginRequestHandler : IPacketHandler<LoginRequest>
+public class LoginRequestPacketHandler : IClientPacketHandler<LoginRequestPacket>
 {
-    private readonly MinecraftServer _server;
+    private readonly EntityIdGenerator _entityIdGenerator;
 
-    public LoginRequestHandler(MinecraftServer server)
+    public LoginRequestPacketHandler(EntityIdGenerator entityIdGenerator)
     {
-        _server = server;
+        _entityIdGenerator = entityIdGenerator;
     }
 
-    public async ValueTask HandleAsync(LoginRequest command, CancellationToken cancellationToken)
+    public async Task HandleAsync(LoginRequestPacket packet, ClientPacketHandlerContext context)
     {
-        command.Client.Username = command.Username + Guid.NewGuid().ToString()[..4];
+        context.RemoteClient.Username = packet.Username + Guid.NewGuid().ToString()[..4];
 
-        if (command.ProtocolVersion != ServerConstants.ProtocolVersion)
+        if (packet.ProtocolVersion != ServerConstants.ProtocolVersion)
         {
             var message = $"Incompatible Minecraft client, protocol version required: {ServerConstants.ProtocolVersion}";
-            using var session = command.Client.SocketWrapper.StartWriting();
+            using var session = context.RemoteClient.SocketWrapper.StartWriting();
             session.WriteByte(0xFF);
             await session.WriteStringAsync(message);
         }
         else
         {
-            using (var session = command.Client.SocketWrapper.StartWriting())
+            using (var session = context.RemoteClient.SocketWrapper.StartWriting())
             {
                 session.WriteByte(0x01);
                 // Player entity id
@@ -39,17 +38,21 @@ public class LoginRequestHandler : IPacketHandler<LoginRequest>
                 session.WriteByte(0);
             }
 
-            command.Client.InitializePlayer();
+            context.RemoteClient.InitializePlayer(new MinecraftPlayer
+            {
+                EntityId = _entityIdGenerator.Next(),
+                Health = 20
+            });
 
             //TODO Everything below is for experimentation and need to be moved somewhere else 
-            
+
             // World chunks
-            foreach (var chunk in _server.World.Chunks)
+            foreach (var chunk in context.Server.World.Chunks)
             {
                 if (chunk is null)
                     continue;
 
-                using (var session = command.Client.SocketWrapper.StartWriting())
+                using (var session = context.RemoteClient.SocketWrapper.StartWriting())
                 {
                     session.WriteByte(0x32);
                     await session.WriteIntAsync(chunk.X);
@@ -57,7 +60,7 @@ public class LoginRequestHandler : IPacketHandler<LoginRequest>
                     session.WriteByte(1);
                 }
 
-                using (var session = command.Client.SocketWrapper.StartWriting())
+                using (var session = context.RemoteClient.SocketWrapper.StartWriting())
                 {
                     session.WriteByte(0x33);
                     await session.WriteIntAsync(chunk.X * Chunk.Length);
@@ -74,7 +77,7 @@ public class LoginRequestHandler : IPacketHandler<LoginRequest>
             }
 
             // Spawn point
-            using (var session = command.Client.SocketWrapper.StartWriting())
+            using (var session = context.RemoteClient.SocketWrapper.StartWriting())
             {
                 session.WriteByte(0x06);
                 await session.WriteIntAsync(0);
@@ -83,7 +86,7 @@ public class LoginRequestHandler : IPacketHandler<LoginRequest>
             }
 
             // Set position
-            using (var session = command.Client.SocketWrapper.StartWriting())
+            using (var session = context.RemoteClient.SocketWrapper.StartWriting())
             {
                 session.WriteByte(0x0D);
                 await session.WriteDoubleAsync(0);
@@ -92,18 +95,28 @@ public class LoginRequestHandler : IPacketHandler<LoginRequest>
                 await session.WriteDoubleAsync(0);
                 await session.WriteFloatAsync(0);
                 await session.WriteFloatAsync(0);
-                session.WriteByte(0);
+                session.WriteByte(1);
             }
 
-            await _server.BroadcastMessageAsync($"§9{command.Client.Username} §fhas joined the server!");
+            await context.Server.BroadcastMessageAsync($"{ChatColors.Blue}{context.RemoteClient.Username} {ChatColors.White}has joined the server!");
 
-            using (var session = command.Client.SocketWrapper.StartWriting())
+            using (var session = context.RemoteClient.SocketWrapper.StartWriting())
             {
                 session.WriteByte(0x67);
                 session.WriteByte(0);
                 await session.WriteUInt16Async(36);
                 await session.WriteUInt16Async(3);
                 session.WriteByte(64);
+                await session.WriteUInt16Async(0);
+            }
+
+            using (var session = context.RemoteClient.SocketWrapper.StartWriting())
+            {
+                session.WriteByte(0x67);
+                session.WriteByte(0);
+                await session.WriteUInt16Async(37);
+                await session.WriteUInt16Async(277);
+                session.WriteByte(1);
                 await session.WriteUInt16Async(0);
             }
 
@@ -114,26 +127,26 @@ public class LoginRequestHandler : IPacketHandler<LoginRequest>
                 while (await timer.WaitForNextTickAsync())
                 {
                     // Keep alive
-                    using (var session = command.Client.SocketWrapper.StartWriting())
+                    using (var session = context.RemoteClient.SocketWrapper.StartWriting())
                     {
                         session.WriteByte(0x0);
                     }
 
-                    /*if (command.Client.Player!.Health > 0)
+                    /*if (packet.Client.Player!.Health > 0)
                     {
-                        command.Client.Player!.Health -= 2;
+                        packet.Client.Player!.Health -= 2;
 
-                        using (var session = command.Client.SocketWrapper.StartWriting())
+                        using (var session = packet.Client.SocketWrapper.StartWriting())
                         {
                             session.WriteByte(0x26);
                             await session.WriteIntAsync(1);
                             session.WriteByte(2);
                         }
 
-                        using (var session = command.Client.SocketWrapper.StartWriting())
+                        using (var session = packet.Client.SocketWrapper.StartWriting())
                         {
                             session.WriteByte(0x08);
-                            await session.WriteShortAsync(command.Client.Player!.Health);
+                            await session.WriteShortAsync(packet.Client.Player!.Health);
                         }
                     }*/
                 }

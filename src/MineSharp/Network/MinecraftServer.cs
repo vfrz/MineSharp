@@ -2,36 +2,38 @@ using System.Collections.Concurrent;
 using System.IO.Pipelines;
 using System.Net;
 using System.Net.Sockets;
-using Mediator;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MineSharp.Configuration;
 using MineSharp.Core;
-using MineSharp.Notifications;
+using MineSharp.Core.Packets;
+using MineSharp.Packets;
 
 namespace MineSharp.Network;
 
 public class MinecraftServer
 {
-    public IEnumerable<MinecraftClient> Clients => _clients.Values;
-    private readonly ConcurrentDictionary<string, MinecraftClient> _clients;
+    public IEnumerable<MinecraftRemoteClient> Clients => _clients.Values;
+    private readonly ConcurrentDictionary<string, MinecraftRemoteClient> _clients;
 
     private readonly Socket _listener;
-    private readonly IMediator _mediator;
-    private readonly PacketHandler _packetHandler;
+    private readonly PacketsHandler _packetsHandler;
     private readonly IOptions<ServerConfiguration> _configuration;
     private readonly ILogger<MinecraftServer> _logger;
+    private readonly EntityIdGenerator _entityIdGenerator;
 
     public World World { get; }
 
-    public MinecraftServer(IMediator mediator, PacketHandler packetHandler, IOptions<ServerConfiguration> configuration,
-        ILogger<MinecraftServer> logger)
+    public MinecraftServer(PacketsHandler packetsHandler,
+        IOptions<ServerConfiguration> configuration,
+        ILogger<MinecraftServer> logger,
+        EntityIdGenerator entityIdGenerator)
     {
-        _mediator = mediator;
-        _packetHandler = packetHandler;
+        _packetsHandler = packetsHandler;
         _configuration = configuration;
         _logger = logger;
-        _clients = new ConcurrentDictionary<string, MinecraftClient>();
+        _entityIdGenerator = entityIdGenerator;
+        _clients = new ConcurrentDictionary<string, MinecraftRemoteClient>();
 
         World = new World();
         World.InitializeDefault();
@@ -80,14 +82,25 @@ public class MinecraftServer
         });
     }
 
-    public async Task BroadcastMessageAsync(string message)
+    public async Task BroadcastPacketAsync(IServerPacket packet, MinecraftRemoteClient? except = null)
     {
+        await using var writer = new PacketWriter();
+        packet.Write(writer);
+        var data = writer.ToByteArray();
         await Parallel.ForEachAsync(Clients, async (client, token) =>
         {
-            using var session = client.SocketWrapper.StartWriting();
-            session.WriteByte(0x03);
-            await session.WriteStringAsync(message);
+            if (client == except)
+                return;
+            await client.SendAsync(data);
         });
+    }
+
+    public async Task BroadcastMessageAsync(string message, MinecraftRemoteClient? except = null)
+    {
+        await BroadcastPacketAsync(new ChatMessagePacket
+        {
+            Message = message
+        }, except);
     }
 
     private async Task HandleClientAsync(Socket socket, CancellationToken cancellationToken)
@@ -102,15 +115,17 @@ public class MinecraftServer
             socketWrapper.Dispose();
             return;
         }
-        
-        var client = await CreateAndRegisterMinecraftClientAsync(socketWrapper);
+
+        var remoteClient = await CreateRemoteClientAsync(socketWrapper);
+
+        var context = new ClientPacketHandlerContext(this, remoteClient);
 
         var pipe = new Pipe();
 
         try
         {
-            var writing = FillPipeAsync(client, pipe, cancellationToken);
-            var reading = ReadPipeAsync(client, pipe, cancellationToken);
+            var writing = FillPipeAsync(socketWrapper, pipe, cancellationToken);
+            var reading = ReadPipeAsync(context, pipe, cancellationToken);
 
             await Task.WhenAll(reading, writing);
         }
@@ -122,34 +137,41 @@ public class MinecraftServer
         }
         finally
         {
-            _logger.LogInformation("Client (socket) disconnected with network id: {0}", client.NetworkId);
-            _clients.Remove(client.NetworkId, out _);
-            client.Dispose();
+            _logger.LogInformation("Client (socket) disconnected with network id: {0}", remoteClient.NetworkId);
+            await RemoveRemoteClientAsync(remoteClient);
         }
     }
 
-    private async Task<MinecraftClient> CreateAndRegisterMinecraftClientAsync(SocketWrapper socketWrapper)
+    private async Task<MinecraftRemoteClient> CreateRemoteClientAsync(SocketWrapper socketWrapper)
     {
-        var client = new MinecraftClient(socketWrapper);
+        var client = new MinecraftRemoteClient(socketWrapper);
         if (!_clients.TryAdd(client.NetworkId, client))
             throw new Exception("Failed to add client to list");
 
         _logger.LogInformation("Client (socket) connected with network id: {0}", client.NetworkId);
-        await _mediator.Publish(new MinecraftClientConnected(client));
 
         return client;
     }
-
-    private async Task FillPipeAsync(MinecraftClient client, Pipe pipe, CancellationToken cancellationToken)
+    
+    private async Task RemoveRemoteClientAsync(MinecraftRemoteClient remoteClient)
     {
-        const int minimumBufferSize = 512;
+        await BroadcastMessageAsync($"{ChatColors.Blue}{remoteClient.Username} {ChatColors.White}has left the server!", remoteClient);
 
+        if (remoteClient.Player is not null)
+            _entityIdGenerator.Release(remoteClient.Player.EntityId);
+        
+        _clients.Remove(remoteClient.NetworkId, out _);
+        remoteClient.Dispose();
+    }
+
+    private async Task FillPipeAsync(SocketWrapper socketWrapper, Pipe pipe, CancellationToken cancellationToken)
+    {
         while (true)
         {
-            // Allocate at least 512 bytes from the PipeWriter.
-            var memory = pipe.Writer.GetMemory(minimumBufferSize);
+            // Allocate at least 65535 bytes from the PipeWriter. (Maximum tcp packet size)
+            var memory = pipe.Writer.GetMemory(65535);
 
-            var bytesRead = await client.SocketWrapper.Socket.ReceiveAsync(memory, SocketFlags.None, cancellationToken);
+            var bytesRead = await socketWrapper.Socket.ReceiveAsync(memory, SocketFlags.None, cancellationToken);
             if (bytesRead == 0)
                 break;
 
@@ -167,24 +189,34 @@ public class MinecraftServer
         await pipe.Writer.CompleteAsync();
     }
 
-    private async Task ReadPipeAsync(MinecraftClient client, Pipe pipe, CancellationToken cancellationToken)
+    private async Task ReadPipeAsync(ClientPacketHandlerContext context, Pipe pipe, CancellationToken cancellationToken)
     {
-        while (!cancellationToken.IsCancellationRequested)
+        while (true)
         {
             var result = await pipe.Reader.ReadAsync(cancellationToken);
             var buffer = result.Buffer;
 
             if (buffer.Length > 0)
-                _packetHandler.HandlePacket(client, buffer);
-
-            // Tell the PipeReader how much of the buffer has been consumed.
-            pipe.Reader.AdvanceTo(buffer.End);
+            {
+                var task = _packetsHandler.HandlePacket(context, buffer, out var position);
+                try
+                {
+                    await task;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to handle packet");
+                }
+                finally
+                {
+                    // Tell the PipeReader how much of the buffer has been consumed.
+                    pipe.Reader.AdvanceTo(position);
+                }
+            }
 
             // Stop reading if there's no more data coming.
             if (result.IsCompleted)
-            {
                 break;
-            }
         }
 
         // Mark the PipeReader as complete.

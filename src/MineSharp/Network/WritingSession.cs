@@ -19,9 +19,9 @@ public readonly struct WritingSession : IDisposable
 
     public async Task WriteLongAsync(long value)
     {
-        using var memoryOwner = MemoryPool<byte>.Shared.Rent(8);
+        using var memoryOwner = MemoryPool<byte>.Shared.Rent(sizeof(long));
         BinaryPrimitives.WriteInt64BigEndian(memoryOwner.Memory.Span, value);
-        await _networkStream.WriteAsync(memoryOwner.Memory[..8]);
+        await _networkStream.WriteAsync(memoryOwner.Memory[..sizeof(long)]);
     }
 
     public async Task WriteShortAsync(short value)

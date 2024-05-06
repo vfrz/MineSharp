@@ -1,37 +1,29 @@
 using MineSharp.Core;
 using MineSharp.Core.Packets;
-using MineSharp.Network;
 
 namespace MineSharp.Packets.Handlers;
 
-public class PlayerBlockPlacementHandler : IPacketHandler<PlayerBlockPlacement>
+public class PlayerBlockPlacementPacketHandler : IClientPacketHandler<PlayerBlockPlacementPacket>
 {
-    private readonly MinecraftServer _server;
-
-    public PlayerBlockPlacementHandler(MinecraftServer server)
+    public async Task HandleAsync(PlayerBlockPlacementPacket packet, ClientPacketHandlerContext context)
     {
-        _server = server;
-    }
-
-    public async ValueTask HandleAsync(PlayerBlockPlacement command, CancellationToken cancellationToken)
-    {
-        if (command.BlockId == -1 || command.Direction == -1)
+        if (packet.BlockId == -1 || packet.Direction == -1)
             return;
 
-        var coordinates = new Coordinates3D(command.X, command.Z, command.Y);
-        ApplyDirectionToCoordinates(ref coordinates, command.Direction);
-        
-        await Parallel.ForEachAsync(_server.Clients, async (client, token) =>
+        var coordinates = new Coordinates3D(packet.X, packet.Z, packet.Y);
+        ApplyDirectionToCoordinates(ref coordinates, packet.Direction);
+
+        await Parallel.ForEachAsync(context.Server.Clients, async (client, token) =>
         {
             using var session = client.SocketWrapper.StartWriting();
             session.WriteByte(0x35);
             await session.WriteIntAsync(coordinates.X);
             session.WriteSByte(coordinates.Y);
             await session.WriteIntAsync(coordinates.Z);
-            session.WriteByte((byte) command.BlockId);
+            session.WriteByte((byte) packet.BlockId);
             session.WriteByte(0);
         });
-        
+
         //TODO Update world/chunk
     }
 

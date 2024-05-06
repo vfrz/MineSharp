@@ -7,7 +7,7 @@ namespace MineSharp.Tests;
 public class NibbleArrayTests
 {
     [TestMethod]
-    public void HalfByteArray_SetAndGet()
+    public void NibbleArrayTests_SetAndGet()
     {
         // Arrange
         var innerArray = new byte[1];

@@ -36,7 +36,9 @@ public class Chunk
                 for (var y = 0; y < Height; y++)
                 {
                     var index = y + z * Height + x * Height * Width;
-                    if (y < 10)
+                    if (y < 1)
+                        _blocks[index] = 7;
+                    else if (y < 3)
                         _blocks[index] = 2;
                     _light[index] = 15;
                     _skyLight[index] = 15;
@@ -50,7 +52,7 @@ public class Chunk
         var output = new MemoryStream();
         await using (var stream = new ZLibStream(output, CompressionMode.Compress))
         {
-            await stream.WriteAsync(_blocks, 0, _blocks.Length);
+            await stream.WriteAsync(_blocks);
         }
         var result = output.ToArray();
         await output.DisposeAsync();
