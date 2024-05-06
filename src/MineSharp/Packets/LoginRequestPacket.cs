@@ -8,14 +8,14 @@ public class LoginRequestPacket : IClientPacket
 {
     public const int Id = 0x01;
 
-    public int ProtocolVersion { get; private set; }
-    public string Username { get; private set; }
+    public int ProtocolVersion { get; set; }
+    public string Username { get; set; }
 
     // Unused
-    public long MapSeed { get; private set; }
+    public long MapSeed { get; set; }
 
     // Unused
-    public sbyte Dimension { get; private set; }
+    public sbyte Dimension { get; set; }
 
     public void Read(ref SequenceReader<byte> reader)
     {

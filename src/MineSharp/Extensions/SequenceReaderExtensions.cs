@@ -30,15 +30,31 @@ public static class SequenceReaderExtensions
         throw new Exception("Failed to read Long");
     }
 
+    public static double ReadDouble(ref this SequenceReader<byte> reader)
+    {
+        var buffer = reader.ReadBytes(sizeof(double));
+        //TODO Warn about using FirstSpan might cause issues if data is on multiple spans
+        return BinaryPrimitives.ReadDoubleBigEndian(buffer.FirstSpan);
+    }
+    
+    public static float ReadFloat(ref this SequenceReader<byte> reader)
+    {
+        var buffer = reader.ReadBytes(sizeof(float));
+        //TODO Warn about using FirstSpan might cause issues if data is on multiple spans
+        return BinaryPrimitives.ReadSingleBigEndian(buffer.FirstSpan);
+    }
+
     public static ushort ReadUInt16(ref this SequenceReader<byte> reader)
     {
         var buffer = reader.ReadBytes(2);
+        //TODO Warn about using FirstSpan might cause issues if data is on multiple spans
         return BinaryPrimitives.ReadUInt16BigEndian(buffer.FirstSpan);
     }
 
     public static short ReadShort(ref this SequenceReader<byte> reader)
     {
         var buffer = reader.ReadBytes(2);
+        //TODO Warn about using FirstSpan might cause issues if data is on multiple spans
         return BinaryPrimitives.ReadInt16BigEndian(buffer.FirstSpan);
     }
 

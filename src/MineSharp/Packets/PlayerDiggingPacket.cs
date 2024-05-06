@@ -9,11 +9,11 @@ public record PlayerDiggingPacket : IClientPacket
 {
     public const int Id = 0x0E;
     
-    public PlayerDiggingStatus Status { get; private set; }
-    public int X { get; private set; }
-    public sbyte Y { get; private set; }
-    public int Z { get; private set; }
-    public sbyte Face { get; private set; }
+    public PlayerDiggingStatus Status { get; set; }
+    public int X { get; set; }
+    public sbyte Y { get; set; }
+    public int Z { get; set; }
+    public sbyte Face { get; set; }
 
     public void Read(ref SequenceReader<byte> reader)
     {

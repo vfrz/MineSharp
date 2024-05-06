@@ -4,7 +4,7 @@ namespace MineSharp.Packets;
 
 public class BlockUpdatePacket : IServerPacket
 {
-    public const int Id = 0x35;
+    public const byte Id = 0x35;
 
     public int X { get; set; }
 

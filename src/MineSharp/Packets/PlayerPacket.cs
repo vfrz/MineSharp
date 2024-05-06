@@ -4,14 +4,14 @@ using MineSharp.Extensions;
 
 namespace MineSharp.Packets;
 
-public class HandshakeRequestPacket : IClientPacket
+public class PlayerPacket : IClientPacket
 {
-    public const int Id = 0x02;
+    public const int Id = 0x0A;
     
-    public string Username { get; set; }
+    public bool OnGround { get; set; }
 
     public void Read(ref SequenceReader<byte> reader)
     {
-        Username = reader.ReadString();
+        OnGround = reader.ReadBool();
     }
 }

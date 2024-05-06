@@ -8,13 +8,13 @@ public class PlayerBlockPlacementPacket : IClientPacket
 {
     public const int Id = 0x0F;
     
-    public int X { get; private set; }
-    public sbyte Y { get; private set; }
-    public int Z { get; private set; }
-    public sbyte Direction { get; private set; }
-    public short BlockId { get; private set; }
-    public byte? Amount { get; private set; }
-    public short? Damage { get; private set; }
+    public int X { get; set; }
+    public sbyte Y { get; set; }
+    public int Z { get; set; }
+    public sbyte Direction { get; set; }
+    public short BlockId { get; set; }
+    public byte? Amount { get; set; }
+    public short? Damage { get; set; }
 
     public void Read(ref SequenceReader<byte> reader)
     {

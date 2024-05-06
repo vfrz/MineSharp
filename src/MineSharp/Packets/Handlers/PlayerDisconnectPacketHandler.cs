@@ -7,6 +7,6 @@ public class PlayerDisconnectPacketHandler : IClientPacketHandler<PlayerDisconne
     public async Task HandleAsync(PlayerDisconnectPacket packet, ClientPacketHandlerContext context)
     {
         //TODO this is ugly but for testing
-        await context.RemoteClient.DisconnectAsync();
+        await context.RemoteClient.DisconnectSocketAsync();
     }
 }

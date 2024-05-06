@@ -1,5 +1,3 @@
-using MineSharp.Network;
-
 namespace MineSharp.Core.Packets;
 
 public interface IClientPacketHandler<in T> where T : IClientPacket

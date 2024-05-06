@@ -7,26 +7,38 @@ namespace MineSharp.Network;
 
 public class PacketsHandler
 {
-    private readonly IClientPacketHandler<HandshakeRequestPacket> _handshakeRequestPacketHandler;
     private readonly IClientPacketHandler<ChatMessagePacket> _chatMessagePacketHandler;
+    private readonly IClientPacketHandler<HandshakeRequestPacket> _handshakeRequestPacketHandler;
     private readonly IClientPacketHandler<LoginRequestPacket> _loginRequestPacketHandler;
-    private readonly IClientPacketHandler<PlayerDiggingPacket> _playerDiggingPacketHandler;
     private readonly IClientPacketHandler<PlayerBlockPlacementPacket> _playerBlockPlacementPacketHandler;
+    private readonly IClientPacketHandler<PlayerDiggingPacket> _playerDiggingPacketHandler;
     private readonly IClientPacketHandler<PlayerDisconnectPacket> _playerDisconnectPacketHandler;
+    private readonly IClientPacketHandler<PlayerLookPacket> _playerLookPacketHandler;
+    private readonly IClientPacketHandler<PlayerPacket> _playerPacketHandler;
+    private readonly IClientPacketHandler<PlayerPositionAndLookClientPacket> _playerPositionAndLookClientPacketHandler;
+    private readonly IClientPacketHandler<PlayerPositionPacket> _playerPositionPacketHandler;
 
-    public PacketsHandler(IClientPacketHandler<HandshakeRequestPacket> handshakeRequestPacketHandler,
-        IClientPacketHandler<ChatMessagePacket> chatMessagePacketHandler,
+    public PacketsHandler(IClientPacketHandler<ChatMessagePacket> chatMessagePacketHandler,
+        IClientPacketHandler<HandshakeRequestPacket> handshakeRequestPacketHandler,
         IClientPacketHandler<LoginRequestPacket> loginRequestPacketHandler,
-        IClientPacketHandler<PlayerDiggingPacket> playerDiggingPacketHandler,
         IClientPacketHandler<PlayerBlockPlacementPacket> playerBlockPlacementPacketHandler,
-        IClientPacketHandler<PlayerDisconnectPacket> playerDisconnectPacketHandler)
+        IClientPacketHandler<PlayerDiggingPacket> playerDiggingPacketHandler,
+        IClientPacketHandler<PlayerDisconnectPacket> playerDisconnectPacketHandler,
+        IClientPacketHandler<PlayerLookPacket> playerLookPacketHandler,
+        IClientPacketHandler<PlayerPacket> playerPacketHandler,
+        IClientPacketHandler<PlayerPositionAndLookClientPacket> playerPositionAndLookClientPacketHandler,
+        IClientPacketHandler<PlayerPositionPacket> playerPositionPacketHandler)
     {
-        _handshakeRequestPacketHandler = handshakeRequestPacketHandler;
         _chatMessagePacketHandler = chatMessagePacketHandler;
+        _handshakeRequestPacketHandler = handshakeRequestPacketHandler;
         _loginRequestPacketHandler = loginRequestPacketHandler;
-        _playerDiggingPacketHandler = playerDiggingPacketHandler;
         _playerBlockPlacementPacketHandler = playerBlockPlacementPacketHandler;
+        _playerDiggingPacketHandler = playerDiggingPacketHandler;
         _playerDisconnectPacketHandler = playerDisconnectPacketHandler;
+        _playerLookPacketHandler = playerLookPacketHandler;
+        _playerPacketHandler = playerPacketHandler;
+        _playerPositionAndLookClientPacketHandler = playerPositionAndLookClientPacketHandler;
+        _playerPositionPacketHandler = playerPositionPacketHandler;
     }
 
     public Task HandlePacket(ClientPacketHandlerContext context, ReadOnlySequence<byte> buffer, out SequencePosition finalPosition)
@@ -36,12 +48,16 @@ public class PacketsHandler
 
         var task = packetId switch
         {
-            LoginRequestPacket.Id => HandleLoginRequestPacket(ref reader, context),
-            HandshakeRequestPacket.Id => HandleHandshakeRequestPacket(ref reader, context),
             ChatMessagePacket.Id => HandleChatMessagePacket(ref reader, context),
-            PlayerDiggingPacket.Id => HandlePlayerDiggingPacket(ref reader, context),
+            HandshakeRequestPacket.Id => HandleHandshakeRequestPacket(ref reader, context),
+            LoginRequestPacket.Id => HandleLoginRequestPacket(ref reader, context),
             PlayerBlockPlacementPacket.Id => HandlePlayerBlockPlacementPacket(ref reader, context),
+            PlayerDiggingPacket.Id => HandlePlayerDiggingPacket(ref reader, context),
             PlayerDisconnectPacket.Id => HandlePlayerDisconnectPacket(ref reader, context),
+            PlayerLookPacket.Id => HandlePlayerLookPacket(ref reader, context),
+            PlayerPacket.Id => HandlePlayerPacket(ref reader, context),
+            PlayerPositionAndLookClientPacket.Id => HandlePlayerPositionAndLookClientPacket(ref reader, context),
+            PlayerPositionPacket.Id => HandlePlayerPositionPacket(ref reader, context),
             _ => HandleUnknownPacket(ref reader, context, packetId)
         };
 
@@ -50,11 +66,11 @@ public class PacketsHandler
         return task;
     }
 
-    private Task HandleLoginRequestPacket(ref SequenceReader<byte> reader, ClientPacketHandlerContext context)
+    private Task HandleChatMessagePacket(ref SequenceReader<byte> reader, ClientPacketHandlerContext context)
     {
-        var packet = new LoginRequestPacket();
+        var packet = new ChatMessagePacket();
         packet.Read(ref reader);
-        return _loginRequestPacketHandler.HandleAsync(packet, context);
+        return _chatMessagePacketHandler.HandleAsync(packet, context);
     }
 
     private Task HandleHandshakeRequestPacket(ref SequenceReader<byte> reader, ClientPacketHandlerContext context)
@@ -64,19 +80,11 @@ public class PacketsHandler
         return _handshakeRequestPacketHandler.HandleAsync(packet, context);
     }
 
-
-    private Task HandleChatMessagePacket(ref SequenceReader<byte> reader, ClientPacketHandlerContext context)
+    private Task HandleLoginRequestPacket(ref SequenceReader<byte> reader, ClientPacketHandlerContext context)
     {
-        var packet = new ChatMessagePacket();
+        var packet = new LoginRequestPacket();
         packet.Read(ref reader);
-        return _chatMessagePacketHandler.HandleAsync(packet, context);
-    }
-
-    private Task HandlePlayerDiggingPacket(ref SequenceReader<byte> reader, ClientPacketHandlerContext context)
-    {
-        var packet = new PlayerDiggingPacket();
-        packet.Read(ref reader);
-        return _playerDiggingPacketHandler.HandleAsync(packet, context);
+        return _loginRequestPacketHandler.HandleAsync(packet, context);
     }
 
     private Task HandlePlayerBlockPlacementPacket(ref SequenceReader<byte> reader, ClientPacketHandlerContext context)
@@ -86,6 +94,13 @@ public class PacketsHandler
         return _playerBlockPlacementPacketHandler.HandleAsync(packet, context);
     }
 
+    private Task HandlePlayerDiggingPacket(ref SequenceReader<byte> reader, ClientPacketHandlerContext context)
+    {
+        var packet = new PlayerDiggingPacket();
+        packet.Read(ref reader);
+        return _playerDiggingPacketHandler.HandleAsync(packet, context);
+    }
+
     private Task HandlePlayerDisconnectPacket(ref SequenceReader<byte> reader, ClientPacketHandlerContext context)
     {
         var packet = new PlayerDisconnectPacket();
@@ -93,30 +108,40 @@ public class PacketsHandler
         return _playerDisconnectPacketHandler.HandleAsync(packet, context);
     }
 
+    private Task HandlePlayerLookPacket(ref SequenceReader<byte> reader, ClientPacketHandlerContext context)
+    {
+        var packet = new PlayerLookPacket();
+        packet.Read(ref reader);
+        return _playerLookPacketHandler.HandleAsync(packet, context);
+    }
+
+    private Task HandlePlayerPacket(ref SequenceReader<byte> reader, ClientPacketHandlerContext context)
+    {
+        var packet = new PlayerPacket();
+        packet.Read(ref reader);
+        return _playerPacketHandler.HandleAsync(packet, context);
+    }
+
+    private Task HandlePlayerPositionAndLookClientPacket(ref SequenceReader<byte> reader, ClientPacketHandlerContext context)
+    {
+        var packet = new PlayerPositionAndLookClientPacket();
+        packet.Read(ref reader);
+        return _playerPositionAndLookClientPacketHandler.HandleAsync(packet, context);
+    }
+
+    private Task HandlePlayerPositionPacket(ref SequenceReader<byte> reader, ClientPacketHandlerContext context)
+    {
+        var packet = new PlayerPositionPacket();
+        packet.Read(ref reader);
+        return _playerPositionPacketHandler.HandleAsync(packet, context);
+    }
+
     private Task HandleUnknownPacket(ref SequenceReader<byte> reader, ClientPacketHandlerContext context, int packetId)
     {
         //todo temporary hack to avoid packet loss
-        if (packetId == 0x0A)
-        {
-            reader.Advance(1);
-            return Task.CompletedTask;
-        }
-
-        if (packetId == 0x0B)
-        {
-            reader.Advance(33);
-            return Task.CompletedTask;
-        }
-
-        if (packetId == 0x0C)
+        if (packetId == 0x07)
         {
             reader.Advance(9);
-            return Task.CompletedTask;
-        }
-
-        if (packetId == 0x0D)
-        {
-            reader.Advance(41);
             return Task.CompletedTask;
         }
 

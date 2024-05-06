@@ -2,10 +2,8 @@
 using Microsoft.Extensions.Hosting;
 using MineSharp.Configuration;
 using MineSharp.Core;
-using MineSharp.Core.Packets;
+using MineSharp.Extensions;
 using MineSharp.Network;
-using MineSharp.Packets;
-using MineSharp.Packets.Handlers;
 using MineSharp.Services;
 
 
@@ -20,14 +18,8 @@ var host = Host.CreateDefaultBuilder(args)
         services.AddSingleton<MinecraftServer>();
         services.AddSingleton<EntityIdGenerator>();
         services.AddHostedService<MinecraftServerHostedService>();
-        
-        //TODO Automatic packet handlers registration
-        services.AddSingleton<IClientPacketHandler<HandshakeRequestPacket>, HandshakeRequestPacketHandler>();
-        services.AddSingleton<IClientPacketHandler<ChatMessagePacket>, ChatMessagePacketHandler>();
-        services.AddSingleton<IClientPacketHandler<LoginRequestPacket>, LoginRequestPacketHandler>();
-        services.AddSingleton<IClientPacketHandler<PlayerDiggingPacket>, PlayerDiggingPacketHandler>();
-        services.AddSingleton<IClientPacketHandler<PlayerBlockPlacementPacket>, PlayerBlockPlacementPacketHandler>();
-        services.AddSingleton<IClientPacketHandler<PlayerDisconnectPacket>, PlayerDisconnectPacketHandler>();
+
+        services.RegisterClientPacketHandlers(typeof(Program).Assembly);
     });
 
 await host.RunConsoleAsync();

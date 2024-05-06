@@ -1,3 +1,4 @@
+using System.Net.Sockets;
 using MineSharp.Core;
 using MineSharp.Core.Packets;
 
@@ -5,15 +6,16 @@ namespace MineSharp.Network;
 
 public class MinecraftRemoteClient : IDisposable
 {
-    public SocketWrapper SocketWrapper { get; }
     public MinecraftPlayer? Player { get; private set; }
-    public string NetworkId { get; }
     public string? Username { get; set; }
+    public string NetworkId { get; }
 
-    public MinecraftRemoteClient(SocketWrapper socketWrapper)
+    private Socket Socket { get; }
+
+    public MinecraftRemoteClient(Socket socket)
     {
-        SocketWrapper = socketWrapper;
-        NetworkId = socketWrapper.Socket.RemoteEndPoint?.ToString() ?? throw new Exception();
+        Socket = socket;
+        NetworkId = socket.RemoteEndPoint?.ToString() ?? throw new Exception();
     }
 
     public void InitializePlayer(MinecraftPlayer player)
@@ -33,16 +35,16 @@ public class MinecraftRemoteClient : IDisposable
 
     public async Task SendAsync(byte[] data)
     {
-        await SocketWrapper.Socket.SendAsync(data);
+        await Socket.SendAsync(data);
     }
 
-    public async Task DisconnectAsync()
+    public async Task DisconnectSocketAsync()
     {
-        await SocketWrapper.CloseSocketConnectionAsync();
+        await Socket.DisconnectAsync(false);
     }
 
     public void Dispose()
     {
-        SocketWrapper.Dispose();
+        Socket.Dispose();
     }
 }

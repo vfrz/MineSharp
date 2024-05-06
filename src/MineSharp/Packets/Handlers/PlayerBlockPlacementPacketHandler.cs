@@ -13,20 +13,19 @@ public class PlayerBlockPlacementPacketHandler : IClientPacketHandler<PlayerBloc
         var coordinates = new Coordinates3D(packet.X, packet.Z, packet.Y);
         ApplyDirectionToCoordinates(ref coordinates, packet.Direction);
 
-        await Parallel.ForEachAsync(context.Server.Clients, async (client, token) =>
+        await context.Server.BroadcastPacketAsync(new BlockUpdatePacket
         {
-            using var session = client.SocketWrapper.StartWriting();
-            session.WriteByte(0x35);
-            await session.WriteIntAsync(coordinates.X);
-            session.WriteSByte(coordinates.Y);
-            await session.WriteIntAsync(coordinates.Z);
-            session.WriteByte((byte) packet.BlockId);
-            session.WriteByte(0);
+            X = coordinates.X,
+            Y = coordinates.Y,
+            Z = coordinates.Z,
+            BlockId = (byte) packet.BlockId,
+            Metadata = 0
         });
 
         //TODO Update world/chunk
     }
 
+    //TODO Move this method somewhere else
     private static void ApplyDirectionToCoordinates(ref Coordinates3D coordinates, sbyte direction)
     {
         if (direction == 0)
