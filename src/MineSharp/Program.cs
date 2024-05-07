@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using MineSharp.Configuration;
 using MineSharp.Core;
 using MineSharp.Extensions;
@@ -8,6 +9,10 @@ using MineSharp.Services;
 
 
 var host = Host.CreateDefaultBuilder(args)
+    .ConfigureLogging(builder =>
+    {
+        builder.SetMinimumLevel(LogLevel.Debug);
+    })
     .ConfigureServices((context, services) =>
     {
         services.Configure<ConsoleLifetimeOptions>(options => options.SuppressStatusMessages = true);

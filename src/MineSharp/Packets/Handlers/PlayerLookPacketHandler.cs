@@ -11,7 +11,7 @@ public class PlayerLookPacketHandler : IClientPacketHandler<PlayerLookPacket>
         player.Pitch = packet.Pitch;
         player.OnGround = packet.OnGround;
 
-        //player.PositionDirty = true; //TODO Calculate this
+        player.PositionDirty = true;
 
         return Task.CompletedTask;
     }

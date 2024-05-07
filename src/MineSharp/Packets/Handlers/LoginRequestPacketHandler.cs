@@ -75,7 +75,7 @@ public class LoginRequestPacketHandler : IClientPacketHandler<LoginRequestPacket
                     CompressedData = await chunk.ToCompressedDataAsync()
                 });
             }
-
+            
             await context.RemoteClient.SendPacketAsync(new SpawnPositionPacket
             {
                 X = 0,

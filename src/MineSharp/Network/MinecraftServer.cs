@@ -1,8 +1,8 @@
 using System.Collections.Concurrent;
-using System.Diagnostics;
 using System.IO.Pipelines;
 using System.Net;
 using System.Net.Sockets;
+using Cysharp.Threading;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MineSharp.Configuration;
@@ -17,11 +17,14 @@ public class MinecraftServer
     public IEnumerable<MinecraftRemoteClient> RemoteClients => _remoteClients.Values;
     private readonly ConcurrentDictionary<string, MinecraftRemoteClient> _remoteClients;
 
-    private readonly Socket _listener;
+    private readonly Socket _socket;
     private readonly PacketsHandler _packetsHandler;
     private readonly IOptions<ServerConfiguration> _configuration;
     private readonly ILogger<MinecraftServer> _logger;
     private readonly EntityIdGenerator _entityIdGenerator;
+
+    private readonly LogicLooper _mainLooper;
+    private readonly LogicLooper _keepAliveLooper;
 
     public World World { get; }
 
@@ -40,62 +43,55 @@ public class MinecraftServer
         World.InitializeDefault();
 
         var ip = new IPEndPoint(IPAddress.Any, configuration.Value.Port);
-        _listener = new Socket(ip.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
-        _listener.Bind(ip);
+        _socket = new Socket(ip.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
+        _socket.Bind(ip);
+
+        _mainLooper = new LogicLooper(TimeSpan.FromSeconds(1 / 20d), 1);
+        _keepAliveLooper = new LogicLooper(TimeSpan.FromSeconds(5), 1);
     }
 
     public void Start(CancellationToken cancellationToken)
     {
         _logger.LogInformation("Server starting...");
 
-        _listener.Listen();
+        _socket.Listen();
 
         Task.Run(async () =>
         {
             while (!cancellationToken.IsCancellationRequested)
             {
-                var socket = await _listener.AcceptAsync(cancellationToken);
+                var socket = await _socket.AcceptAsync(cancellationToken);
                 _ = HandleClientAsync(socket, cancellationToken);
             }
         }, cancellationToken);
 
-        Task.Run(async () =>
-        {
-            var stopwatch = new Stopwatch();
-            var timer = new PeriodicTimer(TimeSpan.FromSeconds(1 / 20d));
-            stopwatch.Start();
-            while (await timer.WaitForNextTickAsync(cancellationToken))
-            {
-                var elapsed = stopwatch.Elapsed;
-                stopwatch.Restart();
-                await UpdateAsync(elapsed);
-            }
-        }, cancellationToken);
-
-        Task.Run(async () =>
-        {
-            var timer = new PeriodicTimer(TimeSpan.FromSeconds(5));
-            while (await timer.WaitForNextTickAsync(cancellationToken))
-            {
-                await BroadcastPacketAsync(new KeepAlivePacket());
-            }
-        }, cancellationToken);
+        _mainLooper.RegisterActionAsync(LoopAsync);
+        _keepAliveLooper.RegisterActionAsync(SendKeepAlivePacketsAsync);
 
         _logger.LogInformation("Server started on port: {0}", _configuration.Value.Port);
+    }
+
+    private async ValueTask<bool> SendKeepAlivePacketsAsync(LogicLooperActionContext ctx)
+    {
+        await BroadcastPacketAsync(new KeepAlivePacket());
+        return true;
     }
 
     public async Task StopAsync()
     {
         await DisconnectAllPlayersAsync("Server stopped.");
 
+        await _mainLooper.ShutdownAsync(TimeSpan.Zero);
+        await _keepAliveLooper.ShutdownAsync(TimeSpan.Zero);
+
         _logger.LogInformation("Server stoping...");
-        _listener.Shutdown(SocketShutdown.Both);
-        _listener.Close();
-        _listener.Dispose();
+        //_socket.Shutdown(SocketShutdown.Both);
+        //_socket.Close();
+        _socket.Dispose();
         _logger.LogInformation("Server stopped");
     }
 
-    public async Task UpdateAsync(TimeSpan elapsed)
+    private async ValueTask<bool> LoopAsync(LogicLooperActionContext ctx)
     {
         foreach (var remoteClient in RemoteClients)
         {
@@ -113,6 +109,8 @@ public class MinecraftServer
             }, remoteClient);
             player.PositionDirty = false;
         }
+
+        return true;
     }
 
     public async Task DisconnectAllPlayersAsync(string message)
@@ -194,8 +192,11 @@ public class MinecraftServer
 
     private async Task RemoveRemoteClientAsync(MinecraftRemoteClient remoteClient)
     {
-        await BroadcastMessageAsync($"{ChatColors.Blue}{remoteClient.Username} {ChatColors.White}has left the server!", remoteClient);
+        if (!_remoteClients.Remove(remoteClient.NetworkId, out _))
+            throw new Exception("Failed to remove client");
+        remoteClient.Dispose();
 
+        await BroadcastMessageAsync($"{ChatColors.Blue}{remoteClient.Username} {ChatColors.White}has left the server!", remoteClient);
 
         if (remoteClient.Player is not null)
         {
@@ -206,9 +207,6 @@ public class MinecraftServer
 
             _entityIdGenerator.Release(remoteClient.Player.EntityId);
         }
-
-        _remoteClients.Remove(remoteClient.NetworkId, out _);
-        remoteClient.Dispose();
     }
 
     private async Task FillPipeAsync(Socket socket, Pipe pipe, CancellationToken cancellationToken)
