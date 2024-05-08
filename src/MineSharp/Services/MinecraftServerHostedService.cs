@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Hosting;
+using MineSharp.Core;
 using MineSharp.Network;
 
 namespace MineSharp.Services;

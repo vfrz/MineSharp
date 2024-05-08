@@ -32,30 +32,30 @@ public static class SequenceReaderExtensions
 
     public static double ReadDouble(ref this SequenceReader<byte> reader)
     {
-        var buffer = reader.ReadBytes(sizeof(double));
-        //TODO Warn about using FirstSpan might cause issues if data is on multiple spans
-        return BinaryPrimitives.ReadDoubleBigEndian(buffer.FirstSpan);
+        var result = BinaryPrimitives.ReadDoubleBigEndian(reader.UnreadSpan);
+        reader.Advance(sizeof(double));
+        return result;
     }
-    
+
     public static float ReadFloat(ref this SequenceReader<byte> reader)
     {
-        var buffer = reader.ReadBytes(sizeof(float));
-        //TODO Warn about using FirstSpan might cause issues if data is on multiple spans
-        return BinaryPrimitives.ReadSingleBigEndian(buffer.FirstSpan);
+        var result = BinaryPrimitives.ReadSingleBigEndian(reader.UnreadSpan);
+        reader.Advance(sizeof(float));
+        return result;
     }
 
     public static ushort ReadUInt16(ref this SequenceReader<byte> reader)
     {
-        var buffer = reader.ReadBytes(2);
-        //TODO Warn about using FirstSpan might cause issues if data is on multiple spans
-        return BinaryPrimitives.ReadUInt16BigEndian(buffer.FirstSpan);
+        var result = BinaryPrimitives.ReadUInt16BigEndian(reader.UnreadSpan);
+        reader.Advance(sizeof(ushort));
+        return result;
     }
 
     public static short ReadShort(ref this SequenceReader<byte> reader)
     {
-        var buffer = reader.ReadBytes(2);
-        //TODO Warn about using FirstSpan might cause issues if data is on multiple spans
-        return BinaryPrimitives.ReadInt16BigEndian(buffer.FirstSpan);
+        var result = BinaryPrimitives.ReadInt16BigEndian(reader.UnreadSpan);
+        reader.Advance(sizeof(short));
+        return result;
     }
 
     public static string ReadString(ref this SequenceReader<byte> reader)
@@ -73,7 +73,7 @@ public static class SequenceReaderExtensions
             return output;
         throw new Exception("Failed to read byte");
     }
-    
+
     public static sbyte ReadSByte(ref this SequenceReader<byte> reader)
     {
         if (reader.TryRead(out var output))

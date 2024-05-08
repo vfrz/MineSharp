@@ -1,0 +1,26 @@
+using MineSharp.Commands;
+using MineSharp.Core.Packets;
+
+namespace MineSharp.Network.Packets.Handlers;
+
+public class ChatMessagePacketHandler : IClientPacketHandler<ChatMessagePacket>
+{
+    private readonly CommandHandler _commandHandler;
+
+    public ChatMessagePacketHandler(CommandHandler commandHandler)
+    {
+        _commandHandler = commandHandler;
+    }
+
+    public async Task HandleAsync(ChatMessagePacket packet, ClientPacketHandlerContext context)
+    {
+        if (packet.Message.StartsWith('/'))
+        {
+            await _commandHandler.ParseAndExecuteCommandAsync(packet.Message, context.Server, context.RemoteClient);
+        }
+        else
+        {
+            await context.Server.BroadcastMessageAsync($"[{context.RemoteClient.Username}] {packet.Message}");
+        }
+    }
+}

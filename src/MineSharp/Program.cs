@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using MineSharp.Commands;
 using MineSharp.Configuration;
 using MineSharp.Core;
 using MineSharp.Extensions;
@@ -12,6 +13,10 @@ var host = Host.CreateDefaultBuilder(args)
     .ConfigureLogging(builder =>
     {
         builder.SetMinimumLevel(LogLevel.Debug);
+        builder.AddSimpleConsole(options =>
+        {
+            options.TimestampFormat = "[HH:mm:ss:fff] ";
+        });
     })
     .ConfigureServices((context, services) =>
     {
@@ -19,9 +24,9 @@ var host = Host.CreateDefaultBuilder(args)
         
         services.Configure<ServerConfiguration>(context.Configuration);
         
-        services.AddSingleton<PacketsHandler>();
+        services.AddSingleton<PacketDispatcher>();
+        services.AddSingleton<CommandHandler>();
         services.AddSingleton<MinecraftServer>();
-        services.AddSingleton<EntityIdGenerator>();
         services.AddHostedService<MinecraftServerHostedService>();
 
         services.RegisterClientPacketHandlers(typeof(Program).Assembly);
