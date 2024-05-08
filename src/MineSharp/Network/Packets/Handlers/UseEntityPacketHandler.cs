@@ -11,21 +11,27 @@ public class UseEntityPacketHandler : IClientPacketHandler<UseEntityPacket>
         //TODO Make this clean
         if (packet.LeftClick 
             && context.Server.EntityManager.TryGetEntity(packet.TargetEntityId, out var targetEntity)
-            && targetEntity is MinecraftPlayer targetPlayer)
+            && targetEntity is ILivingEntity targetLivingEntity)
         {
-            await targetPlayer.SetHealthAsync(targetPlayer.Health - 1);
+            var remotePlayer = context.RemoteClient.Player!;
+            
             await context.Server.BroadcastPacketAsync(new EntityStatusPacket
             {
-                EntityId = targetPlayer.EntityId,
+                EntityId = targetLivingEntity.EntityId,
                 Status = EntityStatus.Hurt
             });
+
+            var multiplier = targetLivingEntity.KnockBackMultiplier;
             await context.Server.BroadcastPacketAsync(new EntityVelocity
             {
-                EntityId = targetPlayer.EntityId,
-                VelocityX = 0,
-                VelocityY = 2000,
-                VelocityZ = 0
+                EntityId = targetLivingEntity.EntityId,
+                VelocityX = (short) (-MinecraftMath.SinDegree(remotePlayer.Yaw) * 3000 * multiplier.X),
+                VelocityY = (short) (targetLivingEntity.OnGround ? 3000 * multiplier.Y : 0),
+                VelocityZ = (short) (MinecraftMath.CosDegree(remotePlayer.Yaw) * 3000 * multiplier.Z)
             });
+            //TODO Adapt damage depending on player's weapon/tool
+            var damage = 1;
+            await targetLivingEntity.SetHealthAsync((short) (targetLivingEntity.Health - damage));
         }
     }
 }

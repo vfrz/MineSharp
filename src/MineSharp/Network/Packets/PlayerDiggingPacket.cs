@@ -14,7 +14,7 @@ public record PlayerDiggingPacket : IClientPacket
     public sbyte Y { get; set; }
     public int Z { get; set; }
     public sbyte Face { get; set; }
-
+    
     public void Read(ref SequenceReader<byte> reader)
     {
         Status = (PlayerDiggingStatus) reader.ReadSByte();

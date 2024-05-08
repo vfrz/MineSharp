@@ -22,9 +22,11 @@ public class PacketDispatcher
 
         var task = packetId switch
         {
+            AnimationPacket.Id => HandlePacket<AnimationPacket>(ref reader, context),
             ChatMessagePacket.Id => HandlePacket<ChatMessagePacket>(ref reader, context),
             EntityActionPacket.Id => HandlePacket<EntityActionPacket>(ref reader, context),
             HandshakeRequestPacket.Id => HandlePacket<HandshakeRequestPacket>(ref reader, context),
+            HoldingChangePacket.Id => HandlePacket<HoldingChangePacket>(ref reader, context),
             LoginRequestPacket.Id => HandlePacket<LoginRequestPacket>(ref reader, context),
             PlayerBlockPlacementPacket.Id => HandlePacket<PlayerBlockPlacementPacket>(ref reader, context),
             PlayerDiggingPacket.Id => HandlePacket<PlayerDiggingPacket>(ref reader, context),
@@ -52,29 +54,10 @@ public class PacketDispatcher
 
     private static Task HandleUnknownPacket(ref SequenceReader<byte> reader, ClientPacketHandlerContext context, int packetId)
     {
-        //todo temporary hack to avoid packet loss
-        if (packetId == 0x07)
-        {
-            reader.Advance(9);
-            return Task.CompletedTask;
-        }
-
-        if (packetId == 0x10)
-        {
-            reader.Advance(2);
-            return Task.CompletedTask;
-        }
-
-        if (packetId == 0x12)
-        {
-            reader.Advance(5);
-            return Task.CompletedTask;
-        }
-
-        var packetSize = (int) reader.Length - 1;
         //TODO Dangerous because we can lose data
+        var packetSize = (int) reader.Length - 1;
         var packetData = packetSize > 0 ? reader.ReadBytesArray(packetSize) : Array.Empty<byte>();
-        Console.WriteLine($"Unknown packet: 0x{packetId:X} with data length: {packetData.Length}");
+        Console.WriteLine($"[WARN] Unknown packet: 0x{packetId:X} with data length: {packetData.Length}");
         return Task.CompletedTask;
     }
 }

@@ -10,6 +10,7 @@ using MineSharp.Commands;
 using MineSharp.Configuration;
 using MineSharp.Core.Packets;
 using MineSharp.Entities;
+using MineSharp.Entities.Mobs;
 using MineSharp.Network;
 using MineSharp.Network.Packets;
 using MineSharp.World;
@@ -18,18 +19,21 @@ namespace MineSharp.Core;
 
 public class MinecraftServer
 {
+    private const int ClientTimeoutInSeconds = 10;
+
     public IEnumerable<MinecraftRemoteClient> RemoteClients => _remoteClients.Values;
     private readonly ConcurrentDictionary<string, MinecraftRemoteClient> _remoteClients;
 
     private readonly Socket _socket;
     private readonly PacketDispatcher _packetDispatcher;
-    private readonly IOptions<ServerConfiguration> _configuration;
+    public ServerConfiguration Configuration { get; }
     private readonly ILogger<MinecraftServer> _logger;
     private readonly IServiceProvider _serviceProvider;
     private readonly CommandHandler _commandHandler;
 
     public MinecraftWorld World { get; }
     public EntityManager EntityManager { get; }
+    public Scheduler Scheduler { get; }
 
     public MinecraftServer(PacketDispatcher packetDispatcher,
         IOptions<ServerConfiguration> configuration,
@@ -38,7 +42,7 @@ public class MinecraftServer
         CommandHandler commandHandler)
     {
         _packetDispatcher = packetDispatcher;
-        _configuration = configuration;
+        Configuration = configuration.Value;
         _logger = logger;
         _serviceProvider = serviceProvider;
         _commandHandler = commandHandler;
@@ -47,8 +51,10 @@ public class MinecraftServer
         World = new MinecraftWorld(this);
         World.InitializeDefault();
 
-        EntityManager = new EntityManager();
-        
+        EntityManager = new EntityManager(this);
+
+        Scheduler = new Scheduler();
+
         RegisterDefaultCommands();
 
         var ip = new IPEndPoint(IPAddress.Any, configuration.Value.Port);
@@ -58,7 +64,7 @@ public class MinecraftServer
 
     private void RegisterDefaultCommands()
     {
-        _commandHandler.RegisterCommand("id", async (server, client, args) =>
+        _commandHandler.TryRegisterCommand("id", async (_, client, _) =>
         {
             if (client is null)
                 return true;
@@ -68,8 +74,8 @@ public class MinecraftServer
             });
             return true;
         });
-        
-        _commandHandler.RegisterCommand("rain", async (server, client, args) =>
+
+        _commandHandler.TryRegisterCommand("rain", async (server, _, _) =>
         {
             if (server.World.Raining)
                 await server.World.StopRainAsync();
@@ -77,23 +83,35 @@ public class MinecraftServer
                 await server.World.StartRainAsync();
             return true;
         });
-        
-        _commandHandler.RegisterCommand("time", async (server, client, args) =>
+
+        _commandHandler.TryRegisterCommand("time", async (server, _, args) =>
         {
             var time = long.Parse(args[0]);
             await server.World.SetTimeAsync(time);
             return true;
         });
-        
-        _commandHandler.RegisterCommand("heal", async (server, client, args) =>
+
+        _commandHandler.TryRegisterCommand("heal", async (_, client, _) =>
         {
             await client!.Player!.SetHealthAsync(20);
             return true;
         });
-        
-        _commandHandler.RegisterCommand("kill", async (server, client, args) =>
+
+        _commandHandler.TryRegisterCommand("kill", async (_, client, _) =>
         {
-            await client!.Player!.KillAsync();
+            await client!.Player!.SetHealthAsync(0);
+            return true;
+        });
+
+        _commandHandler.TryRegisterCommand("yaw", async (server, client, _) =>
+        {
+            await server.BroadcastMessageAsync($"Yaw: {client!.Player!.Yaw}");
+            return true;
+        });
+
+        _commandHandler.TryRegisterCommand("mob", async (server, client, args) =>
+        {
+            await server.SpawnMobAsync((MobType) byte.Parse(args[0]), client!.Player!.Position.ToVector3i());
             return true;
         });
     }
@@ -107,8 +125,16 @@ public class MinecraftServer
     {
         _logger.LogInformation("Server starting...");
 
-        _socket.Listen();
+        World.Start();
+        Scheduler.Start();
 
+        // Main tick loop
+        RegisterLoop(TimeSpan.FromMilliseconds(50), ProcessAsync, cancellationToken);
+
+        RegisterLoop(TimeSpan.FromSeconds(5), SendKeepAlivePacketsAsync, cancellationToken);
+        RegisterLoop(TimeSpan.FromSeconds(1), World.SendTimeUpdateAsync, cancellationToken);
+
+        _socket.Listen();
         Task.Run(async () =>
         {
             while (!cancellationToken.IsCancellationRequested)
@@ -118,15 +144,7 @@ public class MinecraftServer
             }
         }, cancellationToken);
 
-        World.Start();
-
-        // Main tick loop
-        RegisterLoop(TimeSpan.FromMilliseconds(50), ProcessAsync, cancellationToken);
-
-        RegisterLoop(TimeSpan.FromSeconds(5), SendKeepAlivePacketsAsync, cancellationToken);
-        RegisterLoop(TimeSpan.FromSeconds(1), World.SendTimeUpdateAsync, cancellationToken);
-
-        _logger.LogInformation("Server started on port: {0}", _configuration.Value.Port);
+        _logger.LogInformation("Server started on port: {0}", Configuration.Port);
     }
 
     private void RegisterLoop(TimeSpan interval, Func<Task> func, CancellationToken cancellationToken)
@@ -166,6 +184,7 @@ public class MinecraftServer
     {
         await DisconnectAllPlayersAsync("Server stopped.");
 
+        Scheduler.Stop();
         World.Stop();
 
         _logger.LogInformation("Server stoping...");
@@ -183,15 +202,18 @@ public class MinecraftServer
             if (player is null || player.PositionDirty is false || player.Health == 0)
                 continue;
 
-            if (player.Y < -50)
-                await player.KillAsync();
+            // Kill player if off map
+            if (player.Position.Y < -50)
+            {
+                await player.SetHealthAsync(0);
+            }
 
             await BroadcastPacketAsync(new EntityTeleportPacket
             {
                 EntityId = player.EntityId,
-                X = (int) (player.X * 32),
-                Y = (int) (player.Y * 32),
-                Z = (int) (player.Z * 32),
+                X = player.Position.X.ToAbsoluteInt(),
+                Y = player.Position.Y.ToAbsoluteInt(),
+                Z = player.Position.Z.ToAbsoluteInt(),
                 Yaw = MinecraftMath.RotationFloatToSByte(player.Yaw),
                 Pitch = MinecraftMath.RotationFloatToSByte(player.Pitch)
             }, remoteClient, readyOnly: true);
@@ -199,6 +221,7 @@ public class MinecraftServer
         }
 
         await World.ProcessAsync(elapsed);
+        await Scheduler.ProcessAsync();
     }
 
     public async Task DisconnectAllPlayersAsync(string message)
@@ -230,15 +253,67 @@ public class MinecraftServer
         }, except);
     }
 
+    public async Task<IMobEntity> SpawnMobAsync(MobType type, Vector3i position)
+    {
+        var mob = await (type switch
+        {
+            MobType.Creeper => SpawnMobAsync(new Creeper(), position),
+            MobType.Skeleton => SpawnMobAsync(new Skeleton(), position),
+            MobType.Spider => SpawnMobAsync(new Spider(), position),
+            MobType.GiantZombie => SpawnMobAsync(new GiantZombie(), position),
+            MobType.Zombie => SpawnMobAsync(new Zombie(), position),
+            MobType.Slime => SpawnMobAsync(new Slime(), position),
+            MobType.Ghast => SpawnMobAsync(new Ghast(), position),
+            MobType.ZombiePigman => SpawnMobAsync(new ZombiePigman(), position),
+            MobType.Pig => SpawnMobAsync(new Pig(), position),
+            MobType.Sheep => SpawnMobAsync(new Sheep(), position),
+            MobType.Cow => SpawnMobAsync(new Cow(), position),
+            MobType.Chicken => SpawnMobAsync(new Chicken(), position),
+            MobType.Squid => SpawnMobAsync(new Squid(), position),
+            MobType.Wolf => SpawnMobAsync(new Wolf(), position),
+            _ => throw new ArgumentOutOfRangeException(nameof(type), type, null)
+        });
+        return mob;
+    }
+
+    public async Task<T> SpawnMobAsync<T>(Vector3i position) where T : IMobEntity, new()
+    {
+        var mob = new T();
+        await SpawnMobAsync(mob, position);
+        return mob;
+    }
+
+    public async Task<IMobEntity> SpawnMobAsync(IMobEntity mob, Vector3i position)
+    {
+        mob.Position = position.ToVector3();
+        mob.Pitch = 0;
+        mob.Yaw = 0;
+        mob.OnGround = true;
+        await mob.SetHealthAsync(mob.MaxHealth);
+        EntityManager.RegisterEntity(mob);
+        await BroadcastPacketAsync(new MobSpawnPacket
+        {
+            EntityId = mob.EntityId,
+            X = mob.Position.X.ToAbsoluteInt(),
+            Y = mob.Position.Y.ToAbsoluteInt(),
+            Z = mob.Position.Z.ToAbsoluteInt(),
+            Pitch = MinecraftMath.RotationFloatToSByte(mob.Pitch),
+            Yaw = MinecraftMath.RotationFloatToSByte(mob.Yaw),
+            Type = mob.Type,
+            MetadataContainer = mob.MetadataContainer
+        });
+        return mob;
+    }
+
     private async Task HandleClientAsync(Socket socket, CancellationToken cancellationToken)
     {
         var remoteClient = new MinecraftRemoteClient(socket, this);
 
-        if (_remoteClients.Count >= _configuration.Value.MaxPlayers)
+        if (_remoteClients.Count >= Configuration.MaxPlayers)
         {
             await remoteClient.SendPacketAsync(new PlayerDisconnectPacket
             {
-                Reason = $"Server is full: {_remoteClients.Count}/{_configuration.Value.MaxPlayers}"
+                Reason = $"Server is full: {_remoteClients.Count}/{Configuration.MaxPlayers}"
             });
             await remoteClient.DisconnectSocketAsync();
             return;
@@ -256,6 +331,21 @@ public class MinecraftServer
             var reading = ReadPipeAsync(context, pipe, cancellationToken);
 
             await Task.WhenAll(reading, writing);
+        }
+        catch (OperationCanceledException)
+        {
+            _logger.LogWarning("Client with network id: {0} has timed out", remoteClient.NetworkId);
+            try
+            {
+                await remoteClient.SendPacketAsync(new PlayerDisconnectPacket
+                {
+                    Reason = "Disconnected because you was afk"
+                });
+            }
+            catch
+            {
+                // ignored
+            }
         }
         catch (Exception ex)
         {
@@ -289,10 +379,11 @@ public class MinecraftServer
 
     private async Task PlayerDisconnectedAsync(MinecraftRemoteClient remoteClient)
     {
-        await BroadcastMessageAsync($"{ChatColors.Blue}{remoteClient.Username} {ChatColors.White}has left the server!", remoteClient);
-
         if (remoteClient.Player is not null)
         {
+            var leftMessage = $"{ChatColors.Blue}{remoteClient.Username} {ChatColors.White}has left the server!";
+            await BroadcastMessageAsync(leftMessage, remoteClient);
+
             await BroadcastPacketAsync(new DestroyEntityPacket
             {
                 EntityId = remoteClient.Player.EntityId
@@ -306,10 +397,13 @@ public class MinecraftServer
     {
         while (true)
         {
+            using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            cts.CancelAfter(TimeSpan.FromSeconds(ClientTimeoutInSeconds));
+
             // Allocate at least 65535 bytes from the PipeWriter. (Maximum tcp packet size)
             var memory = pipe.Writer.GetMemory(65535);
 
-            var bytesRead = await socket.ReceiveAsync(memory, SocketFlags.None, cancellationToken);
+            var bytesRead = await socket.ReceiveAsync(memory, SocketFlags.None, cts.Token);
             if (bytesRead == 0)
                 break;
 
@@ -317,7 +411,7 @@ public class MinecraftServer
             pipe.Writer.Advance(bytesRead);
 
             // Make the data available to the PipeReader.
-            var result = await pipe.Writer.FlushAsync(cancellationToken);
+            var result = await pipe.Writer.FlushAsync(cts.Token);
 
             if (result.IsCompleted)
                 break;
@@ -331,7 +425,10 @@ public class MinecraftServer
     {
         while (true)
         {
-            var result = await pipe.Reader.ReadAsync(cancellationToken);
+            using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            cts.CancelAfter(TimeSpan.FromSeconds(ClientTimeoutInSeconds));
+
+            var result = await pipe.Reader.ReadAsync(cts.Token);
             var buffer = result.Buffer;
 
             if (buffer.Length > 0)

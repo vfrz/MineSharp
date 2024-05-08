@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using MineSharp.Core;
 
 namespace MineSharp.Entities;
 
@@ -6,18 +7,18 @@ public class EntityManager
 {
     private readonly EntityIdGenerator _idGenerator;
     private readonly ConcurrentDictionary<int, IEntity> _entities;
+    private readonly MinecraftServer _server;
 
-    public EntityManager()
+    public EntityManager(MinecraftServer server)
     {
+        _server = server;
         _idGenerator = new EntityIdGenerator();
         _entities = new ConcurrentDictionary<int, IEntity>();
     }
 
     public void RegisterEntity(IEntity entity)
     {
-        if (entity.EntityId != 0)
-            throw new Exception($"Entity already registered with id: {entity.EntityId}");
-        entity.EntityId = _idGenerator.Next();
+        entity.InitializeEntity(_server, _idGenerator.Next());
         _entities.TryAdd(entity.EntityId, entity);
     }
 

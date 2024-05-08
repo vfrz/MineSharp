@@ -16,7 +16,7 @@ public class ChatMessagePacketHandler : IClientPacketHandler<ChatMessagePacket>
     {
         if (packet.Message.StartsWith('/'))
         {
-            await _commandHandler.ParseAndExecuteCommandAsync(packet.Message, context.Server, context.RemoteClient);
+            await _commandHandler.TryExecuteCommandAsync(packet.Message, context.Server, context.RemoteClient);
         }
         else
         {

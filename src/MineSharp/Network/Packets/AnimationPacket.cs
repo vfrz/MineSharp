@@ -1,13 +1,21 @@
+using System.Buffers;
 using MineSharp.Core.Packets;
+using MineSharp.Extensions;
 
 namespace MineSharp.Network.Packets;
 
-public class AnimationPacket : IServerPacket
+public class AnimationPacket : IClientPacket, IServerPacket
 {
     public const int Id = 0x12;
 
     public int EntityId { get; set; }
     public AnimationType Animation { get; set; }
+
+    public void Read(ref SequenceReader<byte> reader)
+    {
+        EntityId = reader.ReadInt();
+        Animation = (AnimationType) reader.ReadByte();
+    }
 
     public void Write(PacketWriter writer)
     {

@@ -7,19 +7,14 @@ public class CommandHandler
 {
     public delegate Task<bool> CommandCallback(MinecraftServer server, MinecraftRemoteClient? remoteClient, params string[] args);
 
-    private readonly ConcurrentDictionary<string, CommandCallback> _commands;
+    private readonly ConcurrentDictionary<string, CommandCallback> _commands = new();
 
-    public CommandHandler()
+    public bool TryRegisterCommand(string command, CommandCallback callback)
     {
-        _commands = new ConcurrentDictionary<string, CommandCallback>();
+        return _commands.TryAdd(command, callback);
     }
 
-    public void RegisterCommand(string command, CommandCallback callback)
-    {
-        _commands.TryAdd(command, callback);
-    }
-
-    public async Task<bool> ParseAndExecuteCommandAsync(string completeCommand, MinecraftServer server, MinecraftRemoteClient? remoteClient)
+    public async Task<bool> TryExecuteCommandAsync(string completeCommand, MinecraftServer server, MinecraftRemoteClient? remoteClient)
     {
         if (!CommandParser.TryParse(completeCommand, out var parsedCommand))
             return false;
