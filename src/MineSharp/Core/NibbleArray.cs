@@ -13,18 +13,12 @@ public class NibbleArray
 
     public byte this[int index]
     {
-        get
-        {
-            var value = (byte) (_innerArray[_offset + index / 2] >> (index % 2 == 0 ? 4 : 0) & 0x0F);
-            return value;
-        }
+        get => (byte) (_innerArray[_offset + index / 2] >> (index % 2 * 4) & 0xF);
         set
         {
-            if (value > 0xF)
-                throw new ArgumentOutOfRangeException(nameof(index), "Value must be between 0 and 15 (inclusive).");
-            var shift = index % 2 == 0 ? 4 : 0;
-            _innerArray[_offset + index / 2] &= (byte) (0xFF ^ (0x0F << shift));
-            _innerArray[_offset + index / 2] |= (byte) (value << shift);
+            value &= 0xF;
+            _innerArray[_offset + index / 2] &= (byte) ~(0xF << (index % 2 * 4));
+            _innerArray[_offset + index / 2] |= (byte) (value << (index % 2 * 4));
         }
     }
 }

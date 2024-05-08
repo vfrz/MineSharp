@@ -1,6 +1,5 @@
 using MineSharp.Core;
 using MineSharp.Core.Packets;
-using MineSharp.Entities.Mobs;
 
 namespace MineSharp.Network.Packets.Handlers;
 
@@ -13,11 +12,20 @@ public class PlayerBlockPlacementPacketHandler : IClientPacketHandler<PlayerBloc
 
         var coordinates = new Vector3i(packet.X, packet.Y, packet.Z);
         var directedCoordinates = ApplyDirectionToCoordinates(coordinates, packet.Direction);
-        
+
         if (packet.BlockId == -1)
         {
-            //await context.RemoteClient.SendMessageAsync($"Position: {packet.X} {packet.Y} {packet.Z}");
-            await context.Server.SpawnMobAsync(new Sheep(Sheep.ColorType.Red), directedCoordinates);
+            /*await context.Server.BroadcastPacketAsync(new BlockUpdatePacket
+            {
+                X = directedCoordinates.X,
+                Y = (sbyte) directedCoordinates.Y,
+                Z = directedCoordinates.Z,
+                BlockId = 31,
+                Metadata = 0x1
+            });*/
+
+            await context.RemoteClient.SendMessageAsync($"Position: {packet.X} {packet.Y} {packet.Z}");
+            //await context.Server.SpawnMobAsync(new Sheep(Sheep.ColorType.Red), directedCoordinates);
 
             /*await context.Server.BroadcastPacketAsync(new ThunderboltPacket
             {

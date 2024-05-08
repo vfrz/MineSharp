@@ -65,30 +65,6 @@ public class LoginRequestPacketHandler : IClientPacketHandler<LoginRequestPacket
 
         await context.RemoteClient.UpdateLoadedChunksAsync();
 
-        /*foreach (var chunk in context.Server.World.Chunks)
-        {
-            if (chunk is null)
-                continue;
-
-            await context.RemoteClient.SendPacketAsync(new PreChunkPacket
-            {
-                X = chunk.X,
-                Z = chunk.Z,
-                Mode = PreChunkPacket.LoadingMode.Load
-            });
-
-            await context.RemoteClient.SendPacketAsync(new ChunkPacket
-            {
-                X = chunk.X * WorldChunk.Length,
-                Y = 0,
-                Z = chunk.Z * WorldChunk.Width,
-                SizeX = WorldChunk.Length - 1,
-                SizeY = WorldChunk.Height - 1,
-                SizeZ = WorldChunk.Width - 1,
-                CompressedData = await chunk.ToCompressedDataAsync()
-            });
-        }*/
-
         await context.RemoteClient.SendPacketAsync(new TimeUpdatePacket
         {
             Time = context.Server.World.Time
@@ -174,7 +150,7 @@ public class LoginRequestPacketHandler : IClientPacketHandler<LoginRequestPacket
         }, context.RemoteClient);
 
 
-        var welcomeMessage = $"Welcome to the server, {ChatColors.Blue}{context.RemoteClient.Username}{ChatColors.White}!";
+        var welcomeMessage = $"Welcome on MineSharp, {ChatColors.Blue}{context.RemoteClient.Username}{ChatColors.White}!";
         await context.RemoteClient.SendMessageAsync(welcomeMessage);
 
         var joinedMessage = $"{ChatColors.Blue}{context.RemoteClient.Username} {ChatColors.White}has joined the server!";

@@ -1,3 +1,4 @@
+using System.Security.Cryptography;
 using Microsoft.Extensions.Logging;
 using MineSharp.Core;
 using MineSharp.Network.Packets;
@@ -18,9 +19,33 @@ public class MinecraftWorld
 
     private static readonly object Locker = new();
 
-    public MinecraftWorld(MinecraftServer server)
+    public int Seed { get; }
+    public FastNoiseLite Noise { get; }
+    public FastNoiseLite OtherNoise { get; }
+    public Random Random { get; }
+
+    public MinecraftWorld(MinecraftServer server, int seed)
     {
         Server = server;
+        Seed = seed;
+
+        Random = new Random(Seed);
+        
+        Noise = new FastNoiseLite(Seed);
+        Noise.SetNoiseType(FastNoiseLite.NoiseType.OpenSimplex2);
+        // Terrain parameters
+        Noise.SetFrequency(0.008f); // Adjust the frequency to change the terrain detail
+        Noise.SetFractalOctaves(16); // Adjust the number of octaves for more complexity
+        Noise.SetFractalLacunarity(2.0f); // Adjust the lacunarity for variation
+        Noise.SetFractalGain(0.5f); // Adjust the gain for smoothness
+        
+        OtherNoise = new FastNoiseLite(Seed);
+        OtherNoise.SetNoiseType(FastNoiseLite.NoiseType.OpenSimplex2);
+        OtherNoise.SetFrequency(0.5f); // Adjust the frequency to change the terrain detail
+        OtherNoise.SetFractalOctaves(1); // Adjust the number of octaves for more complexity
+        OtherNoise.SetFractalLacunarity(2.0f); // Adjust the lacunarity for variation
+        OtherNoise.SetFractalGain(0.5f); // Adjust the gain for smoothness
+
         _logger = server.GetLogger<MinecraftWorld>();
         Timer = new WorldTimer();
         Chunks = new TwoDimensionalArray<WorldChunk?>(-500, 500, -500, 500);
@@ -54,11 +79,62 @@ public class MinecraftWorld
         }, readyOnly: true);
     }
 
-    public void InitializeDefault()
+    public void GenerateInitialChunks()
     {
-        /*for (var x = Chunks.LowerBoundX; x < Chunks.UpperBoundX; x++)
-        for (var z = Chunks.LowerBoundZ; z < Chunks.UpperBoundZ; z++)
-            GetOrLoadChunk(x, z);*/
+        Parallel.ForEach(GetInitialChunks(), chunk =>
+        {
+            GetOrLoadChunk(chunk.X, chunk.Z);
+        });
+    }
+    
+    public HashSet<Vector2i> GetInitialChunks()
+    {
+        var chunks = new HashSet<Vector2i>();
+        var distance = Server.Configuration.VisibleChunksDistance;
+        var currentChunk = new Vector2i(0, 0);
+        chunks.Add(currentChunk);
+
+        // Front
+        for (var z = 1; z < distance; z++)
+        {
+            chunks.Add(new Vector2i(currentChunk.X, currentChunk.Z + z));
+            for (var x = 1; x < distance - z; x++)
+            {
+                chunks.Add(new Vector2i(currentChunk.X - x, currentChunk.Z + z));
+            }
+        }
+
+        // Right
+        for (var x = 1; x < distance; x++)
+        {
+            chunks.Add(new Vector2i(currentChunk.X - x, currentChunk.Z));
+            for (var z = 1; z < distance - x; z++)
+            {
+                chunks.Add(new Vector2i(currentChunk.X - x, currentChunk.Z - z));
+            }
+        }
+
+        // Back
+        for (var z = 1; z < distance; z++)
+        {
+            chunks.Add(new Vector2i(currentChunk.X, currentChunk.Z - z));
+            for (var x = 1; x < distance - z; x++)
+            {
+                chunks.Add(new Vector2i(currentChunk.X + x, currentChunk.Z - z));
+            }
+        }
+
+        // Left
+        for (var x = 1; x < distance; x++)
+        {
+            chunks.Add(new Vector2i(currentChunk.X + x, currentChunk.Z));
+            for (var z = 1; z < distance - x; z++)
+            {
+                chunks.Add(new Vector2i(currentChunk.X + x, currentChunk.Z + z));
+            }
+        }
+
+        return chunks;
     }
 
     public async Task SetBlockAsync(Vector3i worldPosition, byte blockId)
@@ -81,8 +157,9 @@ public class MinecraftWorld
         {
             chunk = new WorldChunk(this, chunkX, chunkZ);
             Chunks[chunkX, chunkZ] = chunk;
-            chunk.FillDefault();
+            chunk.Generate();
         }
+
         return chunk;
     }
 

@@ -65,19 +65,40 @@ public class WorldChunk
         return new Vector2i(chunkX, chunkZ);
     }
 
-    public void FillDefault()
+    public void Generate()
     {
         for (var x = 0; x < Length; x++)
         {
-            for (var y = 0; y < Height; y++)
+            for (var z = 0; z < Width; z++)
             {
-                for (var z = 0; z < Width; z++)
+                var noiseValue = (World.Noise.GetNoise(X * Length + x, Z * Width + z) + 1) / 2f;
+
+                // Bedrock
+                _blocks[CoordinatesToIndex(x, 0, z)] = 7;
+
+                var height = (int) (noiseValue * 30f + 5);
+                for (var y = 1; y <= height; y++)
+                {
+                    if (y == height)
+                    {
+                        _blocks[CoordinatesToIndex(x, y, z)] = 2;
+                        var otherNoiseValue = (World.OtherNoise.GetNoise(X * Length + x, Z * Width + z) + 1) / 2f;
+                        if (otherNoiseValue < 0.4f)
+                        {
+                            _blocks[CoordinatesToIndex(x, y + 1, z)] = 31;
+                            _metadata[CoordinatesToIndex(x, y + 1, z)] = 0x1;
+                        }
+                    }
+                    else
+                    {
+                        _blocks[CoordinatesToIndex(x, y, z)] = 3;
+                    }
+                }
+
+                for (var y = 0; y < Height; y++)
                 {
                     var index = CoordinatesToIndex(x, y, z);
-                    if (y < 1)
-                        _blocks[index] = 7;
-                    else if (y < 3)
-                        _blocks[index] = 2;
+
                     _light[index] = 15;
                     _skyLight[index] = 15;
                 }

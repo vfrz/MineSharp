@@ -48,8 +48,8 @@ public class MinecraftServer
         _commandHandler = commandHandler;
         _remoteClients = new ConcurrentDictionary<string, MinecraftRemoteClient>();
 
-        World = new MinecraftWorld(this);
-        World.InitializeDefault();
+        World = new MinecraftWorld(this, 42);
+        World.GenerateInitialChunks();
 
         EntityManager = new EntityManager(this);
 

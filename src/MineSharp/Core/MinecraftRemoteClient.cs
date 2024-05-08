@@ -36,10 +36,11 @@ public class MinecraftRemoteClient : IDisposable
     {
         if (Player is not null)
             throw new Exception($"Can't initialize player because it has already been initialized");
+        var position = new Vector3(0, 50, 0);
         var player = new PlayerEntity(this)
         {
-            Position = new Vector3(0, 5, 0),
-            Stance = 5 + 1.62,
+            Position = position,
+            Stance = position.Y + 1.62,
             OnGround = false, //TODO Change that when spawning correctly
             Pitch = 0,
             Yaw = 0,
