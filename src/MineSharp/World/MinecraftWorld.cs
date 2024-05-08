@@ -16,12 +16,14 @@ public class MinecraftWorld
     public MinecraftServer Server { get; }
     private readonly ILogger<MinecraftWorld> _logger;
 
+    private static readonly object Locker = new();
+
     public MinecraftWorld(MinecraftServer server)
     {
         Server = server;
         _logger = server.GetLogger<MinecraftWorld>();
         Timer = new WorldTimer();
-        Chunks = new TwoDimensionalArray<WorldChunk?>(-1, 2, -1, 2);
+        Chunks = new TwoDimensionalArray<WorldChunk?>(-500, 500, -500, 500);
     }
 
     public void Start()
@@ -54,9 +56,9 @@ public class MinecraftWorld
 
     public void InitializeDefault()
     {
-        for (var x = Chunks.LowerBoundX; x < Chunks.UpperBoundX; x++)
+        /*for (var x = Chunks.LowerBoundX; x < Chunks.UpperBoundX; x++)
         for (var z = Chunks.LowerBoundZ; z < Chunks.UpperBoundZ; z++)
-            LoadChunk(x, z);
+            GetOrLoadChunk(x, z);*/
     }
 
     public async Task SetBlockAsync(Vector3i worldPosition, byte blockId)
@@ -66,16 +68,21 @@ public class MinecraftWorld
 
         var chunk = Chunks[chunkX, chunkZ];
         if (chunk is null)
-            chunk = LoadChunk(chunkX, chunkZ);
+            chunk = GetOrLoadChunk(chunkX, chunkZ);
 
         await chunk.SetBlockAsync(worldPosition.X, worldPosition.Y, worldPosition.Z, blockId);
     }
 
-    private WorldChunk LoadChunk(int chunkX, int chunkZ)
+    public WorldChunk GetOrLoadChunk(int chunkX, int chunkZ)
     {
-        var chunk = new WorldChunk(this, chunkX, chunkZ);
-        chunk.FillDefault();
-        Chunks[chunkX, chunkZ] = chunk;
+        //TODO Be careful about thread safety here
+        var chunk = Chunks[chunkX, chunkZ];
+        if (chunk is null)
+        {
+            chunk = new WorldChunk(this, chunkX, chunkZ);
+            Chunks[chunkX, chunkZ] = chunk;
+            chunk.FillDefault();
+        }
         return chunk;
     }
 

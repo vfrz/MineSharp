@@ -26,4 +26,14 @@ public record struct Vector3(double X, double Y, double Z)
 
     // ReSharper disable once InconsistentNaming
     public Vector3i ToVector3i() => new((int) X, (int) Y, (int) Z);
+
+    public override string ToString()
+    {
+        return $"{X}, {Y}, {Z}";
+    }
+
+    public override int GetHashCode()
+    {
+        return HashCode.Combine(X, Y, Z);
+    }
 }

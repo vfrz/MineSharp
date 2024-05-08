@@ -90,6 +90,18 @@ public class MinecraftServer
             await server.World.SetTimeAsync(time);
             return true;
         });
+        
+        _commandHandler.TryRegisterCommand("pos", async (server, client, args) =>
+        {
+            await client!.SendMessageAsync(client.Player!.Position.ToString());
+            return true;
+        });
+        
+        _commandHandler.TryRegisterCommand("chunk", async (server, client, args) =>
+        {
+            await client!.SendMessageAsync(client.GetCurrentChunk().ToString());
+            return true;
+        });
 
         _commandHandler.TryRegisterCommand("heal", async (_, client, _) =>
         {
@@ -114,6 +126,12 @@ public class MinecraftServer
             await server.SpawnMobAsync((MobType) byte.Parse(args[0]), client!.Player!.Position.ToVector3i());
             return true;
         });
+
+        _commandHandler.TryRegisterCommand("test", async (server, client, args) =>
+        {
+            client!.GetVisibleChunks();
+            return true;
+        });
     }
 
     public ILogger<T> GetLogger<T>()
@@ -133,6 +151,14 @@ public class MinecraftServer
 
         RegisterLoop(TimeSpan.FromSeconds(5), SendKeepAlivePacketsAsync, cancellationToken);
         RegisterLoop(TimeSpan.FromSeconds(1), World.SendTimeUpdateAsync, cancellationToken);
+        RegisterLoop(TimeSpan.FromSeconds(1), async () =>
+        {
+            await Parallel.ForEachAsync(RemoteClients, cancellationToken, async (client, token) =>
+            {
+                if (client.Player is not null)
+                    await client.UpdateLoadedChunksAsync();
+            });
+        }, cancellationToken);
 
         _socket.Listen();
         Task.Run(async () =>

@@ -1,6 +1,7 @@
 using System.Net.Sockets;
 using MineSharp.Core.Packets;
 using MineSharp.Network.Packets;
+using MineSharp.World;
 
 namespace MineSharp.Core;
 
@@ -20,6 +21,8 @@ public class MinecraftRemoteClient : IDisposable
 
     private Socket Socket { get; }
     private MinecraftServer Server { get; }
+
+    private HashSet<Vector2i> _loadedChunks = new();
 
     public MinecraftRemoteClient(Socket socket, MinecraftServer server)
     {
@@ -76,7 +79,102 @@ public class MinecraftRemoteClient : IDisposable
             Message = message
         });
     }
-    
+
+    //TODO optimize (remove LINQ)
+    public async Task UpdateLoadedChunksAsync()
+    {
+        var visibleChunks = GetVisibleChunks();
+        var chunksToLoad = visibleChunks.Except(_loadedChunks);
+        var chunksToUnload = _loadedChunks.Except(visibleChunks);
+
+        foreach (var chunkToLoad in chunksToLoad)
+        {
+            var chunk = Server.World.GetOrLoadChunk(chunkToLoad.X, chunkToLoad.Z);
+
+            await SendPacketAsync(new PreChunkPacket
+            {
+                X = chunkToLoad.X,
+                Z = chunkToLoad.Z,
+                Mode = PreChunkPacket.LoadingMode.Load
+            });
+
+            await SendPacketAsync(new ChunkPacket
+            {
+                X = chunkToLoad.X * WorldChunk.Length,
+                Y = 0,
+                Z = chunkToLoad.Z * WorldChunk.Width,
+                SizeX = WorldChunk.Length - 1,
+                SizeY = WorldChunk.Height - 1,
+                SizeZ = WorldChunk.Width - 1,
+                CompressedData = await chunk.ToCompressedDataAsync()
+            });
+        }
+
+        foreach (var chunkToUnload in chunksToUnload)
+        {
+            await SendPacketAsync(new PreChunkPacket
+            {
+                X = chunkToUnload.X,
+                Z = chunkToUnload.Z,
+                Mode = PreChunkPacket.LoadingMode.Unload
+            });
+        }
+
+        _loadedChunks = visibleChunks;
+    }
+
+    public Vector2i GetCurrentChunk() => WorldChunk.WorldPositionToChunk(Player!.Position);
+
+    public HashSet<Vector2i> GetVisibleChunks()
+    {
+        var chunks = new HashSet<Vector2i>();
+        var distance = Server.Configuration.VisibleChunksDistance;
+        var currentChunk = GetCurrentChunk();
+        chunks.Add(currentChunk);
+
+        // Front
+        for (var z = 1; z < distance; z++)
+        {
+            chunks.Add(new Vector2i(currentChunk.X, currentChunk.Z + z));
+            for (var x = 1; x < distance - z; x++)
+            {
+                chunks.Add(new Vector2i(currentChunk.X - x, currentChunk.Z + z));
+            }
+        }
+
+        // Right
+        for (var x = 1; x < distance; x++)
+        {
+            chunks.Add(new Vector2i(currentChunk.X - x, currentChunk.Z));
+            for (var z = 1; z < distance - x; z++)
+            {
+                chunks.Add(new Vector2i(currentChunk.X - x, currentChunk.Z - z));
+            }
+        }
+
+        // Back
+        for (var z = 1; z < distance; z++)
+        {
+            chunks.Add(new Vector2i(currentChunk.X, currentChunk.Z - z));
+            for (var x = 1; x < distance - z; x++)
+            {
+                chunks.Add(new Vector2i(currentChunk.X + x, currentChunk.Z - z));
+            }
+        }
+
+        // Left
+        for (var x = 1; x < distance; x++)
+        {
+            chunks.Add(new Vector2i(currentChunk.X + x, currentChunk.Z));
+            for (var z = 1; z < distance - x; z++)
+            {
+                chunks.Add(new Vector2i(currentChunk.X + x, currentChunk.Z + z));
+            }
+        }
+
+        return chunks;
+    }
+
     public void Dispose()
     {
         Socket.Dispose();

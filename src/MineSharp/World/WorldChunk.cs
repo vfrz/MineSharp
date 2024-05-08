@@ -34,9 +34,6 @@ public class WorldChunk
 
     public async Task SetBlockAsync(int worldX, int worldY, int worldZ, byte blockId)
     {
-        var chunkX = worldX / Length - (worldX < 0 ? 1 : 0);
-        var chunkZ = worldZ / Width - (worldZ < 0 ? 1 : 0);
-
         var internalX = (worldX % Length + Length) % Length;
         var internalZ = (worldZ % Width + Width) % Width;
 
@@ -59,6 +56,13 @@ public class WorldChunk
     private static int CoordinatesToIndex(int chunkX, int chunkY, int chunkZ)
     {
         return chunkY + chunkZ * Height + chunkX * Height * Width;
+    }
+
+    public static Vector2i WorldPositionToChunk(Vector3 position)
+    {
+        var chunkX = (int) position.X / Length - (position.X < 0 ? 1 : 0);
+        var chunkZ = (int) position.Z / Width - (position.Z < 0 ? 1 : 0);
+        return new Vector2i(chunkX, chunkZ);
     }
 
     public void FillDefault()

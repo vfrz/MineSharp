@@ -38,6 +38,7 @@ public class LoginRequestPacketHandler : IClientPacketHandler<LoginRequestPacket
                     });
                     return;
                 }
+
                 context.RemoteClient.Username = packet.Username;
             }
             finally
@@ -61,7 +62,10 @@ public class LoginRequestPacketHandler : IClientPacketHandler<LoginRequestPacket
         await currentPlayer.SetHealthAsync(20);
 
         // World chunks and more
-        foreach (var chunk in context.Server.World.Chunks)
+
+        await context.RemoteClient.UpdateLoadedChunksAsync();
+
+        /*foreach (var chunk in context.Server.World.Chunks)
         {
             if (chunk is null)
                 continue;
@@ -83,7 +87,7 @@ public class LoginRequestPacketHandler : IClientPacketHandler<LoginRequestPacket
                 SizeZ = WorldChunk.Width - 1,
                 CompressedData = await chunk.ToCompressedDataAsync()
             });
-        }
+        }*/
 
         await context.RemoteClient.SendPacketAsync(new TimeUpdatePacket
         {
@@ -193,13 +197,22 @@ public class LoginRequestPacketHandler : IClientPacketHandler<LoginRequestPacket
             ItemCount = 1,
             ItemUses = 0
         });
-        
+
         await context.RemoteClient.SendPacketAsync(new SetSlotPacket
         {
             WindowId = 0,
             Slot = 38,
             ItemId = 1,
-            ItemCount = 10,
+            ItemCount = 80,
+            ItemUses = 0
+        });
+        
+        await context.RemoteClient.SendPacketAsync(new SetSlotPacket
+        {
+            WindowId = 0,
+            Slot = 39,
+            ItemId = 345,
+            ItemCount = 1,
             ItemUses = 0
         });
     }

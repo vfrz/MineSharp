@@ -18,7 +18,9 @@ var host = Host.CreateDefaultBuilder(args)
     {
         services.Configure<ConsoleLifetimeOptions>(options => options.SuppressStatusMessages = true);
 
-        services.Configure<ServerConfiguration>(context.Configuration);
+        services.AddOptions<ServerConfiguration>()
+            .Bind(context.Configuration)
+            .ValidateDataAnnotations();
 
         services.AddSingleton<PacketDispatcher>();
         services.AddSingleton<CommandHandler>();
