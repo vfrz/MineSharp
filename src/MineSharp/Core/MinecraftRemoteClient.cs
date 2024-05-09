@@ -101,12 +101,12 @@ public class MinecraftRemoteClient : IDisposable
 
             await SendPacketAsync(new ChunkPacket
             {
-                X = chunkToLoad.X * WorldChunk.Width,
+                X = chunkToLoad.X * Chunk.Width,
                 Y = 0,
-                Z = chunkToLoad.Z * WorldChunk.Width,
-                SizeX = WorldChunk.Width - 1,
-                SizeY = WorldChunk.Height - 1,
-                SizeZ = WorldChunk.Width - 1,
+                Z = chunkToLoad.Z * Chunk.Width,
+                SizeX = Chunk.Width - 1,
+                SizeY = Chunk.Height - 1,
+                SizeZ = Chunk.Width - 1,
                 CompressedData = await chunk.Data.ToCompressedDataAsync()
             });
         }
@@ -124,7 +124,7 @@ public class MinecraftRemoteClient : IDisposable
         _loadedChunks = visibleChunks;
     }
 
-    public Vector2i GetCurrentChunk() => WorldChunk.GetChunkPositionForWorldPosition(Player!.Position);
+    public Vector2i GetCurrentChunk() => Chunk.GetChunkPositionForWorldPosition(Player!.Position);
 
     public HashSet<Vector2i> GetVisibleChunks()
     {

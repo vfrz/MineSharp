@@ -28,13 +28,11 @@ public class DefaultWorldGenerator : IWorldGenerator
         PoissonDiskSampler = new UniformPoissonDiskSampler(seed);
     }
     
-    public ChunkData GenerateChunk(int chunkX, int chunkZ)
+    public void GenerateChunk(int chunkX, int chunkZ, IBlockChunkData chunkData)
     {
-        var chunkData = new ChunkData();
-        
-        for (var localX = 0; localX < WorldChunk.Width; localX++)
+        for (var localX = 0; localX < Chunk.Width; localX++)
         {
-            for (var localZ = 0; localZ < WorldChunk.Width; localZ++)
+            for (var localZ = 0; localZ < Chunk.Width; localZ++)
             {
                 // Bedrock
                 chunkData.SetBlock(new Vector3i(localX, 0, localZ), 7);
@@ -46,7 +44,7 @@ public class DefaultWorldGenerator : IWorldGenerator
                     {
                         chunkData.SetBlock(new Vector3i(localX, y, localZ), 12);
 
-                        var otherNoiseValue = (OtherNoise.GetNoise(chunkX * WorldChunk.Width + localX, chunkZ * WorldChunk.Width + localZ) + 1) / 2f;
+                        var otherNoiseValue = (OtherNoise.GetNoise(chunkX * Chunk.Width + localX, chunkZ * Chunk.Width + localZ) + 1) / 2f;
                         if (otherNoiseValue < 0.2f)
                         {
                             chunkData.SetBlock(new Vector3i(localX, y + 1, localZ), 31, 0);
@@ -57,20 +55,14 @@ public class DefaultWorldGenerator : IWorldGenerator
                         chunkData.SetBlock(new Vector3i(localX, y, localZ), 12);
                     }
                 }
-
-                //TODO Move ligth calculation somewhere else
-                for (var y = 0; y < WorldChunk.Height; y++)
-                {
-                    chunkData.SetLight(new Vector3i(localX, y, localZ), 15, 15);
-                }
             }
         }
 
-        var trees = PoissonDiskSampler.SampleRectangle(chunkX * WorldChunk.Width, chunkZ * WorldChunk.Width, WorldChunk.Width, WorldChunk.Width, 6);
+        var trees = PoissonDiskSampler.SampleRectangle(chunkX * Chunk.Width, chunkZ * Chunk.Width, Chunk.Width, Chunk.Width, 6);
 
         foreach (var treePosition in trees)
         {
-            var localPosition = WorldChunk.WorldToLocal(new Vector2i(treePosition));
+            var localPosition = Chunk.WorldToLocal(new Vector2i(treePosition));
             var height = GetHeight(localPosition.X, localPosition.Z, chunkX, chunkZ);
 
             for (var h = 1; h < 6; h++)
@@ -78,13 +70,11 @@ public class DefaultWorldGenerator : IWorldGenerator
                 chunkData.SetBlock(new Vector3i(localPosition.X, height + h, localPosition.Z), 81);
             }
         }
-
-        return chunkData;
     }
     
     private int GetHeight(int localX, int localZ, int chunkX, int chunkZ)
     {
-        var noiseValue = (Noise.GetNoise(chunkX * WorldChunk.Width + localX, chunkZ * WorldChunk.Width + localZ) + 1) / 2f;
+        var noiseValue = (Noise.GetNoise(chunkX * Chunk.Width + localX, chunkZ * Chunk.Width + localZ) + 1) / 2f;
         return (int) (noiseValue * 30f + 5);
     }
 }

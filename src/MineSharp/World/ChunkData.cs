@@ -4,9 +4,9 @@ using MineSharp.Core;
 
 namespace MineSharp.World;
 
-public class ChunkData
+public class ChunkData : IBlockChunkData
 {
-    private const int ArraySize = WorldChunk.Width * WorldChunk.Width * WorldChunk.Height;
+    private const int ArraySize = Chunk.Width * Chunk.Width * Chunk.Height;
 
     private readonly byte[] _blocks;
     private NibbleArray _metadata;
@@ -24,7 +24,7 @@ public class ChunkData
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int LocalToIndex(Vector3i localPosition)
     {
-        return localPosition.Y + localPosition.Z * WorldChunk.Height + localPosition.X * WorldChunk.Height * WorldChunk.Width;
+        return localPosition.Y + localPosition.Z * Chunk.Height + localPosition.X * Chunk.Height * Chunk.Width;
     }
 
     public void SetBlock(Vector3i localPosition, byte blockId, byte metadata = 0)
@@ -34,13 +34,20 @@ public class ChunkData
         _metadata[index] = metadata;
     }
 
+    public byte GetBlock(Vector3i localPosition, out byte metadata)
+    {
+        var index = LocalToIndex(localPosition);
+        metadata = _metadata[index];
+        return _blocks[index];
+    }
+
     public void SetLight(Vector3i localPosition, byte light, byte skyLight)
     {
         var index = LocalToIndex(localPosition);
         _light[index] = light;
         _skyLight[index] = skyLight;
     }
-    
+
     public async Task<byte[]> ToCompressedDataAsync()
     {
         var output = new MemoryStream();

@@ -3,7 +3,7 @@ using MineSharp.Core;
 
 namespace MineSharp.World;
 
-public class WorldChunk
+public class Chunk
 {
     public const int Width = 16;
     public const int Height = 128;
@@ -13,7 +13,7 @@ public class WorldChunk
     public int ChunkX { get; }
     public int ChunkZ { get; }
 
-    public WorldChunk(int chunkX, int chunkZ, ChunkData data)
+    public Chunk(int chunkX, int chunkZ, ChunkData data)
     {
         ChunkX = chunkX;
         ChunkZ = chunkZ;

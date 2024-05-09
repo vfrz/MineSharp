@@ -1,6 +1,6 @@
-namespace MineSharp.World;
+namespace MineSharp.World.Generation;
 
 public interface IWorldGenerator
 {
-    ChunkData GenerateChunk(int chunkX, int chunkZ);
+    void GenerateChunk(int chunkX, int chunkZ, IBlockChunkData chunkData);
 }

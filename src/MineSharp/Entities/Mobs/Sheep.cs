@@ -4,6 +4,8 @@ namespace MineSharp.Entities.Mobs;
 
 public class Sheep : MobEntity
 {
+    private const byte ColorMetadataIndex = 16;
+    
     public override MobType Type => MobType.Sheep;
     public override short MaxHealth => 8;
 
@@ -11,11 +13,11 @@ public class Sheep : MobEntity
     {
         get
         {
-            if (MetadataContainer.TryGet<EntityByteMetadata>(16, out var metadata))
+            if (MetadataContainer.TryGet<EntityByteMetadata>(ColorMetadataIndex, out var metadata))
                 return (ColorType) metadata!.Value;
             return default;
         }
-        private set => MetadataContainer.Set(16, new EntityByteMetadata((byte) value));
+        private set => MetadataContainer.Set(ColorMetadataIndex, new EntityByteMetadata((byte) value));
     }
 
     public Sheep()

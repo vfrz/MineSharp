@@ -7,7 +7,7 @@ namespace MineSharp.World;
 
 public class MinecraftWorld
 {
-    private TwoDimensionalArray<WorldChunk?> Chunks { get; }
+    private TwoDimensionalArray<Chunk?> Chunks { get; }
 
     public bool Raining { get; private set; }
     private WorldTimer Timer { get; }
@@ -29,7 +29,7 @@ public class MinecraftWorld
         WorldGenerator = new DefaultWorldGenerator(seed);
         _logger = server.GetLogger<MinecraftWorld>();
         Timer = new WorldTimer();
-        Chunks = new TwoDimensionalArray<WorldChunk?>(-500, 500, -500, 500);
+        Chunks = new TwoDimensionalArray<Chunk?>(-500, 500, -500, 500);
     }
 
     public void Start()
@@ -67,7 +67,7 @@ public class MinecraftWorld
             GetOrLoadChunk(chunk.X, chunk.Z);
         }
     }
-    
+
     public HashSet<Vector2i> GetInitialChunks()
     {
         var chunks = new HashSet<Vector2i>();
@@ -120,15 +120,15 @@ public class MinecraftWorld
 
     public async Task UpdateBlockAsync(Vector3i worldPosition, byte blockId, byte metadata = 0)
     {
-        var chunkX = worldPosition.X / WorldChunk.Width - (worldPosition.X < 0 ? 1 : 0);
-        var chunkZ = worldPosition.Z / WorldChunk.Width - (worldPosition.Z < 0 ? 1 : 0);
+        var chunkX = worldPosition.X / Chunk.Width - (worldPosition.X < 0 ? 1 : 0);
+        var chunkZ = worldPosition.Z / Chunk.Width - (worldPosition.Z < 0 ? 1 : 0);
 
         var chunk = Chunks[chunkX, chunkZ];
         if (chunk is null)
             chunk = GetOrLoadChunk(chunkX, chunkZ);
 
         chunk.UpdateBlock(worldPosition, blockId, metadata);
-        
+
         var blockUpdatePacket = new BlockUpdatePacket
         {
             X = worldPosition.X,
@@ -141,14 +141,24 @@ public class MinecraftWorld
         await Server.BroadcastPacketAsync(blockUpdatePacket);
     }
 
-    public WorldChunk GetOrLoadChunk(int chunkX, int chunkZ)
+    public Chunk GetOrLoadChunk(int chunkX, int chunkZ)
     {
         //TODO Be careful about thread safety here
         var chunk = Chunks[chunkX, chunkZ];
         if (chunk is null)
         {
-            var chunkData = WorldGenerator.GenerateChunk(chunkX, chunkZ);
-            chunk = new WorldChunk(chunkX, chunkZ, chunkData);
+            var chunkData = new ChunkData();
+            WorldGenerator.GenerateChunk(chunkX, chunkZ, chunkData);
+            
+            //TODO Move ligth calculation somewhere else
+            for (var x = 0; x < Chunk.Width; x++)
+            for (var y = 0; y < Chunk.Height; y++)
+            for (var z = 0; z < Chunk.Width; z++)
+            {
+                chunkData.SetLight(new Vector3i(x, y, z), 15, 15);
+            }
+            
+            chunk = new Chunk(chunkX, chunkZ, chunkData);
             Chunks[chunkX, chunkZ] = chunk;
         }
 
