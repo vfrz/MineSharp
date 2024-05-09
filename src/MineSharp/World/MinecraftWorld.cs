@@ -1,4 +1,3 @@
-using System.Security.Cryptography;
 using Microsoft.Extensions.Logging;
 using MineSharp.Core;
 using MineSharp.Network.Packets;
@@ -21,32 +20,13 @@ public class MinecraftWorld
     private static readonly object Locker = new();
 
     public int Seed { get; }
-    public FastNoiseLite Noise { get; }
-    public FastNoiseLite OtherNoise { get; }
-    public UniformPoissonDiskSampler PoissonDiskSampler { get; }
+    public IWorldGenerator WorldGenerator { get; }
 
     public MinecraftWorld(MinecraftServer server, int seed)
     {
         Server = server;
         Seed = seed;
-
-        Noise = new FastNoiseLite(Seed);
-        Noise.SetNoiseType(FastNoiseLite.NoiseType.OpenSimplex2);
-        // Terrain parameters
-        Noise.SetFrequency(0.008f); // Adjust the frequency to change the terrain detail
-        Noise.SetFractalOctaves(16); // Adjust the number of octaves for more complexity
-        Noise.SetFractalLacunarity(2.0f); // Adjust the lacunarity for variation
-        Noise.SetFractalGain(0.5f); // Adjust the gain for smoothness
-        
-        OtherNoise = new FastNoiseLite(Seed);
-        OtherNoise.SetNoiseType(FastNoiseLite.NoiseType.OpenSimplex2);
-        OtherNoise.SetFrequency(0.5f); // Adjust the frequency to change the terrain detail
-        OtherNoise.SetFractalOctaves(1); // Adjust the number of octaves for more complexity
-        OtherNoise.SetFractalLacunarity(2.0f); // Adjust the lacunarity for variation
-        OtherNoise.SetFractalGain(0.5f); // Adjust the gain for smoothness
-
-        PoissonDiskSampler = new UniformPoissonDiskSampler(seed);
-
+        WorldGenerator = new DefaultWorldGenerator(seed);
         _logger = server.GetLogger<MinecraftWorld>();
         Timer = new WorldTimer();
         Chunks = new TwoDimensionalArray<WorldChunk?>(-500, 500, -500, 500);
@@ -147,7 +127,7 @@ public class MinecraftWorld
         if (chunk is null)
             chunk = GetOrLoadChunk(chunkX, chunkZ);
 
-        chunk.UpdateBlock(worldPosition.X, worldPosition.Y, worldPosition.Z, blockId, metadata);
+        chunk.UpdateBlock(worldPosition, blockId, metadata);
         
         var blockUpdatePacket = new BlockUpdatePacket
         {
@@ -167,9 +147,9 @@ public class MinecraftWorld
         var chunk = Chunks[chunkX, chunkZ];
         if (chunk is null)
         {
-            chunk = new WorldChunk(this, chunkX, chunkZ);
+            var chunkData = WorldGenerator.GenerateChunk(chunkX, chunkZ);
+            chunk = new WorldChunk(chunkX, chunkZ, chunkData);
             Chunks[chunkX, chunkZ] = chunk;
-            chunk.Generate();
         }
 
         return chunk;

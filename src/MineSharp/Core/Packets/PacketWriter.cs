@@ -71,8 +71,16 @@ public class PacketWriter : IDisposable, IAsyncDisposable
 
     public void WriteString(string value)
     {
+        WriteUShort((ushort) value.Length);
         var bytes = Encoding.BigEndianUnicode.GetBytes(value);
-        WriteUShort((ushort) (bytes.Length / 2));
+        if (bytes.Length > 0)
+            WriteBytes(bytes);
+    }
+    
+    public void WriteString8(string value)
+    {
+        WriteUShort((ushort) value.Length);
+        var bytes = Encoding.UTF8.GetBytes(value);
         if (bytes.Length > 0)
             WriteBytes(bytes);
     }

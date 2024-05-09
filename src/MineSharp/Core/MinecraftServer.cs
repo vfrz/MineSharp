@@ -126,9 +126,15 @@ public class MinecraftServer
             return true;
         });
 
-        _commandHandler.TryRegisterCommand("test", async (server, client, args) =>
+        _commandHandler.TryRegisterCommand("chest", async (server, client, args) =>
         {
-            client!.GetVisibleChunks();
+            await client!.SendPacketAsync(new OpenWindowPacket
+            {
+                WindowId = 42,
+                InventoryType = 0,
+                Slots = 27 * 2,
+                WindowTitle = "Ahahah"
+            });
             return true;
         });
     }

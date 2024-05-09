@@ -24,10 +24,12 @@ public class PacketDispatcher
         {
             AnimationPacket.Id => HandlePacket<AnimationPacket>(ref reader, context),
             ChatMessagePacket.Id => HandlePacket<ChatMessagePacket>(ref reader, context),
+            CloseWindowPacket.Id => HandlePacket<CloseWindowPacket>(ref reader, context),
             EntityActionPacket.Id => HandlePacket<EntityActionPacket>(ref reader, context),
             HandshakeRequestPacket.Id => HandlePacket<HandshakeRequestPacket>(ref reader, context),
             HoldingChangePacket.Id => HandlePacket<HoldingChangePacket>(ref reader, context),
             LoginRequestPacket.Id => HandlePacket<LoginRequestPacket>(ref reader, context),
+            KeepAlivePacket.Id => HandlePacket<KeepAlivePacket>(ref reader, context),
             PlayerBlockPlacementPacket.Id => HandlePacket<PlayerBlockPlacementPacket>(ref reader, context),
             PlayerDiggingPacket.Id => HandlePacket<PlayerDiggingPacket>(ref reader, context),
             PlayerDisconnectPacket.Id => HandlePacket<PlayerDisconnectPacket>(ref reader, context),
