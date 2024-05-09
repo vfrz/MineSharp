@@ -2,12 +2,13 @@ using System.Security.Cryptography;
 using Microsoft.Extensions.Logging;
 using MineSharp.Core;
 using MineSharp.Network.Packets;
+using MineSharp.World.Generation;
 
 namespace MineSharp.World;
 
 public class MinecraftWorld
 {
-    public TwoDimensionalArray<WorldChunk?> Chunks { get; }
+    private TwoDimensionalArray<WorldChunk?> Chunks { get; }
 
     public bool Raining { get; private set; }
     private WorldTimer Timer { get; }
@@ -22,15 +23,13 @@ public class MinecraftWorld
     public int Seed { get; }
     public FastNoiseLite Noise { get; }
     public FastNoiseLite OtherNoise { get; }
-    public Random Random { get; }
+    public UniformPoissonDiskSampler PoissonDiskSampler { get; }
 
     public MinecraftWorld(MinecraftServer server, int seed)
     {
         Server = server;
         Seed = seed;
 
-        Random = new Random(Seed);
-        
         Noise = new FastNoiseLite(Seed);
         Noise.SetNoiseType(FastNoiseLite.NoiseType.OpenSimplex2);
         // Terrain parameters
@@ -45,6 +44,8 @@ public class MinecraftWorld
         OtherNoise.SetFractalOctaves(1); // Adjust the number of octaves for more complexity
         OtherNoise.SetFractalLacunarity(2.0f); // Adjust the lacunarity for variation
         OtherNoise.SetFractalGain(0.5f); // Adjust the gain for smoothness
+
+        PoissonDiskSampler = new UniformPoissonDiskSampler(seed);
 
         _logger = server.GetLogger<MinecraftWorld>();
         Timer = new WorldTimer();
@@ -81,10 +82,10 @@ public class MinecraftWorld
 
     public void GenerateInitialChunks()
     {
-        Parallel.ForEach(GetInitialChunks(), chunk =>
+        foreach (var chunk in GetInitialChunks())
         {
             GetOrLoadChunk(chunk.X, chunk.Z);
-        });
+        }
     }
     
     public HashSet<Vector2i> GetInitialChunks()
@@ -137,16 +138,27 @@ public class MinecraftWorld
         return chunks;
     }
 
-    public async Task SetBlockAsync(Vector3i worldPosition, byte blockId)
+    public async Task UpdateBlockAsync(Vector3i worldPosition, byte blockId, byte metadata = 0)
     {
-        var chunkX = worldPosition.X / WorldChunk.Length - (worldPosition.X < 0 ? 1 : 0);
+        var chunkX = worldPosition.X / WorldChunk.Width - (worldPosition.X < 0 ? 1 : 0);
         var chunkZ = worldPosition.Z / WorldChunk.Width - (worldPosition.Z < 0 ? 1 : 0);
 
         var chunk = Chunks[chunkX, chunkZ];
         if (chunk is null)
             chunk = GetOrLoadChunk(chunkX, chunkZ);
 
-        await chunk.SetBlockAsync(worldPosition.X, worldPosition.Y, worldPosition.Z, blockId);
+        chunk.UpdateBlock(worldPosition.X, worldPosition.Y, worldPosition.Z, blockId, metadata);
+        
+        var blockUpdatePacket = new BlockUpdatePacket
+        {
+            X = worldPosition.X,
+            Y = (sbyte) worldPosition.Y,
+            Z = worldPosition.Z,
+            BlockId = blockId,
+            Metadata = metadata
+        };
+
+        await Server.BroadcastPacketAsync(blockUpdatePacket);
     }
 
     public WorldChunk GetOrLoadChunk(int chunkX, int chunkZ)

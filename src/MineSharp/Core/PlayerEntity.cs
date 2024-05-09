@@ -49,7 +49,7 @@ public class PlayerEntity : LivingEntity
 
     public async Task RespawnAsync(MinecraftDimension dimension)
     {
-        Position = new Vector3(0, 50, 0);
+        Position = new Vector3d(0, 50, 0);
         Stance = Position.Y + Height;
         OnGround = false;
         Yaw = 0;

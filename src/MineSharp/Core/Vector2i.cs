@@ -1,8 +1,14 @@
+using System.Numerics;
+
 namespace MineSharp.Core;
 
 // ReSharper disable once InconsistentNaming
 public record struct Vector2i(int X, int Z)
 {
+    public Vector2i(Vector2 vector) : this((int) vector.X, (int) vector.Y)
+    {
+    }
+
     public static Vector2i operator +(Vector2i left, Vector2i right)
         => new(left.X + right.X, left.Z + right.Z);
 

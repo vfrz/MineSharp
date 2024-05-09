@@ -37,7 +37,7 @@ public class PlayerBlockPlacementPacketHandler : IClientPacketHandler<PlayerBloc
         }
         else
         {
-            await context.Server.World.SetBlockAsync(directedCoordinates, (byte) packet.BlockId);
+            await context.Server.World.UpdateBlockAsync(directedCoordinates, (byte) packet.BlockId);
         }
     }
 

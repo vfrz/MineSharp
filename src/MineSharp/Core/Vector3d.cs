@@ -1,28 +1,28 @@
 namespace MineSharp.Core;
 
-public record struct Vector3(double X, double Y, double Z)
+public record struct Vector3d(double X, double Y, double Z)
 {
-    public static readonly Vector3 One = new(1);
+    public static readonly Vector3d One = new(1);
 
-    public Vector3(double value) : this(value, value, value)
+    public Vector3d(double value) : this(value, value, value)
     {
     }
 
-    public static Vector3 operator +(Vector3 left, Vector3 right)
+    public static Vector3d operator +(Vector3d left, Vector3d right)
         => new(left.X + right.X, left.Y + right.Y, left.Z + right.Z);
 
-    public static Vector3 operator -(Vector3 left, Vector3 right)
+    public static Vector3d operator -(Vector3d left, Vector3d right)
         => new(left.X - right.X, left.Y - right.Y, left.Z - right.Z);
 
-    public static Vector3 operator *(Vector3 left, Vector3 right)
+    public static Vector3d operator *(Vector3d left, Vector3d right)
         => new(left.X * right.X, left.Y * right.Y, left.Z * right.Z);
 
-    public static Vector3 operator /(Vector3 left, Vector3 right)
+    public static Vector3d operator /(Vector3d left, Vector3d right)
         => new(left.X / right.X, left.Y / right.Y, left.Z / right.Z);
 
-    public static Vector3 operator +(Vector3 vector) => vector;
+    public static Vector3d operator +(Vector3d vector) => vector;
 
-    public static Vector3 operator -(Vector3 vector) => new(-vector.X, -vector.Y, -vector.Z);
+    public static Vector3d operator -(Vector3d vector) => new(-vector.X, -vector.Y, -vector.Z);
 
     // ReSharper disable once InconsistentNaming
     public Vector3i ToVector3i() => new((int) X, (int) Y, (int) Z);

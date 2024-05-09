@@ -36,7 +36,7 @@ public class MinecraftRemoteClient : IDisposable
     {
         if (Player is not null)
             throw new Exception($"Can't initialize player because it has already been initialized");
-        var position = new Vector3(0, 50, 0);
+        var position = new Vector3d(0, 50, 0);
         var player = new PlayerEntity(this)
         {
             Position = position,
@@ -101,10 +101,10 @@ public class MinecraftRemoteClient : IDisposable
 
             await SendPacketAsync(new ChunkPacket
             {
-                X = chunkToLoad.X * WorldChunk.Length,
+                X = chunkToLoad.X * WorldChunk.Width,
                 Y = 0,
                 Z = chunkToLoad.Z * WorldChunk.Width,
-                SizeX = WorldChunk.Length - 1,
+                SizeX = WorldChunk.Width - 1,
                 SizeY = WorldChunk.Height - 1,
                 SizeZ = WorldChunk.Width - 1,
                 CompressedData = await chunk.ToCompressedDataAsync()
@@ -124,7 +124,7 @@ public class MinecraftRemoteClient : IDisposable
         _loadedChunks = visibleChunks;
     }
 
-    public Vector2i GetCurrentChunk() => WorldChunk.WorldPositionToChunk(Player!.Position);
+    public Vector2i GetCurrentChunk() => WorldChunk.WorldToChunkPosition(Player!.Position);
 
     public HashSet<Vector2i> GetVisibleChunks()
     {

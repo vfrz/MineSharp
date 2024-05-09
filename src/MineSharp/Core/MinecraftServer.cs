@@ -48,8 +48,7 @@ public class MinecraftServer
         _commandHandler = commandHandler;
         _remoteClients = new ConcurrentDictionary<string, MinecraftRemoteClient>();
 
-        World = new MinecraftWorld(this, 42);
-        World.GenerateInitialChunks();
+        World = new MinecraftWorld(this, new Random().Next());
 
         EntityManager = new EntityManager(this);
 
@@ -90,13 +89,13 @@ public class MinecraftServer
             await server.World.SetTimeAsync(time);
             return true;
         });
-        
+
         _commandHandler.TryRegisterCommand("pos", async (server, client, args) =>
         {
             await client!.SendMessageAsync(client.Player!.Position.ToString());
             return true;
         });
-        
+
         _commandHandler.TryRegisterCommand("chunk", async (server, client, args) =>
         {
             await client!.SendMessageAsync(client.GetCurrentChunk().ToString());
@@ -143,7 +142,9 @@ public class MinecraftServer
     {
         _logger.LogInformation("Server starting...");
 
+        World.GenerateInitialChunks();
         World.Start();
+
         Scheduler.Start();
 
         // Main tick loop

@@ -8,7 +8,7 @@ public class PlayerPositionAndLookClientPacketHandler : IClientPacketHandler<Pla
     public Task HandleAsync(PlayerPositionAndLookClientPacket packet, ClientPacketHandlerContext context)
     {
         var player = context.RemoteClient.Player!;
-        player.Position = new Vector3(packet.X, packet.Y, packet.Z);
+        player.Position = new Vector3d(packet.X, packet.Y, packet.Z);
         player.Yaw = packet.Yaw;
         player.Pitch = packet.Pitch;
         player.Stance = packet.Stance;

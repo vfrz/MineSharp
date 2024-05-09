@@ -9,7 +9,7 @@ public class PlayerDiggingPacketHandler : IClientPacketHandler<PlayerDiggingPack
     {
         if (packet.Status is PlayerDiggingStatus.Finished)
         {
-            await context.Server.World.SetBlockAsync(new Vector3i(packet.X, packet.Y, packet.Z), 0);
+            await context.Server.World.UpdateBlockAsync(new Vector3i(packet.X, packet.Y, packet.Z), 0);
         }
     }
 }

@@ -25,7 +25,7 @@ public record struct Vector3i(int X, int Y, int Z)
 
     public static Vector3i operator -(Vector3i vector) => new(-vector.X, -vector.Y, -vector.Z);
 
-    public Vector3 ToVector3() => new(X, Y, Z);
+    public Vector3d ToVector3() => new(X, Y, Z);
 
     public override int GetHashCode()
     {
