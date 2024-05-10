@@ -6,6 +6,8 @@ public class PreChunkPacket : IServerPacket
 {
     public const int Id = 0x32;
 
+    public byte PacketId => Id;
+
     public int X { get; set; }
 
     public int Z { get; set; }
@@ -14,7 +16,6 @@ public class PreChunkPacket : IServerPacket
 
     public void Write(PacketWriter writer)
     {
-        writer.WriteByte(Id);
         writer.WriteInt(X);
         writer.WriteInt(Z);
         writer.WriteByte((byte) Mode);

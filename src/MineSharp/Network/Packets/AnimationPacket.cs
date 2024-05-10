@@ -6,7 +6,9 @@ namespace MineSharp.Network.Packets;
 
 public class AnimationPacket : IClientPacket, IServerPacket
 {
-    public const int Id = 0x12;
+    public const byte Id = 0x12;
+
+    public byte PacketId => Id;
 
     public int EntityId { get; set; }
     public AnimationType Animation { get; set; }
@@ -19,7 +21,6 @@ public class AnimationPacket : IClientPacket, IServerPacket
 
     public void Write(PacketWriter writer)
     {
-        writer.WriteByte(Id);
         writer.WriteInt(EntityId);
         writer.WriteByte((byte) Animation);
     }

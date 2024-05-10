@@ -6,11 +6,12 @@ public class HandshakeResponsePacket : IServerPacket
 {
     public const byte Id = 0x02;
 
-    public string ConnectionHash { get; set; }
+    public byte PacketId => Id;
+
+    public string ConnectionHash { get; set; } = string.Empty;
 
     public void Write(PacketWriter writer)
     {
-        writer.WriteByte(Id);
         writer.WriteString(ConnectionHash);
     }
 }

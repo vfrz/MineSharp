@@ -5,7 +5,13 @@ namespace MineSharp.Core;
 // ReSharper disable once InconsistentNaming
 public record struct Vector2i(int X, int Z)
 {
+    public static readonly Vector2i Zero = new(0);
+
     public Vector2i(Vector2 vector) : this((int) vector.X, (int) vector.Y)
+    {
+    }
+
+    public Vector2i(int value) : this(value, value)
     {
     }
 

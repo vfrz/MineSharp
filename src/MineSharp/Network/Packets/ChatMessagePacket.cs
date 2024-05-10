@@ -8,8 +8,10 @@ public class ChatMessagePacket : IClientPacket, IServerPacket
 {
     public const int Id = 0x03;
 
+    public byte PacketId => Id;
+
     public string Message { get; set; } = string.Empty;
-    
+
     public void Read(ref SequenceReader<byte> reader)
     {
         Message = reader.ReadString();
@@ -17,7 +19,6 @@ public class ChatMessagePacket : IClientPacket, IServerPacket
 
     public void Write(PacketWriter writer)
     {
-        writer.WriteByte(Id);
         writer.WriteString(Message);
     }
 }

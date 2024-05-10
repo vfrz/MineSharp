@@ -6,6 +6,8 @@ public class BlockUpdatePacket : IServerPacket
 {
     public const byte Id = 0x35;
 
+    public byte PacketId => Id;
+
     public int X { get; set; }
 
     public sbyte Y { get; set; }
@@ -18,7 +20,6 @@ public class BlockUpdatePacket : IServerPacket
 
     public void Write(PacketWriter writer)
     {
-        writer.WriteByte(Id);
         writer.WriteInt(X);
         writer.WriteSByte(Y);
         writer.WriteInt(Z);

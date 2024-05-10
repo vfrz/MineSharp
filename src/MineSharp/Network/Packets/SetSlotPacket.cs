@@ -6,6 +6,8 @@ public class SetSlotPacket : IServerPacket
 {
     public const int Id = 0x67;
 
+    public byte PacketId => Id;
+
     public byte WindowId { get; set; }
     public short Slot { get; set; }
     public short ItemId { get; set; }
@@ -14,7 +16,6 @@ public class SetSlotPacket : IServerPacket
 
     public void Write(PacketWriter writer)
     {
-        writer.WriteByte(Id);
         writer.WriteByte(WindowId);
         writer.WriteShort(Slot);
         writer.WriteShort(ItemId);

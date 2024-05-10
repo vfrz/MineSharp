@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using MineSharp.Core;
 using MineSharp.Core.Packets;
 
@@ -6,6 +7,13 @@ namespace MineSharp.Network.Packets.Handlers;
 public class LoginRequestPacketHandler : IClientPacketHandler<LoginRequestPacket>
 {
     private static readonly SemaphoreSlim Semaphore = new(1, 1);
+
+    private readonly ILogger<MinecraftServer> _logger;
+
+    public LoginRequestPacketHandler(ILogger<MinecraftServer> logger)
+    {
+        _logger = logger;
+    }
 
     public async Task HandleAsync(LoginRequestPacket packet, ClientPacketHandlerContext context)
     {
@@ -77,6 +85,7 @@ public class LoginRequestPacketHandler : IClientPacketHandler<LoginRequestPacket
             });
         }
 
+        //TODO Handle spawn point correctly
         await context.RemoteClient.SendPacketAsync(new SpawnPositionPacket
         {
             X = 0,
@@ -95,7 +104,6 @@ public class LoginRequestPacketHandler : IClientPacketHandler<LoginRequestPacket
             OnGround = currentPlayer.OnGround
         });
 
-        // Might have a bug around here, sometime the client crashes on joining
         foreach (var remoteClient in context.Server.RemoteClients)
         {
             if (remoteClient.Player is null
@@ -148,12 +156,13 @@ public class LoginRequestPacketHandler : IClientPacketHandler<LoginRequestPacket
             Yaw = MinecraftMath.RotationFloatToSByte(currentPlayer.Yaw)
         }, context.RemoteClient);
 
+        _logger.LogInformation($"Player {context.RemoteClient.Username} ({context.RemoteClient.NetworkId}) has joined the server");
 
         var welcomeMessage = $"Welcome on MineSharp, {ChatColors.Blue}{context.RemoteClient.Username}{ChatColors.White}!";
-        await context.RemoteClient.SendMessageAsync(welcomeMessage);
+        await context.RemoteClient.SendChatAsync(welcomeMessage);
 
         var joinedMessage = $"{ChatColors.Blue}{context.RemoteClient.Username} {ChatColors.White}has joined the server!";
-        await context.Server.BroadcastMessageAsync(joinedMessage, context.RemoteClient);
+        await context.Server.BroadcastChatAsync(joinedMessage, context.RemoteClient);
 
         await context.RemoteClient.SendPacketAsync(new SetSlotPacket
         {
@@ -188,6 +197,24 @@ public class LoginRequestPacketHandler : IClientPacketHandler<LoginRequestPacket
             Slot = 39,
             ItemId = 345,
             ItemCount = 1,
+            ItemUses = 0
+        });
+        
+        await context.RemoteClient.SendPacketAsync(new SetSlotPacket
+        {
+            WindowId = 0,
+            Slot = 39,
+            ItemId = 323,
+            ItemCount = 10,
+            ItemUses = 0
+        });
+        
+        await context.RemoteClient.SendPacketAsync(new SetSlotPacket
+        {
+            WindowId = 0,
+            Slot = 40,
+            ItemId = 324,
+            ItemCount = 10,
             ItemUses = 0
         });
     }

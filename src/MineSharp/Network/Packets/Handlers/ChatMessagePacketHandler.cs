@@ -20,7 +20,7 @@ public class ChatMessagePacketHandler : IClientPacketHandler<ChatMessagePacket>
         }
         else
         {
-            await context.Server.BroadcastMessageAsync($"[{context.RemoteClient.Username}] {packet.Message}");
+            await context.Server.BroadcastChatAsync($"[{context.RemoteClient.Username}] {packet.Message}");
         }
     }
 }

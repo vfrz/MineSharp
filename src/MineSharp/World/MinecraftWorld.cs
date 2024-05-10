@@ -42,8 +42,9 @@ public class MinecraftWorld
         Timer.Stop();
     }
 
-    public async Task ProcessAsync(TimeSpan elapsed)
+    public Task ProcessAsync(TimeSpan elapsed)
     {
+        return Task.CompletedTask;
     }
 
     public async Task SetTimeAsync(long time)
@@ -60,72 +61,25 @@ public class MinecraftWorld
         }, readyOnly: true);
     }
 
-    public void GenerateInitialChunks()
+    public void LoadInitialChunks()
     {
-        foreach (var chunk in GetInitialChunks())
-        {
-            GetOrLoadChunk(chunk.X, chunk.Z);
-        }
+        _logger.LogInformation("Generating world...");
+        var initialChunks = GetChunksAround(Vector2i.Zero, Server.Configuration.VisibleChunksDistance);
+        Parallel.ForEach(initialChunks, chunk => GetOrLoadChunk(chunk));
     }
 
-    public HashSet<Vector2i> GetInitialChunks()
+    public byte GetBlockId(Vector3i worldPosition)
     {
-        var chunks = new HashSet<Vector2i>();
-        var distance = Server.Configuration.VisibleChunksDistance;
-        var currentChunk = new Vector2i(0, 0);
-        chunks.Add(currentChunk);
-
-        // Front
-        for (var z = 1; z < distance; z++)
-        {
-            chunks.Add(new Vector2i(currentChunk.X, currentChunk.Z + z));
-            for (var x = 1; x < distance - z; x++)
-            {
-                chunks.Add(new Vector2i(currentChunk.X - x, currentChunk.Z + z));
-            }
-        }
-
-        // Right
-        for (var x = 1; x < distance; x++)
-        {
-            chunks.Add(new Vector2i(currentChunk.X - x, currentChunk.Z));
-            for (var z = 1; z < distance - x; z++)
-            {
-                chunks.Add(new Vector2i(currentChunk.X - x, currentChunk.Z - z));
-            }
-        }
-
-        // Back
-        for (var z = 1; z < distance; z++)
-        {
-            chunks.Add(new Vector2i(currentChunk.X, currentChunk.Z - z));
-            for (var x = 1; x < distance - z; x++)
-            {
-                chunks.Add(new Vector2i(currentChunk.X + x, currentChunk.Z - z));
-            }
-        }
-
-        // Left
-        for (var x = 1; x < distance; x++)
-        {
-            chunks.Add(new Vector2i(currentChunk.X + x, currentChunk.Z));
-            for (var z = 1; z < distance - x; z++)
-            {
-                chunks.Add(new Vector2i(currentChunk.X + x, currentChunk.Z + z));
-            }
-        }
-
-        return chunks;
+        var chunkPosition = Chunk.GetChunkPositionForWorldPosition(worldPosition);
+        var chunk = GetOrLoadChunk(chunkPosition);
+        return chunk.Data.GetBlock(Chunk.WorldToLocal(worldPosition), out _);
     }
 
     public async Task UpdateBlockAsync(Vector3i worldPosition, byte blockId, byte metadata = 0)
     {
-        var chunkX = worldPosition.X / Chunk.Width - (worldPosition.X < 0 ? 1 : 0);
-        var chunkZ = worldPosition.Z / Chunk.Width - (worldPosition.Z < 0 ? 1 : 0);
+        var chunkPosition = Chunk.GetChunkPositionForWorldPosition(worldPosition);
 
-        var chunk = Chunks[chunkX, chunkZ];
-        if (chunk is null)
-            chunk = GetOrLoadChunk(chunkX, chunkZ);
+        var chunk = GetOrLoadChunk(chunkPosition);
 
         chunk.UpdateBlock(worldPosition, blockId, metadata);
 
@@ -141,15 +95,16 @@ public class MinecraftWorld
         await Server.BroadcastPacketAsync(blockUpdatePacket);
     }
 
-    public Chunk GetOrLoadChunk(int chunkX, int chunkZ)
+    public Chunk GetOrLoadChunk(Vector2i chunkPosition)
     {
         //TODO Be careful about thread safety here
-        var chunk = Chunks[chunkX, chunkZ];
+        var chunk = Chunks[chunkPosition.X, chunkPosition.Z];
         if (chunk is null)
         {
             var chunkData = new ChunkData();
-            WorldGenerator.GenerateChunk(chunkX, chunkZ, chunkData);
-            
+            WorldGenerator.GenerateChunkTerrain(chunkPosition, chunkData);
+            WorldGenerator.GenerateChunkDecorations(chunkPosition, chunkData);
+
             //TODO Move ligth calculation somewhere else
             for (var x = 0; x < Chunk.Width; x++)
             for (var y = 0; y < Chunk.Height; y++)
@@ -157,9 +112,9 @@ public class MinecraftWorld
             {
                 chunkData.SetLight(new Vector3i(x, y, z), 15, 15);
             }
-            
-            chunk = new Chunk(chunkX, chunkZ, chunkData);
-            Chunks[chunkX, chunkZ] = chunk;
+
+            chunk = new Chunk(chunkPosition.X, chunkPosition.Z, chunkData);
+            Chunks[chunkPosition.X, chunkPosition.Z] = chunk;
         }
 
         return chunk;
@@ -181,5 +136,55 @@ public class MinecraftWorld
         {
             Reason = NewStatePacket.ReasonType.EndRaining
         });
+    }
+
+    public static HashSet<Vector2i> GetChunksAround(Vector2i originChunk, int distance)
+    {
+        var chunks = new HashSet<Vector2i>
+        {
+            originChunk
+        };
+
+        // Front
+        for (var z = 1; z < distance; z++)
+        {
+            chunks.Add(new Vector2i(originChunk.X, originChunk.Z + z));
+            for (var x = 1; x < distance - z; x++)
+            {
+                chunks.Add(new Vector2i(originChunk.X - x, originChunk.Z + z));
+            }
+        }
+
+        // Right
+        for (var x = 1; x < distance; x++)
+        {
+            chunks.Add(new Vector2i(originChunk.X - x, originChunk.Z));
+            for (var z = 1; z < distance - x; z++)
+            {
+                chunks.Add(new Vector2i(originChunk.X - x, originChunk.Z - z));
+            }
+        }
+
+        // Back
+        for (var z = 1; z < distance; z++)
+        {
+            chunks.Add(new Vector2i(originChunk.X, originChunk.Z - z));
+            for (var x = 1; x < distance - z; x++)
+            {
+                chunks.Add(new Vector2i(originChunk.X + x, originChunk.Z - z));
+            }
+        }
+
+        // Left
+        for (var x = 1; x < distance; x++)
+        {
+            chunks.Add(new Vector2i(originChunk.X + x, originChunk.Z));
+            for (var z = 1; z < distance - x; z++)
+            {
+                chunks.Add(new Vector2i(originChunk.X + x, originChunk.Z + z));
+            }
+        }
+
+        return chunks;
     }
 }

@@ -8,7 +8,9 @@ namespace MineSharp.Network.Packets;
 public record PlayerDiggingPacket : IClientPacket
 {
     public const int Id = 0x0E;
-    
+
+    public byte PacketId => Id;
+
     public PlayerDiggingStatus Status { get; set; }
     public int X { get; set; }
     public sbyte Y { get; set; }

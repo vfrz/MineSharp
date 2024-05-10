@@ -8,9 +8,10 @@ public class PacketWriter : IDisposable, IAsyncDisposable
 {
     private readonly MemoryStream _memoryStream;
 
-    public PacketWriter()
+    public PacketWriter(byte packetId)
     {
         _memoryStream = new MemoryStream();
+        WriteByte(packetId);
     }
 
     public void WriteBytes(byte[] bytes)

@@ -57,7 +57,7 @@ public class MinecraftRemoteClient : IDisposable
 
     public async Task SendPacketAsync(IServerPacket packet)
     {
-        await using var writer = new PacketWriter();
+        await using var writer = new PacketWriter(packet.PacketId);
         packet.Write(writer);
         var data = writer.ToByteArray();
         await SendAsync(data);
@@ -73,7 +73,7 @@ public class MinecraftRemoteClient : IDisposable
         await Socket.DisconnectAsync(false);
     }
 
-    public async Task SendMessageAsync(string message)
+    public async Task SendChatAsync(string message)
     {
         await SendPacketAsync(new ChatMessagePacket
         {
@@ -84,13 +84,13 @@ public class MinecraftRemoteClient : IDisposable
     //TODO optimize (remove LINQ)
     public async Task UpdateLoadedChunksAsync()
     {
-        var visibleChunks = GetVisibleChunks();
+        var visibleChunks = MinecraftWorld.GetChunksAround(GetCurrentChunk(), Server.Configuration.VisibleChunksDistance);
         var chunksToLoad = visibleChunks.Except(_loadedChunks);
         var chunksToUnload = _loadedChunks.Except(visibleChunks);
 
         foreach (var chunkToLoad in chunksToLoad)
         {
-            var chunk = Server.World.GetOrLoadChunk(chunkToLoad.X, chunkToLoad.Z);
+            var chunk = Server.World.GetOrLoadChunk(chunkToLoad);
 
             await SendPacketAsync(new PreChunkPacket
             {
@@ -125,56 +125,6 @@ public class MinecraftRemoteClient : IDisposable
     }
 
     public Vector2i GetCurrentChunk() => Chunk.GetChunkPositionForWorldPosition(Player!.Position);
-
-    public HashSet<Vector2i> GetVisibleChunks()
-    {
-        var chunks = new HashSet<Vector2i>();
-        var distance = Server.Configuration.VisibleChunksDistance;
-        var currentChunk = GetCurrentChunk();
-        chunks.Add(currentChunk);
-
-        // Front
-        for (var z = 1; z < distance; z++)
-        {
-            chunks.Add(new Vector2i(currentChunk.X, currentChunk.Z + z));
-            for (var x = 1; x < distance - z; x++)
-            {
-                chunks.Add(new Vector2i(currentChunk.X - x, currentChunk.Z + z));
-            }
-        }
-
-        // Right
-        for (var x = 1; x < distance; x++)
-        {
-            chunks.Add(new Vector2i(currentChunk.X - x, currentChunk.Z));
-            for (var z = 1; z < distance - x; z++)
-            {
-                chunks.Add(new Vector2i(currentChunk.X - x, currentChunk.Z - z));
-            }
-        }
-
-        // Back
-        for (var z = 1; z < distance; z++)
-        {
-            chunks.Add(new Vector2i(currentChunk.X, currentChunk.Z - z));
-            for (var x = 1; x < distance - z; x++)
-            {
-                chunks.Add(new Vector2i(currentChunk.X + x, currentChunk.Z - z));
-            }
-        }
-
-        // Left
-        for (var x = 1; x < distance; x++)
-        {
-            chunks.Add(new Vector2i(currentChunk.X + x, currentChunk.Z));
-            for (var z = 1; z < distance - x; z++)
-            {
-                chunks.Add(new Vector2i(currentChunk.X + x, currentChunk.Z + z));
-            }
-        }
-
-        return chunks;
-    }
 
     public void Dispose()
     {

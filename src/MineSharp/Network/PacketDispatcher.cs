@@ -38,6 +38,7 @@ public class PacketDispatcher
             PlayerPositionAndLookClientPacket.Id => HandlePacket<PlayerPositionAndLookClientPacket>(ref reader, context),
             PlayerPositionPacket.Id => HandlePacket<PlayerPositionPacket>(ref reader, context),
             RespawnPacket.Id => HandlePacket<RespawnPacket>(ref reader, context),
+            UpdateSignPacket.Id => HandlePacket<UpdateSignPacket>(ref reader, context),
             UseEntityPacket.Id => HandlePacket<UseEntityPacket>(ref reader, context),
             _ => HandleUnknownPacket(ref reader, context, packetId)
         };
@@ -58,8 +59,9 @@ public class PacketDispatcher
     {
         //TODO Dangerous because we can lose data
         var packetSize = (int) reader.Length - 1;
-        var packetData = packetSize > 0 ? reader.ReadBytesArray(packetSize) : Array.Empty<byte>();
-        Console.WriteLine($"[WARN] Unknown packet: 0x{packetId:X} with data length: {packetData.Length}");
+        if (packetSize > 0)
+            reader.Advance(packetSize);
+        Console.WriteLine($"[WARN] Unknown packet: 0x{packetId:X} with data length: {packetSize}");
         return Task.CompletedTask;
     }
 }

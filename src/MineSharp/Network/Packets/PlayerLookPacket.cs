@@ -8,6 +8,8 @@ public class PlayerLookPacket : IClientPacket
 {
     public const int Id = 0x0C;
 
+    public byte PacketId => Id;
+
     public float Yaw { get; set; }
     public float Pitch { get; set; }
     public bool OnGround { get; set; }

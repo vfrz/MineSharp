@@ -11,8 +11,14 @@ using MineSharp.Services;
 var host = Host.CreateDefaultBuilder(args)
     .ConfigureLogging(builder =>
     {
+        builder.AddFilter("Microsoft.", LogLevel.Warning)
+            .AddFilter("System.", LogLevel.Warning);
         builder.SetMinimumLevel(LogLevel.Debug);
-        builder.AddSimpleConsole(options => { options.TimestampFormat = "[HH:mm:ss fff] "; });
+        builder.AddSimpleConsole(options =>
+        {
+            options.SingleLine = true;
+            options.TimestampFormat = "[HH:mm:ss fff] ";
+        });
     })
     .ConfigureServices((context, services) =>
     {

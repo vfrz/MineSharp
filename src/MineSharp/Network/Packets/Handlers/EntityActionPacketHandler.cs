@@ -4,7 +4,7 @@ namespace MineSharp.Network.Packets.Handlers;
 
 public class EntityActionPacketHandler : IClientPacketHandler<EntityActionPacket>
 {
-    public async Task HandleAsync(EntityActionPacket packet, ClientPacketHandlerContext context)
+    public Task HandleAsync(EntityActionPacket packet, ClientPacketHandlerContext context)
     {
         if (packet.Action is EntityActionPacket.ActionType.Crouch)
         {
@@ -14,5 +14,6 @@ public class EntityActionPacketHandler : IClientPacketHandler<EntityActionPacket
         {
             //TODO Update player entity metadata
         }
+        return Task.CompletedTask;
     }
 }

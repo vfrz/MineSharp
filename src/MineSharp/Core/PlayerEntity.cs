@@ -58,6 +58,7 @@ public class PlayerEntity : LivingEntity
         {
             Dimension = dimension
         });
+        //TODO Handle spawn point correctly
         await Server!.BroadcastPacketAsync(new NamedEntitySpawnPacket
         {
             EntityId = EntityId,

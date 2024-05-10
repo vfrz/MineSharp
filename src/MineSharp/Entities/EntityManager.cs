@@ -32,4 +32,9 @@ public class EntityManager
     {
         return _entities.TryGetValue(id, out entity);
     }
+
+    public Task ProcessAsync(TimeSpan elapsed)
+    {
+        return Task.CompletedTask;
+    }
 }

@@ -17,9 +17,11 @@ using MineSharp.World;
 
 namespace MineSharp.Core;
 
-public class MinecraftServer
+public class MinecraftServer : IDisposable
 {
     private const int ClientTimeoutInSeconds = 10;
+
+    private readonly SemaphoreSlim _addClientSemaphore = new(1, 1);
 
     public IEnumerable<MinecraftRemoteClient> RemoteClients => _remoteClients.Values;
     private readonly ConcurrentDictionary<string, MinecraftRemoteClient> _remoteClients;
@@ -92,13 +94,13 @@ public class MinecraftServer
 
         _commandHandler.TryRegisterCommand("pos", async (server, client, args) =>
         {
-            await client!.SendMessageAsync(client.Player!.Position.ToString());
+            await client!.SendChatAsync(client.Player!.Position.ToString());
             return true;
         });
 
         _commandHandler.TryRegisterCommand("chunk", async (server, client, args) =>
         {
-            await client!.SendMessageAsync(client.GetCurrentChunk().ToString());
+            await client!.SendChatAsync(client.GetCurrentChunk().ToString());
             return true;
         });
 
@@ -116,7 +118,7 @@ public class MinecraftServer
 
         _commandHandler.TryRegisterCommand("yaw", async (server, client, _) =>
         {
-            await server.BroadcastMessageAsync($"Yaw: {client!.Player!.Yaw}");
+            await server.BroadcastChatAsync($"Yaw: {client!.Player!.Yaw}");
             return true;
         });
 
@@ -148,7 +150,7 @@ public class MinecraftServer
     {
         _logger.LogInformation("Server starting...");
 
-        World.GenerateInitialChunks();
+        World.LoadInitialChunks();
         World.Start();
 
         Scheduler.Start();
@@ -160,7 +162,7 @@ public class MinecraftServer
         RegisterLoop(TimeSpan.FromSeconds(1), World.SendTimeUpdateAsync, cancellationToken);
         RegisterLoop(TimeSpan.FromSeconds(1), async () =>
         {
-            await Parallel.ForEachAsync(RemoteClients, cancellationToken, async (client, token) =>
+            await Parallel.ForEachAsync(RemoteClients, cancellationToken, async (client, _) =>
             {
                 if (client.Player is not null)
                     await client.UpdateLoadedChunksAsync();
@@ -254,6 +256,7 @@ public class MinecraftServer
         }
 
         await World.ProcessAsync(elapsed);
+        await EntityManager.ProcessAsync(elapsed);
         await Scheduler.ProcessAsync();
     }
 
@@ -267,7 +270,7 @@ public class MinecraftServer
 
     public async Task BroadcastPacketAsync(IServerPacket packet, MinecraftRemoteClient? except = null, bool readyOnly = false)
     {
-        await using var writer = new PacketWriter();
+        await using var writer = new PacketWriter(packet.PacketId);
         packet.Write(writer);
         var data = writer.ToByteArray();
         await Parallel.ForEachAsync(RemoteClients, async (client, _) =>
@@ -278,7 +281,7 @@ public class MinecraftServer
         });
     }
 
-    public async Task BroadcastMessageAsync(string message, MinecraftRemoteClient? except = null)
+    public async Task BroadcastChatAsync(string message, MinecraftRemoteClient? except = null)
     {
         await BroadcastPacketAsync(new ChatMessagePacket
         {
@@ -342,17 +345,28 @@ public class MinecraftServer
     {
         var remoteClient = new MinecraftRemoteClient(socket, this);
 
-        if (_remoteClients.Count >= Configuration.MaxPlayers)
+        await _addClientSemaphore.WaitAsync(cancellationToken);
+        try
         {
-            await remoteClient.SendPacketAsync(new PlayerDisconnectPacket
+            if (_remoteClients.Count >= Configuration.MaxPlayers)
             {
-                Reason = $"Server is full: {_remoteClients.Count}/{Configuration.MaxPlayers}"
-            });
-            await remoteClient.DisconnectSocketAsync();
-            return;
+                await remoteClient.SendPacketAsync(new PlayerDisconnectPacket
+                {
+                    Reason = $"Server is full: {_remoteClients.Count}/{Configuration.MaxPlayers}"
+                });
+                await remoteClient.DisconnectSocketAsync();
+                _logger.LogInformation("Client {networkId} tried to connect but the server is full", remoteClient.NetworkId);
+                return;
+            }
+
+            AddRemoteClient(remoteClient);
+        }
+        finally
+        {
+            _addClientSemaphore.Release();
         }
 
-        AddRemoteClient(remoteClient);
+        _logger.LogInformation("Client {networkId} connected", remoteClient.NetworkId);
 
         var context = new ClientPacketHandlerContext(this, remoteClient);
 
@@ -382,13 +396,15 @@ public class MinecraftServer
         }
         catch (Exception ex)
         {
-            _logger.LogError("Exception({0}): {1}", ex.GetType().ToString(), ex.Message);
+            _logger.LogError("Exception({exceptionType}): {exceptionMessage}", ex.GetType().ToString(), ex.Message);
             if (!socket.Connected)
                 throw;
         }
         finally
         {
-            _logger.LogInformation("Client disconnected with network id: {0}", remoteClient.NetworkId);
+            if (remoteClient.Username is not null)
+                _logger.LogInformation("Player {username} with network id: {networkId}", remoteClient.Username, remoteClient.NetworkId);
+            _logger.LogInformation("Client disconnected with network id: {networkId}", remoteClient.NetworkId);
             await RemoveRemoteClientAsync(remoteClient);
         }
     }
@@ -397,8 +413,6 @@ public class MinecraftServer
     {
         if (!_remoteClients.TryAdd(remoteClient.NetworkId, remoteClient))
             throw new Exception("Failed to add client to list");
-
-        _logger.LogInformation("Client connected with network id: {0}", remoteClient.NetworkId);
     }
 
     private async Task RemoveRemoteClientAsync(MinecraftRemoteClient remoteClient)
@@ -415,7 +429,7 @@ public class MinecraftServer
         if (remoteClient.Player is not null)
         {
             var leftMessage = $"{ChatColors.Blue}{remoteClient.Username} {ChatColors.White}has left the server!";
-            await BroadcastMessageAsync(leftMessage, remoteClient);
+            await BroadcastChatAsync(leftMessage, remoteClient);
 
             await BroadcastPacketAsync(new DestroyEntityPacket
             {
@@ -489,5 +503,10 @@ public class MinecraftServer
 
         // Mark the PipeReader as complete.
         await pipe.Reader.CompleteAsync();
+    }
+
+    public void Dispose()
+    {
+        _addClientSemaphore.Dispose();
     }
 }

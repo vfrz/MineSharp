@@ -6,6 +6,8 @@ public class OpenWindowPacket : IServerPacket
 {
     public const int Id = 0x64;
 
+    public byte PacketId => Id;
+
     public byte WindowId { get; set; }
 
     public byte InventoryType { get; set; }
@@ -16,7 +18,6 @@ public class OpenWindowPacket : IServerPacket
 
     public void Write(PacketWriter writer)
     {
-        writer.WriteByte(Id);
         writer.WriteByte(WindowId);
         writer.WriteByte(InventoryType);
         writer.WriteString8(WindowTitle);

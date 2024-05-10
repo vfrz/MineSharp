@@ -6,11 +6,12 @@ public class NewStatePacket : IServerPacket
 {
     public const int Id = 0x46;
 
+    public byte PacketId => Id;
+
     public ReasonType Reason { get; set; }
 
     public void Write(PacketWriter writer)
     {
-        writer.WriteByte(Id);
         writer.WriteByte((byte) Reason);
     }
 

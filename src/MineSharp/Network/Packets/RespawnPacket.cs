@@ -9,6 +9,8 @@ public class RespawnPacket : IClientPacket, IServerPacket
 {
     public const int Id = 0x09;
 
+    public byte PacketId => Id;
+
     public MinecraftDimension Dimension { get; set; }
 
     public void Read(ref SequenceReader<byte> reader)
@@ -18,7 +20,6 @@ public class RespawnPacket : IClientPacket, IServerPacket
 
     public void Write(PacketWriter writer)
     {
-        writer.WriteByte(Id);
         writer.WriteSByte((sbyte) Dimension);
     }
 }

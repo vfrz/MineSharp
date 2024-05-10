@@ -7,9 +7,11 @@ namespace MineSharp.Network.Packets;
 public class CloseWindowPacket : IClientPacket, IServerPacket
 {
     public const int Id = 0x65;
-    
+
+    public byte PacketId => Id;
+
     public byte WindowId { get; set; }
-    
+
     public void Read(ref SequenceReader<byte> reader)
     {
         WindowId = reader.ReadByte();
@@ -17,7 +19,6 @@ public class CloseWindowPacket : IClientPacket, IServerPacket
 
     public void Write(PacketWriter writer)
     {
-        writer.WriteByte(Id);
         writer.WriteByte(WindowId);
     }
 }

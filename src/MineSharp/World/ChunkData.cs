@@ -30,6 +30,8 @@ public class ChunkData : IBlockChunkData
     public void SetBlock(Vector3i localPosition, byte blockId, byte metadata = 0)
     {
         var index = LocalToIndex(localPosition);
+        if (index < 0 || index >= ArraySize)
+            return;
         _blocks[index] = blockId;
         _metadata[index] = metadata;
     }

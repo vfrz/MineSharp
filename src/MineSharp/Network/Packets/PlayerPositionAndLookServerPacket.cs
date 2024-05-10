@@ -6,6 +6,8 @@ public class PlayerPositionAndLookServerPacket : IServerPacket
 {
     public const int Id = 0x0D;
 
+    public byte PacketId => Id;
+
     public double X { get; set; }
     public double Stance { get; set; }
     public double Y { get; set; }
@@ -16,7 +18,6 @@ public class PlayerPositionAndLookServerPacket : IServerPacket
 
     public void Write(PacketWriter writer)
     {
-        writer.WriteByte(Id);
         writer.WriteDouble(X);
         writer.WriteDouble(Stance);
         writer.WriteDouble(Y);

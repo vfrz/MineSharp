@@ -8,6 +8,8 @@ public class EntityActionPacket : IClientPacket
 {
     public const int Id = 0x13;
 
+    public byte PacketId => Id;
+
     public int EntityId { get; set; }
     public ActionType Action { get; set; }
 

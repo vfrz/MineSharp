@@ -7,6 +7,8 @@ public class LoginResponsePacket : IServerPacket
 {
     public const int Id = 0x01;
 
+    public byte PacketId => Id;
+
     public int EntityId { get; set; }
 
     // Unused by the client
@@ -15,7 +17,6 @@ public class LoginResponsePacket : IServerPacket
 
     public void Write(PacketWriter writer)
     {
-        writer.WriteByte(Id);
         writer.WriteInt(EntityId);
         writer.WriteString(string.Empty);
         writer.WriteLong(MapSeed);
