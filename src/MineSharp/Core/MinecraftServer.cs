@@ -34,7 +34,7 @@ public class MinecraftServer : IDisposable
 
     public MinecraftWorld World { get; }
     public EntityManager EntityManager { get; }
-    public Scheduler Scheduler { get; }
+    public Looper Looper { get; }
 
     public MinecraftServer(PacketDispatcher packetDispatcher,
         IOptions<ServerConfiguration> configuration,
@@ -53,7 +53,7 @@ public class MinecraftServer : IDisposable
 
         EntityManager = new EntityManager(this);
 
-        Scheduler = new Scheduler();
+        Looper = new Looper(TimeSpan.FromMilliseconds(50), ProcessAsync);
 
         RegisterDefaultCommands();
 
@@ -69,23 +69,20 @@ public class MinecraftServer : IDisposable
         World.LoadInitialChunks();
         World.Start();
 
-        EntityManager.Start();
-
-        Scheduler.Start();
-
         // Main tick loop
-        Looper.CreateTimedLoop(TimeSpan.FromMilliseconds(50), ProcessAsync, cancellationToken);
-
-        Looper.CreateLoop(TimeSpan.FromSeconds(5), SendKeepAlivePacketsAsync, cancellationToken);
-        Looper.CreateLoop(TimeSpan.FromSeconds(1), World.SendTimeUpdateAsync, cancellationToken);
-        Looper.CreateLoop(TimeSpan.FromSeconds(1), async () =>
+        Looper.RegisterLoop(TimeSpan.FromSeconds(1), EntityManager.ProcessPickupItemsAsync);
+        Looper.RegisterLoop(TimeSpan.FromSeconds(5), SendKeepAlivePacketsAsync);
+        Looper.RegisterLoop(TimeSpan.FromSeconds(1), World.SendTimeUpdateAsync);
+        Looper.RegisterLoop(TimeSpan.FromSeconds(1), async (token) =>
         {
-            await Parallel.ForEachAsync(RemoteClients, cancellationToken, async (client, _) =>
+            await Parallel.ForEachAsync(RemoteClients, token, async (client, _) =>
             {
                 if (client.Player is not null && !client.Player.Respawning)
                     await client.UpdateLoadedChunksAsync();
             });
-        }, cancellationToken);
+        });
+
+        Looper.Start();
 
         _socket.Listen();
         Task.Run(async () =>
@@ -100,7 +97,7 @@ public class MinecraftServer : IDisposable
         _logger.LogInformation("Server started on port: {0}", Configuration.Port);
     }
 
-    private async Task SendKeepAlivePacketsAsync()
+    private async Task SendKeepAlivePacketsAsync(CancellationToken cancellationToken)
     {
         await BroadcastPacketAsync(new KeepAlivePacket(), readyOnly: true);
     }
@@ -109,8 +106,7 @@ public class MinecraftServer : IDisposable
     {
         await DisconnectAllPlayersAsync("Server stopped.");
 
-        Scheduler.Stop();
-        EntityManager.Stop();
+        await Looper.StopAsync();
         World.Stop();
 
         _logger.LogInformation("Server stoping...");
@@ -119,8 +115,8 @@ public class MinecraftServer : IDisposable
         _socket.Dispose();
         _logger.LogInformation("Server stopped");
     }
-    
-        private void RegisterDefaultCommands()
+
+    private void RegisterDefaultCommands()
     {
         _commandHandler.TryRegisterCommand("id", async (_, client, _) =>
         {
@@ -203,7 +199,7 @@ public class MinecraftServer : IDisposable
         return _serviceProvider.GetRequiredService<ILogger<T>>();
     }
 
-    private async Task ProcessAsync(TimeSpan elapsed)
+    private async Task ProcessAsync(TimeSpan elapsed, CancellationToken cancellationToken)
     {
         foreach (var remoteClient in RemoteClients)
         {
@@ -231,7 +227,6 @@ public class MinecraftServer : IDisposable
 
         await World.ProcessAsync(elapsed);
         await EntityManager.ProcessAsync(elapsed);
-        await Scheduler.ProcessAsync();
     }
 
     public async Task DisconnectAllPlayersAsync(string message)

@@ -71,7 +71,7 @@ public class PlayerDiggingPacketHandler : IClientPacketHandler<PlayerDiggingPack
             Pitch = pickupItem.Pitch,
             Roll = pickupItem.Roll
         });
-        context.Server.Scheduler.Schedule(TimeSpan.FromSeconds(0.5), async () =>
+        context.Server.Looper.Schedule(TimeSpan.FromSeconds(0.5), async _ =>
         {
             if (context.Server.EntityManager.EntityExists(context.RemoteClient.Player!.EntityId))
             {

@@ -11,26 +11,13 @@ public class EntityManager
     private readonly ThreadSafeIdGenerator _idGenerator;
     private readonly ConcurrentDictionary<int, IEntity> _entities;
     private readonly MinecraftServer _server;
-
-    private readonly CancellationTokenSource _loopsCts;
-
+    
     public EntityManager(MinecraftServer server)
     {
         _server = server;
 
         _idGenerator = new ThreadSafeIdGenerator();
         _entities = new ConcurrentDictionary<int, IEntity>();
-        _loopsCts = new CancellationTokenSource();
-    }
-
-    public void Start()
-    {
-        Looper.CreateLoop(TimeSpan.FromSeconds(1), ProcessPickupItemsAsync, _loopsCts.Token);
-    }
-
-    public void Stop()
-    {
-        _loopsCts.Cancel();
     }
 
     public void RegisterEntity(IEntity entity)
@@ -51,7 +38,7 @@ public class EntityManager
 
     public bool EntityExists(int id) => _entities.ContainsKey(id);
     
-    public async Task ProcessPickupItemsAsync()
+    public async Task ProcessPickupItemsAsync(CancellationToken cancellationToken)
     {
         foreach (var pickupItem in _entities.Values.OfType<PickupItem>())
         {

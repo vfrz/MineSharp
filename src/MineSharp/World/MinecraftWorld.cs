@@ -56,7 +56,7 @@ public class MinecraftWorld
         await SendTimeUpdateAsync();
     }
 
-    public async Task SendTimeUpdateAsync()
+    public async Task SendTimeUpdateAsync(CancellationToken cancellationToken = default)
     {
         await Server.BroadcastPacketAsync(new TimeUpdatePacket
         {

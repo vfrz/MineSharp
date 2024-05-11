@@ -40,7 +40,7 @@ public class PlayerEntity : LivingEntity
             }, RemoteClient);
 
             //TODO This is a bit dirty
-            Server!.Scheduler.Schedule(TimeSpan.FromSeconds(1.5), async () =>
+            Server!.Looper.Schedule(TimeSpan.FromSeconds(1.5), async _ =>
             {
                 if (Health == 0)
                 {

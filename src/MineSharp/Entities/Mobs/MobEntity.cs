@@ -20,7 +20,7 @@ public abstract class MobEntity : LivingEntity, IMobEntity
                 Status = EntityStatus.Dead
             });
 
-            Server!.Scheduler.Schedule(TimeSpan.FromSeconds(1.5), async () =>
+            Server!.Looper.Schedule(TimeSpan.FromSeconds(1.5), async _ =>
             {
                 await Server!.BroadcastPacketAsync(new DestroyEntityPacket
                 {
