@@ -1,4 +1,5 @@
 using System.Net.Sockets;
+using Microsoft.Extensions.Logging;
 using MineSharp.Core.Packets;
 using MineSharp.Network.Packets;
 using MineSharp.World;
@@ -59,12 +60,23 @@ public class MinecraftRemoteClient : IDisposable
         await using var writer = new PacketWriter(packet.PacketId);
         packet.Write(writer);
         var data = writer.ToByteArray();
-        await SendAsync(data);
+        await TrySendAsync(data);
     }
 
-    public async Task SendAsync(byte[] data)
+    public async Task<bool> TrySendAsync(byte[] data)
     {
-        await Socket.SendAsync(data);
+        if (!Socket.Connected)
+            return false;
+        try
+        {
+            await Socket.SendAsync(data);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Server.GetLogger<MinecraftRemoteClient>().LogError(ex, "Failed to send data to client: {networkId}", NetworkId);
+            return false;
+        }
     }
 
     public async Task DisconnectSocketAsync()
@@ -96,7 +108,7 @@ public class MinecraftRemoteClient : IDisposable
 
         _loadedChunks.Clear();
     }
-    
+
     public async Task UpdateLoadedChunksAsync()
     {
         var visibleChunks = MinecraftWorld.GetChunksAround(GetCurrentChunk(), Server.Configuration.VisibleChunksDistance);

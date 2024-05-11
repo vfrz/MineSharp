@@ -81,8 +81,10 @@ public class Looper : IDisposable
         var stopwatch = new Stopwatch();
         using var timer = new PeriodicTimer(Interval);
         stopwatch.Start();
-        while (await timer.WaitForNextTickAsync(_cts!.Token))
+        while (await timer.WaitForNextTickAsync())
         {
+            if (_cts!.Token.IsCancellationRequested)
+                break;
             var elapsed = stopwatch.Elapsed;
             stopwatch.Restart();
             await ProcessLoopsAsync(elapsed);

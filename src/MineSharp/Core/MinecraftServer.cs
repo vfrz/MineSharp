@@ -69,7 +69,6 @@ public class MinecraftServer : IDisposable
         World.LoadInitialChunks();
         World.Start();
 
-        // Main tick loop
         Looper.RegisterLoop(TimeSpan.FromSeconds(1), EntityManager.ProcessPickupItemsAsync);
         Looper.RegisterLoop(TimeSpan.FromSeconds(5), SendKeepAlivePacketsAsync);
         Looper.RegisterLoop(TimeSpan.FromSeconds(1), World.SendTimeUpdateAsync);
@@ -94,7 +93,7 @@ public class MinecraftServer : IDisposable
             }
         }, cancellationToken);
 
-        _logger.LogInformation("Server started on port: {0}", Configuration.Port);
+        _logger.LogInformation("Server started on port: {port}", Configuration.Port);
     }
 
     private async Task SendKeepAlivePacketsAsync(CancellationToken cancellationToken)
@@ -145,13 +144,13 @@ public class MinecraftServer : IDisposable
             return true;
         });
 
-        _commandHandler.TryRegisterCommand("pos", async (server, client, args) =>
+        _commandHandler.TryRegisterCommand("pos", async (_, client, _) =>
         {
             await client!.SendChatAsync(client.Player!.Position.ToString());
             return true;
         });
 
-        _commandHandler.TryRegisterCommand("chunk", async (server, client, args) =>
+        _commandHandler.TryRegisterCommand("chunk", async (_, client, _) =>
         {
             await client!.SendChatAsync(client.GetCurrentChunk().ToString());
             return true;
@@ -181,7 +180,7 @@ public class MinecraftServer : IDisposable
             return true;
         });
 
-        _commandHandler.TryRegisterCommand("chest", async (server, client, args) =>
+        _commandHandler.TryRegisterCommand("chest", async (_, client, _) =>
         {
             await client!.SendPacketAsync(new OpenWindowPacket
             {
@@ -201,6 +200,9 @@ public class MinecraftServer : IDisposable
 
     private async Task ProcessAsync(TimeSpan elapsed, CancellationToken cancellationToken)
     {
+        // Pass cancellation token
+        await _packetDispatcher.HandlePacketsAsync();
+
         foreach (var remoteClient in RemoteClients)
         {
             var player = remoteClient.Player;
@@ -246,7 +248,7 @@ public class MinecraftServer : IDisposable
         {
             if (client == except || (readyOnly && client.State != MinecraftRemoteClient.ClientState.Ready))
                 return;
-            await client.SendAsync(data);
+            await client.TrySendAsync(data);
         });
     }
 
@@ -449,20 +451,8 @@ public class MinecraftServer : IDisposable
 
             if (buffer.Length > 0)
             {
-                var task = _packetDispatcher.DispatchPacket(context, buffer, out var position);
-                try
-                {
-                    await task;
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Failed to handle packet");
-                }
-                finally
-                {
-                    // Tell the PipeReader how much of the buffer has been consumed.
-                    pipe.Reader.AdvanceTo(position);
-                }
+                var position = _packetDispatcher.DispatchPacket(buffer, context);
+                pipe.Reader.AdvanceTo(position);
             }
 
             // Stop reading if there's no more data coming.

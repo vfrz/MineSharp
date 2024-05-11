@@ -1,6 +1,13 @@
 namespace MineSharp.Core.Packets;
 
-public interface IClientPacketHandler<in T> where T : IClientPacket
+public interface IClientPacketHandler<in T> : IClientPacketHandler where T : IClientPacket
 {
-    Task HandleAsync(T packet, ClientPacketHandlerContext context);
+    Task IClientPacketHandler.HandleAsync(IClientPacket packet, ClientPacketHandlerContext context) => HandleAsync((T) packet, context);
+
+    public Task HandleAsync(T packet, ClientPacketHandlerContext context);
+}
+
+public interface IClientPacketHandler
+{
+    public Task HandleAsync(IClientPacket packet, ClientPacketHandlerContext context);
 }
