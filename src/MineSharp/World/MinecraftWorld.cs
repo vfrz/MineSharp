@@ -7,7 +7,7 @@ namespace MineSharp.World;
 
 public class MinecraftWorld
 {
-    private TwoDimensionalArray<Chunk?> Chunks { get; }
+    private ChunksContainer Chunks { get; }
 
     public bool Raining { get; private set; }
     private WorldTimer Timer { get; }
@@ -26,10 +26,13 @@ public class MinecraftWorld
     {
         Server = server;
         Seed = seed;
-        WorldGenerator = new DefaultWorldGenerator(seed);
+        //WorldGenerator = new DefaultWorldGenerator(seed);
+        WorldGenerator = new DesertWorldGenerator(seed);
+        //WorldGenerator = new FlatWorldGenerator();
+        //WorldGenerator = new TestWorldGenerator(seed);
         _logger = server.GetLogger<MinecraftWorld>();
         Timer = new WorldTimer();
-        Chunks = new TwoDimensionalArray<Chunk?>(-500, 500, -500, 500);
+        Chunks = new ChunksContainer();
     }
 
     public void Start()
@@ -63,8 +66,8 @@ public class MinecraftWorld
 
     public void LoadInitialChunks()
     {
-        _logger.LogInformation("Generating world...");
         var initialChunks = GetChunksAround(Vector2i.Zero, Server.Configuration.VisibleChunksDistance);
+        _logger.LogInformation("Generating world...");
         Parallel.ForEach(initialChunks, chunk => GetOrLoadChunk(chunk));
     }
 
@@ -75,13 +78,21 @@ public class MinecraftWorld
         return chunk.Data.GetBlock(Chunk.WorldToLocal(worldPosition), out _);
     }
 
+    public int GetHighestBlockHeight(Vector2i worldPosition)
+    {
+        var chunkPosition = Chunk.GetChunkPositionForWorldPosition(worldPosition);
+        var chunk = GetOrLoadChunk(chunkPosition);
+        return chunk.GetHighestBlockHeight(Chunk.WorldToLocal(worldPosition));
+    }
+
     public async Task UpdateBlockAsync(Vector3i worldPosition, byte blockId, byte metadata = 0)
     {
         var chunkPosition = Chunk.GetChunkPositionForWorldPosition(worldPosition);
 
         var chunk = GetOrLoadChunk(chunkPosition);
 
-        chunk.UpdateBlock(worldPosition, blockId, metadata);
+        var localPosition = Chunk.WorldToLocal(worldPosition);
+        chunk.UpdateBlock(localPosition, blockId, metadata);
 
         var blockUpdatePacket = new BlockUpdatePacket
         {
@@ -98,7 +109,7 @@ public class MinecraftWorld
     public Chunk GetOrLoadChunk(Vector2i chunkPosition)
     {
         //TODO Be careful about thread safety here
-        var chunk = Chunks[chunkPosition.X, chunkPosition.Z];
+        var chunk = Chunks[chunkPosition];
         if (chunk is null)
         {
             var chunkData = new ChunkData();
@@ -114,7 +125,7 @@ public class MinecraftWorld
             }
 
             chunk = new Chunk(chunkPosition.X, chunkPosition.Z, chunkData);
-            Chunks[chunkPosition.X, chunkPosition.Z] = chunk;
+            Chunks[chunkPosition] = chunk;
         }
 
         return chunk;

@@ -20,9 +20,20 @@ public class Chunk
         Data = data;
     }
 
-    public void UpdateBlock(Vector3i worldPosition, byte blockId, byte metadata = 0)
+    public void UpdateBlock(Vector3i localPosition, byte blockId, byte metadata = 0)
     {
-        Data.SetBlock(WorldToLocal(worldPosition), blockId, metadata);
+        Data.SetBlock(localPosition, blockId, metadata);
+    }
+
+    public int GetHighestBlockHeight(Vector2i localPosition)
+    {
+        for (var y = Height - 1; y >= 0; y--)
+        {
+            if (Data.GetBlock(new Vector3i(localPosition.X, y, localPosition.Z), out _) != 0)
+                return y;
+        }
+
+        return -1;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -39,6 +50,13 @@ public class Chunk
     }
 
     public static Vector2i GetChunkPositionForWorldPosition(Vector3i position)
+    {
+        var chunkX = position.X / Width - (position.X < 0 ? 1 : 0);
+        var chunkZ = position.Z / Width - (position.Z < 0 ? 1 : 0);
+        return new Vector2i(chunkX, chunkZ);
+    }
+    
+    public static Vector2i GetChunkPositionForWorldPosition(Vector2i position)
     {
         var chunkX = position.X / Width - (position.X < 0 ? 1 : 0);
         var chunkZ = position.Z / Width - (position.Z < 0 ? 1 : 0);

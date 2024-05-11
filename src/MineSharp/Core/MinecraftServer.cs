@@ -1,5 +1,4 @@
 using System.Collections.Concurrent;
-using System.Diagnostics;
 using System.IO.Pipelines;
 using System.Net;
 using System.Net.Sockets;
@@ -63,7 +62,65 @@ public class MinecraftServer : IDisposable
         _socket.Bind(ip);
     }
 
-    private void RegisterDefaultCommands()
+    public void Start(CancellationToken cancellationToken)
+    {
+        _logger.LogInformation("Server starting...");
+
+        World.LoadInitialChunks();
+        World.Start();
+
+        EntityManager.Start();
+
+        Scheduler.Start();
+
+        // Main tick loop
+        Looper.CreateTimedLoop(TimeSpan.FromMilliseconds(50), ProcessAsync, cancellationToken);
+
+        Looper.CreateLoop(TimeSpan.FromSeconds(5), SendKeepAlivePacketsAsync, cancellationToken);
+        Looper.CreateLoop(TimeSpan.FromSeconds(1), World.SendTimeUpdateAsync, cancellationToken);
+        Looper.CreateLoop(TimeSpan.FromSeconds(1), async () =>
+        {
+            await Parallel.ForEachAsync(RemoteClients, cancellationToken, async (client, _) =>
+            {
+                if (client.Player is not null && !client.Player.Respawning)
+                    await client.UpdateLoadedChunksAsync();
+            });
+        }, cancellationToken);
+
+        _socket.Listen();
+        Task.Run(async () =>
+        {
+            while (!cancellationToken.IsCancellationRequested)
+            {
+                var socket = await _socket.AcceptAsync(cancellationToken);
+                _ = HandleClientAsync(socket, cancellationToken);
+            }
+        }, cancellationToken);
+
+        _logger.LogInformation("Server started on port: {0}", Configuration.Port);
+    }
+
+    private async Task SendKeepAlivePacketsAsync()
+    {
+        await BroadcastPacketAsync(new KeepAlivePacket(), readyOnly: true);
+    }
+
+    public async Task StopAsync()
+    {
+        await DisconnectAllPlayersAsync("Server stopped.");
+
+        Scheduler.Stop();
+        EntityManager.Stop();
+        World.Stop();
+
+        _logger.LogInformation("Server stoping...");
+        //_socket.Shutdown(SocketShutdown.Both);
+        //_socket.Close();
+        _socket.Dispose();
+        _logger.LogInformation("Server stopped");
+    }
+    
+        private void RegisterDefaultCommands()
     {
         _commandHandler.TryRegisterCommand("id", async (_, client, _) =>
         {
@@ -144,89 +201,6 @@ public class MinecraftServer : IDisposable
     public ILogger<T> GetLogger<T>()
     {
         return _serviceProvider.GetRequiredService<ILogger<T>>();
-    }
-
-    public void Start(CancellationToken cancellationToken)
-    {
-        _logger.LogInformation("Server starting...");
-
-        World.LoadInitialChunks();
-        World.Start();
-
-        Scheduler.Start();
-
-        // Main tick loop
-        RegisterLoop(TimeSpan.FromMilliseconds(50), ProcessAsync, cancellationToken);
-
-        RegisterLoop(TimeSpan.FromSeconds(5), SendKeepAlivePacketsAsync, cancellationToken);
-        RegisterLoop(TimeSpan.FromSeconds(1), World.SendTimeUpdateAsync, cancellationToken);
-        RegisterLoop(TimeSpan.FromSeconds(1), async () =>
-        {
-            await Parallel.ForEachAsync(RemoteClients, cancellationToken, async (client, _) =>
-            {
-                if (client.Player is not null)
-                    await client.UpdateLoadedChunksAsync();
-            });
-        }, cancellationToken);
-
-        _socket.Listen();
-        Task.Run(async () =>
-        {
-            while (!cancellationToken.IsCancellationRequested)
-            {
-                var socket = await _socket.AcceptAsync(cancellationToken);
-                _ = HandleClientAsync(socket, cancellationToken);
-            }
-        }, cancellationToken);
-
-        _logger.LogInformation("Server started on port: {0}", Configuration.Port);
-    }
-
-    private void RegisterLoop(TimeSpan interval, Func<Task> func, CancellationToken cancellationToken)
-    {
-        Task.Run(async () =>
-        {
-            using var timer = new PeriodicTimer(interval);
-            while (await timer.WaitForNextTickAsync(cancellationToken))
-            {
-                await func();
-            }
-        }, cancellationToken);
-    }
-
-    private void RegisterLoop(TimeSpan interval, Func<TimeSpan, Task> func, CancellationToken cancellationToken)
-    {
-        Task.Run(async () =>
-        {
-            var stopwatch = new Stopwatch();
-            using var timer = new PeriodicTimer(interval);
-            stopwatch.Start();
-            while (await timer.WaitForNextTickAsync(cancellationToken))
-            {
-                var elapsed = stopwatch.Elapsed;
-                stopwatch.Restart();
-                await func(elapsed);
-            }
-        }, cancellationToken);
-    }
-
-    private async Task SendKeepAlivePacketsAsync()
-    {
-        await BroadcastPacketAsync(new KeepAlivePacket(), readyOnly: true);
-    }
-
-    public async Task StopAsync()
-    {
-        await DisconnectAllPlayersAsync("Server stopped.");
-
-        Scheduler.Stop();
-        World.Stop();
-
-        _logger.LogInformation("Server stoping...");
-        //_socket.Shutdown(SocketShutdown.Both);
-        //_socket.Close();
-        _socket.Dispose();
-        _logger.LogInformation("Server stopped");
     }
 
     private async Task ProcessAsync(TimeSpan elapsed)

@@ -14,6 +14,8 @@ public class PlayerEntity : LivingEntity
 
     public bool PositionDirty { get; set; }
 
+    public bool Respawning { get; set; }
+
     private MinecraftRemoteClient RemoteClient { get; }
 
     public PlayerEntity(MinecraftRemoteClient remoteClient)
@@ -49,15 +51,40 @@ public class PlayerEntity : LivingEntity
 
     public async Task RespawnAsync(MinecraftDimension dimension)
     {
-        Position = new Vector3d(0, 50, 0);
+        Respawning = true;
+
+        var spawnHeight = Server!.World.GetHighestBlockHeight(new Vector2i(0, 0)) + 1.6200000047683716;
+        Position = new Vector3d(0.5, spawnHeight, 0.5);
         Stance = Position.Y + Height;
-        OnGround = false;
+        OnGround = true;
         Yaw = 0;
         Pitch = 0;
+
+        //TODO This is required, but it has an impact of client-side loaded entities, after respawn the player can't interact with other entities
+        await RemoteClient.UnloadChunksAsync();
+
         await RemoteClient.SendPacketAsync(new RespawnPacket
         {
             Dimension = dimension
         });
+
+        await RemoteClient.UpdateLoadedChunksAsync();
+
+        await SendPositionAndLookAsync();
+
+        await RemoteClient.SendPacketAsync(new TimeUpdatePacket
+        {
+            Time = Server.World.Time
+        });
+
+        if (Server.World.Raining)
+        {
+            await RemoteClient.SendPacketAsync(new NewStatePacket
+            {
+                Reason = NewStatePacket.ReasonType.BeginRaining
+            });
+        }
+
         //TODO Handle spawn point correctly
         await Server!.BroadcastPacketAsync(new NamedEntitySpawnPacket
         {
@@ -70,8 +97,10 @@ public class PlayerEntity : LivingEntity
             Username = RemoteClient.Username!,
             CurrentItem = 0
         }, RemoteClient);
-        await SendPositionAndLookAsync(); //This packet surely needs to be send before respawn packet but need TCP batching (channels maybe?)
+
         await SetHealthAsync(MaxHealth);
+
+        Respawning = false;
     }
 
     private async Task SendPositionAndLookAsync()

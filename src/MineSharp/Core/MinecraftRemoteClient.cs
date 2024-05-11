@@ -32,15 +32,14 @@ public class MinecraftRemoteClient : IDisposable
         NetworkId = socket.RemoteEndPoint?.ToString() ?? throw new Exception();
     }
 
-    public PlayerEntity InitializePlayer()
+    public PlayerEntity InitializePlayer(Vector3d position)
     {
         if (Player is not null)
             throw new Exception($"Can't initialize player because it has already been initialized");
-        var position = new Vector3d(0, 50, 0);
         var player = new PlayerEntity(this)
         {
             Position = position,
-            Stance = position.Y + 1.62,
+            Stance = position.Y + PlayerEntity.Height,
             OnGround = false, //TODO Change that when spawning correctly
             Pitch = 0,
             Yaw = 0,
@@ -82,12 +81,29 @@ public class MinecraftRemoteClient : IDisposable
     }
 
     //TODO optimize (remove LINQ)
+
+    public async Task UnloadChunksAsync()
+    {
+        foreach (var chunkToUnload in _loadedChunks)
+        {
+            await SendPacketAsync(new PreChunkPacket
+            {
+                X = chunkToUnload.X,
+                Z = chunkToUnload.Z,
+                Mode = PreChunkPacket.LoadingMode.Unload
+            });
+        }
+
+        _loadedChunks.Clear();
+    }
+    
     public async Task UpdateLoadedChunksAsync()
     {
         var visibleChunks = MinecraftWorld.GetChunksAround(GetCurrentChunk(), Server.Configuration.VisibleChunksDistance);
         var chunksToLoad = visibleChunks.Except(_loadedChunks);
         var chunksToUnload = _loadedChunks.Except(visibleChunks);
 
+        //TODO Maybe parallelize this when network is using batching with channels
         foreach (var chunkToLoad in chunksToLoad)
         {
             var chunk = Server.World.GetOrLoadChunk(chunkToLoad);

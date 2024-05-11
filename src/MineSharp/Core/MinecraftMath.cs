@@ -8,6 +8,8 @@ public static class MinecraftMath
 
     public static int ToAbsoluteInt(this double value) => (int) (value * 32);
 
+    public static int ToAbsoluteInt(this int value) => value * 32;
+
     public static double SinDegree(double degree) => Math.Sin(degree * (Math.PI / 180));
 
     public static double CosDegree(double degree) => Math.Cos(degree * (Math.PI / 180));

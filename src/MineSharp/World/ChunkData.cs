@@ -29,9 +29,12 @@ public class ChunkData : IBlockChunkData
 
     public void SetBlock(Vector3i localPosition, byte blockId, byte metadata = 0)
     {
-        var index = LocalToIndex(localPosition);
-        if (index < 0 || index >= ArraySize)
+        //TODO Maybe should throw exception when world generation is reworked with multiple phases
+        if (localPosition.X is < 0 or >= Chunk.Width 
+            || localPosition.Y is < 0 or >= Chunk.Height 
+            || localPosition.Z is < 0 or >= Chunk.Width)
             return;
+        var index = LocalToIndex(localPosition);
         _blocks[index] = blockId;
         _metadata[index] = metadata;
     }

@@ -1,5 +1,4 @@
 using System.Buffers;
-using MineSharp.Core;
 using MineSharp.Core.Packets;
 using MineSharp.Extensions;
 
@@ -29,6 +28,4 @@ public class PlayerBlockPlacementPacket : IClientPacket
         Amount = ItemId != -1 ? reader.ReadByte() : null;
         Damage = ItemId != -1 ? reader.ReadShort() : null;
     }
-
-    public Vector3i ToVector3i() => new(X, Y, Z);
 }

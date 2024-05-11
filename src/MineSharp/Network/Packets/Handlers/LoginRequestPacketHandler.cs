@@ -54,7 +54,8 @@ public class LoginRequestPacketHandler : IClientPacketHandler<LoginRequestPacket
             }
         }
 
-        var currentPlayer = context.RemoteClient.InitializePlayer();
+        var spawnHeight = context.Server.World.GetHighestBlockHeight(new Vector2i(0, 0)) + 1;
+        var currentPlayer = context.RemoteClient.InitializePlayer(new Vector3d(0.5, spawnHeight + .1, 0.5));
 
         await context.RemoteClient.SendPacketAsync(new LoginResponsePacket
         {
@@ -89,7 +90,7 @@ public class LoginRequestPacketHandler : IClientPacketHandler<LoginRequestPacket
         await context.RemoteClient.SendPacketAsync(new SpawnPositionPacket
         {
             X = 0,
-            Y = 5,
+            Y = spawnHeight,
             Z = 0
         });
 
@@ -190,7 +191,7 @@ public class LoginRequestPacketHandler : IClientPacketHandler<LoginRequestPacket
             ItemCount = 80,
             ItemUses = 0
         });
-        
+
         await context.RemoteClient.SendPacketAsync(new SetSlotPacket
         {
             WindowId = 0,
@@ -199,7 +200,7 @@ public class LoginRequestPacketHandler : IClientPacketHandler<LoginRequestPacket
             ItemCount = 1,
             ItemUses = 0
         });
-        
+
         await context.RemoteClient.SendPacketAsync(new SetSlotPacket
         {
             WindowId = 0,
@@ -208,13 +209,22 @@ public class LoginRequestPacketHandler : IClientPacketHandler<LoginRequestPacket
             ItemCount = 10,
             ItemUses = 0
         });
-        
+
         await context.RemoteClient.SendPacketAsync(new SetSlotPacket
         {
             WindowId = 0,
             Slot = 40,
             ItemId = 324,
             ItemCount = 10,
+            ItemUses = 0
+        });
+
+        await context.RemoteClient.SendPacketAsync(new SetSlotPacket
+        {
+            WindowId = 0,
+            Slot = 41,
+            ItemId = 278,
+            ItemCount = 1,
             ItemUses = 0
         });
     }
