@@ -27,8 +27,8 @@ public class MinecraftWorld
         Server = server;
         Seed = seed;
         //WorldGenerator = new DefaultWorldGenerator(seed);
-        WorldGenerator = new DesertWorldGenerator(seed);
-        //WorldGenerator = new FlatWorldGenerator();
+        //WorldGenerator = new DesertWorldGenerator(seed);
+        WorldGenerator = new FlatWorldGenerator();
         //WorldGenerator = new TestWorldGenerator(seed);
         _logger = server.GetLogger<MinecraftWorld>();
         Timer = new WorldTimer();

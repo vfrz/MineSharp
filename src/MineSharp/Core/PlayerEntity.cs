@@ -39,18 +39,31 @@ public class PlayerEntity : LivingEntity
                 Status = EntityStatus.Dead
             }, RemoteClient);
 
+            //TODO This is a bit dirty
             Server!.Scheduler.Schedule(TimeSpan.FromSeconds(1.5), async () =>
             {
-                await Server!.BroadcastPacketAsync(new DestroyEntityPacket
+                if (Health == 0)
                 {
-                    EntityId = EntityId
-                }, RemoteClient);
+                    await Server!.BroadcastPacketAsync(new DestroyEntityPacket
+                    {
+                        EntityId = EntityId
+                    }, RemoteClient);
+                }
             });
         }
     }
 
     public async Task RespawnAsync(MinecraftDimension dimension)
     {
+        //TODO This is a bit dirty
+        if (Server!.EntityManager.EntityExists(RemoteClient.Player!.EntityId))
+        {
+            await Server.BroadcastPacketAsync(new DestroyEntityPacket
+            {
+                EntityId = RemoteClient.Player!.EntityId
+            }, RemoteClient);
+        }
+
         Respawning = true;
 
         var spawnHeight = Server!.World.GetHighestBlockHeight(new Vector2i(0, 0)) + 1.6200000047683716;
@@ -60,8 +73,20 @@ public class PlayerEntity : LivingEntity
         Yaw = 0;
         Pitch = 0;
 
-        //TODO This is required, but it has an impact of client-side loaded entities, after respawn the player can't interact with other entities
         await RemoteClient.UnloadChunksAsync();
+
+        foreach (var remoteClient in Server.RemoteClients)
+        {
+            if (remoteClient == RemoteClient || remoteClient.Player is null)
+                continue;
+
+            var player = remoteClient.Player!;
+
+            await RemoteClient.SendPacketAsync(new DestroyEntityPacket
+            {
+                EntityId = player.EntityId
+            });
+        }
 
         await RemoteClient.SendPacketAsync(new RespawnPacket
         {
@@ -85,6 +110,26 @@ public class PlayerEntity : LivingEntity
             });
         }
 
+        foreach (var remoteClient in Server.RemoteClients)
+        {
+            if (remoteClient == RemoteClient || remoteClient.Player is null)
+                continue;
+
+            var player = remoteClient.Player!;
+
+            await RemoteClient.SendPacketAsync(new NamedEntitySpawnPacket
+            {
+                EntityId = player.EntityId,
+                Username = remoteClient.Username!,
+                X = player.Position.X.ToAbsoluteInt(),
+                Y = player.Position.Y.ToAbsoluteInt(),
+                Z = player.Position.Z.ToAbsoluteInt(),
+                Yaw = MinecraftMath.RotationFloatToSByte(Yaw),
+                Pitch = MinecraftMath.RotationFloatToSByte(Pitch),
+                CurrentItem = 0
+            });
+        }
+
         //TODO Handle spawn point correctly
         await Server!.BroadcastPacketAsync(new NamedEntitySpawnPacket
         {
@@ -92,8 +137,8 @@ public class PlayerEntity : LivingEntity
             X = Position.X.ToAbsoluteInt(),
             Y = Position.Y.ToAbsoluteInt(),
             Z = Position.Z.ToAbsoluteInt(),
-            Pitch = MinecraftMath.RotationFloatToSByte(Pitch),
             Yaw = MinecraftMath.RotationFloatToSByte(Yaw),
+            Pitch = MinecraftMath.RotationFloatToSByte(Pitch),
             Username = RemoteClient.Username!,
             CurrentItem = 0
         }, RemoteClient);
