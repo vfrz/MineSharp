@@ -191,6 +191,54 @@ public class MinecraftServer : IDisposable
             });
             return true;
         });
+
+        _commandHandler.TryRegisterCommand("tp", async (server, client, args) =>
+        {
+            var target = new Vector3d();
+
+            if (args.Length == 1)
+            {
+                var otherPlayer = server.GetRemoteClientByUsername(args[0]);
+                if (otherPlayer?.Player is null)
+                {
+                    await client!.SendChatAsync($"Can't find player named {args[0]}");
+                    return false;
+                }
+
+                target = otherPlayer.Player.Position;
+            }
+            else if (args.Length == 2)
+            {
+                var targetX = int.Parse(args[0]);
+                var targetZ = int.Parse(args[1]);
+                var height = await server.World.GetHighestBlockHeightAsync(new Vector2i(targetX, targetZ));
+                target = new Vector3d(targetX + 0.5, height + 1.1, targetZ + 0.5);
+            }
+            else
+            {
+                return false;
+            }
+
+            var player = client!.Player!;
+            player.Position = target;
+            await client.LoadChunkAsync(Chunk.GetChunkPositionForWorldPosition(player.Position));
+            await client.SendPacketAsync(new PlayerPositionAndLookServerPacket
+            {
+                X = player.Position.X,
+                Y = player.Position.Y,
+                Z = player.Position.Z,
+                Pitch = player.Pitch,
+                Yaw = player.Yaw,
+                OnGround = player.OnGround,
+                Stance = player.Position.Y + PlayerEntity.Height
+            });
+            return true;
+        });
+    }
+
+    public RemoteClient? GetRemoteClientByUsername(string username)
+    {
+        return _remoteClients.Values.FirstOrDefault(remoteClient => remoteClient.Username == username);
     }
 
     public ILogger<T> GetLogger<T>()

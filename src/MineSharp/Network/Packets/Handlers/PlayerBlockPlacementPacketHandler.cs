@@ -31,7 +31,7 @@ public class PlayerBlockPlacementPacketHandler : IClientPacketHandler<PlayerBloc
         {
             var coordinates = new Vector3i(packet.X, packet.Y, packet.Z);
             var directedCoordinates = ApplyDirectionToPosition(coordinates, packet.Direction);
-            await context.Server.World.UpdateBlockAsync(directedCoordinates, (byte) packet.ItemId);
+            await context.Server.World.SetBlockAsync(directedCoordinates, (byte) packet.ItemId);
         }
     }
 
@@ -49,7 +49,7 @@ public class PlayerBlockPlacementPacketHandler : IClientPacketHandler<PlayerBloc
         }
 
         var orientationMetadata = (byte) packet.Direction;
-        await context.Server.World.UpdateBlockAsync(directedPosition, (byte) packet.ItemId, orientationMetadata);
+        await context.Server.World.SetBlockAsync(directedPosition, (byte) packet.ItemId, orientationMetadata);
     }
 
     private async Task PlaceSignAsync(PlayerBlockPlacementPacket packet, ClientPacketHandlerContext context)
@@ -76,7 +76,7 @@ public class PlayerBlockPlacementPacketHandler : IClientPacketHandler<PlayerBloc
             orientationMetadata = (byte) (rotation / 22.5);
         }
 
-        await context.Server.World.UpdateBlockAsync(directedPosition, blockId, orientationMetadata);
+        await context.Server.World.SetBlockAsync(directedPosition, blockId, orientationMetadata);
     }
 
     private async Task PlaceDoorAsync(PlayerBlockPlacementPacket packet, ClientPacketHandlerContext context)

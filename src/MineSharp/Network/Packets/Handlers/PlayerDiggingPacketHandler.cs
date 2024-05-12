@@ -29,7 +29,7 @@ public class PlayerDiggingPacketHandler : IClientPacketHandler<PlayerDiggingPack
 
         if (packet.Status is PlayerDiggingStatus.Finished)
         {
-            await context.Server.World.UpdateBlockAsync(packet.PositionAsVector3i, 0);
+            await context.Server.World.SetBlockAsync(packet.PositionAsVector3i, 0);
             await GeneratePickupItemAsync(blockId, packet.PositionAsVector3i, context);
         }
         else
@@ -37,7 +37,7 @@ public class PlayerDiggingPacketHandler : IClientPacketHandler<PlayerDiggingPack
             if (packet.Status is PlayerDiggingStatus.Started or PlayerDiggingStatus.Finished
                 && InstantlyDestroyedBlocks.Contains(await context.Server.World.GetBlockIdAsync(packet.PositionAsVector3i)))
             {
-                await context.Server.World.UpdateBlockAsync(packet.PositionAsVector3i, 0);
+                await context.Server.World.SetBlockAsync(packet.PositionAsVector3i, 0);
                 await GeneratePickupItemAsync(blockId, packet.PositionAsVector3i, context);
             }
         }

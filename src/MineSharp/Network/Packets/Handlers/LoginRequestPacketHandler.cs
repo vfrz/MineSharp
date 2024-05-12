@@ -61,7 +61,7 @@ public class LoginRequestPacketHandler : IClientPacketHandler<LoginRequestPacket
         {
             EntityId = context.RemoteClient.Player!.EntityId,
             Dimension = 0,
-            MapSeed = 0
+            MapSeed = context.Server.World.Seed
         });
 
         context.RemoteClient.SetReady();

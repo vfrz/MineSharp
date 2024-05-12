@@ -9,7 +9,7 @@ public class LoginResponsePacket : IServerPacket
     public byte PacketId => Id;
 
     public int EntityId { get; set; }
-    public long MapSeed { get; set; } // Unused by the client
+    public long MapSeed { get; set; }
     public MinecraftDimension Dimension { get; set; }
 
     public void Write(PacketWriter writer)

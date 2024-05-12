@@ -15,8 +15,8 @@ public class FlatWorldGenerator : IWorldGenerator
 
     public void GenerateChunkTerrain(Vector2i chunkPosition, IBlockChunkData chunkData)
     {
-        for (var x = 0; x < Chunk.Width; x++)
-        for (var z = 0; z < Chunk.Width; z++)
+        for (var x = 0; x < Chunk.ChunkWidth; x++)
+        for (var z = 0; z < Chunk.ChunkWidth; z++)
         for (var y = 0; y < _height; y++)
             chunkData.SetBlock(new Vector3i(x, y, z), _blockId);
     }

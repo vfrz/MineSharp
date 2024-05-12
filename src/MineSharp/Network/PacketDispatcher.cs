@@ -53,7 +53,7 @@ public class PacketDispatcher
             UpdateSignPacket.Id => EnqueuePacket<UpdateSignPacket>(ref reader, context),
             UseEntityPacket.Id => EnqueuePacket<UseEntityPacket>(ref reader, context),
             WindowClickPacket.Id => EnqueuePacket<WindowClickPacket>(ref reader, context),
-            _ => HandleUnknownPacket(ref reader, context, packetId)
+            _ => throw new Exception($"Unknown packet with id: {packetId}")
         };
 
         //TODO Do something if success == false
@@ -102,17 +102,6 @@ public class PacketDispatcher
         };
     }
 
-
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private IClientPacketHandler<T> GetHandler<T>() where T : IClientPacket => _serviceProvider.GetRequiredService<IClientPacketHandler<T>>();
-
-    private static bool HandleUnknownPacket(ref SequenceReader<byte> reader, ClientPacketHandlerContext context, int packetId)
-    {
-        //TODO Dangerous because we can lose data
-        var packetSize = (int) reader.Length - 1;
-        if (packetSize > 0)
-            reader.Advance(packetSize);
-        Console.WriteLine($"[WARN] Unknown packet: 0x{packetId:X} with data length: {packetSize} for client: {context.RemoteClient.NetworkId}");
-        return true;
-    }
 }

@@ -19,9 +19,9 @@ public class TestWorldGenerator : IWorldGenerator
     
     public void GenerateChunkTerrain(Vector2i chunkPosition, IBlockChunkData chunkData)
     {
-        for (var localX = 0; localX < Chunk.Width; localX++)
+        for (var localX = 0; localX < Chunk.ChunkWidth; localX++)
         {
-            for (var localZ = 0; localZ < Chunk.Width; localZ++)
+            for (var localZ = 0; localZ < Chunk.ChunkWidth; localZ++)
             {
                 // Bedrock
                 chunkData.SetBlock(new Vector3i(localX, 0, localZ), 7);
@@ -36,11 +36,11 @@ public class TestWorldGenerator : IWorldGenerator
 
     public void GenerateChunkDecorations(Vector2i chunkPosition, IBlockChunkData chunkData)
     {
-        for (var localX = 0; localX < Chunk.Width; localX++)
+        for (var localX = 0; localX < Chunk.ChunkWidth; localX++)
         {
-            for (var localZ = 0; localZ < Chunk.Width; localZ++)
+            for (var localZ = 0; localZ < Chunk.ChunkWidth; localZ++)
             {
-                var height = (Noise.GetNoise(chunkPosition.X * Chunk.Width + localX, chunkPosition.Z * Chunk.Width + localZ) + 1) / 2f * 50;
+                var height = (Noise.GetNoise(chunkPosition.X * Chunk.ChunkWidth + localX, chunkPosition.Z * Chunk.ChunkWidth + localZ) + 1) / 2f * 50;
                 
                 if (height > 49)
                     chunkData.SetBlock(new Vector3i(localX, 51, localZ), 35, 14);

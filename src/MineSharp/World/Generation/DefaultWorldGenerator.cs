@@ -30,14 +30,15 @@ public class DefaultWorldGenerator : IWorldGenerator
 
     public void GenerateChunkTerrain(Vector2i chunkPosition, IBlockChunkData chunkData)
     {
-        for (var localX = 0; localX < Chunk.Width; localX++)
+        for (var localX = 0; localX < Chunk.ChunkWidth; localX++)
         {
-            for (var localZ = 0; localZ < Chunk.Width; localZ++)
+            for (var localZ = 0; localZ < Chunk.ChunkWidth; localZ++)
             {
                 // Bedrock
                 chunkData.SetBlock(new Vector3i(localX, 0, localZ), 7);
 
                 var height = GetHeight(new Vector2i(localX, localZ), chunkPosition);
+
                 for (var y = 1; y <= height - 4; y++)
                 {
                     chunkData.SetBlock(new Vector3i(localX, y, localZ), 1);
@@ -45,19 +46,15 @@ public class DefaultWorldGenerator : IWorldGenerator
 
                 for (var y = Math.Clamp(height - 4, 1, 255); y <= height; y++)
                 {
-                    if (y == height)
-                    {
-                        chunkData.SetBlock(new Vector3i(localX, y, localZ), 2);
+                    var grass = y == height && y > 62;
+                    chunkData.SetBlock(new Vector3i(localX, y, localZ), (byte) (grass ? 2 : 3));
+                }
 
-                        var otherNoiseValue = (OtherNoise.GetNoise(chunkPosition.X * Chunk.Width + localX, chunkPosition.Z * Chunk.Width + localZ) + 1) / 2f;
-                        if (otherNoiseValue < 0.4f)
-                        {
-                            chunkData.SetBlock(new Vector3i(localX, y + 1, localZ), 31, 1);
-                        }
-                    }
-                    else
+                if (height <= 62)
+                {
+                    for (var y = height + 1; y < 64; y++)
                     {
-                        chunkData.SetBlock(new Vector3i(localX, y, localZ), 3);
+                        chunkData.SetBlock(new Vector3i(localX, y, localZ), 8);
                     }
                 }
             }
@@ -66,13 +63,27 @@ public class DefaultWorldGenerator : IWorldGenerator
 
     public void GenerateChunkDecorations(Vector2i chunkPosition, IBlockChunkData chunkData)
     {
-        var trees = PoissonDiskSampler.SampleRectangle(chunkPosition.X * Chunk.Width, chunkPosition.Z * Chunk.Width, Chunk.Width, Chunk.Width, 7);
+        var trees = PoissonDiskSampler.SampleRectangle(chunkPosition.X * Chunk.ChunkWidth, chunkPosition.Z * Chunk.ChunkWidth, Chunk.ChunkWidth, Chunk.ChunkWidth, 7);
 
         foreach (var treePosition in trees)
         {
             var localPosition = Chunk.WorldToLocal(new Vector2i(treePosition));
             var height = GetHeight(localPosition, chunkPosition);
-            SpawnTree(new Vector3i(localPosition.X, height + 1, localPosition.Z), chunkData);
+            if (height > 64)
+                SpawnTree(new Vector3i(localPosition.X, height + 1, localPosition.Z), chunkData);
+        }
+
+        for (var localX = 0; localX < Chunk.ChunkWidth; localX++)
+        {
+            for (var localZ = 0; localZ < Chunk.ChunkWidth; localZ++)
+            {
+                var highestBlock = chunkData.GetHighestBlockHeight(new Vector2i(localX, localZ));
+                var otherNoiseValue = (OtherNoise.GetNoise(chunkPosition.X * Chunk.ChunkWidth + localX, chunkPosition.Z * Chunk.ChunkWidth + localZ) + 1) / 2f;
+                if (highestBlock > 62 && otherNoiseValue < 0.4f && chunkData.GetBlock(new Vector3i(localX, highestBlock, localZ)) == 2)
+                {
+                    chunkData.SetBlock(new Vector3i(localX, highestBlock + 1, localZ), 31, 1);
+                }
+            }
         }
     }
 
@@ -122,7 +133,7 @@ public class DefaultWorldGenerator : IWorldGenerator
 
     private int GetHeight(Vector2i local, Vector2i chunkPosition)
     {
-        var noiseValue = (Noise.GetNoise(chunkPosition.X * Chunk.Width + local.X, chunkPosition.Z * Chunk.Width + local.Z) + 1) / 2f;
-        return (int) (noiseValue * 30f + 5);
+        var noiseValue = (Noise.GetNoise(chunkPosition.X * Chunk.ChunkWidth + local.X, chunkPosition.Z * Chunk.ChunkWidth + local.Z) + 1) / 2f;
+        return (int) (noiseValue * 32) + 54;
     }
 }

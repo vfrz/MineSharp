@@ -30,9 +30,9 @@ public class DesertWorldGenerator : IWorldGenerator
 
     public void GenerateChunkTerrain(Vector2i chunkPosition, IBlockChunkData chunkData)
     {
-        for (var localX = 0; localX < Chunk.Width; localX++)
+        for (var localX = 0; localX < Chunk.ChunkWidth; localX++)
         {
-            for (var localZ = 0; localZ < Chunk.Width; localZ++)
+            for (var localZ = 0; localZ < Chunk.ChunkWidth; localZ++)
             {
                 // Bedrock
                 chunkData.SetBlock(new Vector3i(localX, 0, localZ), 7);
@@ -44,7 +44,7 @@ public class DesertWorldGenerator : IWorldGenerator
                     {
                         chunkData.SetBlock(new Vector3i(localX, y, localZ), 12);
 
-                        var otherNoiseValue = (OtherNoise.GetNoise(chunkPosition.X * Chunk.Width + localX, chunkPosition.Z * Chunk.Width + localZ) + 1) / 2f;
+                        var otherNoiseValue = (OtherNoise.GetNoise(chunkPosition.X * Chunk.ChunkWidth + localX, chunkPosition.Z * Chunk.ChunkWidth + localZ) + 1) / 2f;
                         if (otherNoiseValue < 0.2f)
                         {
                             chunkData.SetBlock(new Vector3i(localX, y + 1, localZ), 31, 0);
@@ -61,7 +61,7 @@ public class DesertWorldGenerator : IWorldGenerator
 
     public void GenerateChunkDecorations(Vector2i chunkPosition, IBlockChunkData chunkData)
     {
-        var trees = PoissonDiskSampler.SampleRectangle(chunkPosition.X * Chunk.Width, chunkPosition.Z * Chunk.Width, Chunk.Width, Chunk.Width, 6);
+        var trees = PoissonDiskSampler.SampleRectangle(chunkPosition.X * Chunk.ChunkWidth, chunkPosition.Z * Chunk.ChunkWidth, Chunk.ChunkWidth, Chunk.ChunkWidth, 6);
 
         foreach (var treePosition in trees)
         {
@@ -77,7 +77,7 @@ public class DesertWorldGenerator : IWorldGenerator
 
     private int GetHeight(Vector2i local, Vector2i chunkPosition)
     {
-        var noiseValue = (Noise.GetNoise(chunkPosition.X * Chunk.Width + local.X, chunkPosition.Z * Chunk.Width + local.Z) + 1) / 2f;
+        var noiseValue = (Noise.GetNoise(chunkPosition.X * Chunk.ChunkWidth + local.X, chunkPosition.Z * Chunk.ChunkWidth + local.Z) + 1) / 2f;
         return (int) (noiseValue * 30f + 5);
     }
 }

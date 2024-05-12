@@ -41,7 +41,7 @@ public class RemoteClient : IDisposable
         {
             Position = position,
             Stance = position.Y + PlayerEntity.Height,
-            OnGround = false, //TODO Change that when spawning correctly
+            OnGround = true,
             Pitch = 0,
             Yaw = 0,
             PositionDirty = false
@@ -107,6 +107,32 @@ public class RemoteClient : IDisposable
         _loadedChunks.Clear();
     }
 
+    public async Task LoadChunkAsync(Vector2i chunkToLoad)
+    {
+        if (_loadedChunks.Contains(chunkToLoad))
+            return;
+
+        var chunk = await Server.World.GetOrLoadChunkAsync(chunkToLoad);
+
+        await SendPacketAsync(new PreChunkPacket
+        {
+            X = chunkToLoad.X,
+            Z = chunkToLoad.Z,
+            Mode = PreChunkPacket.LoadingMode.Load
+        });
+
+        await SendPacketAsync(new ChunkPacket
+        {
+            X = chunkToLoad.X * Chunk.ChunkWidth,
+            Y = 0,
+            Z = chunkToLoad.Z * Chunk.ChunkWidth,
+            SizeX = Chunk.ChunkWidth - 1,
+            SizeY = Chunk.ChunkHeight - 1,
+            SizeZ = Chunk.ChunkWidth - 1,
+            CompressedData = await chunk.ToCompressedDataAsync()
+        });
+    }
+
     public async Task UpdateLoadedChunksAsync()
     {
         var visibleChunks = MinecraftWorld.GetChunksAround(GetCurrentChunk(), Server.Configuration.VisibleChunksDistance);
@@ -126,13 +152,13 @@ public class RemoteClient : IDisposable
 
             await SendPacketAsync(new ChunkPacket
             {
-                X = chunkToLoad.X * Chunk.Width,
+                X = chunkToLoad.X * Chunk.ChunkWidth,
                 Y = 0,
-                Z = chunkToLoad.Z * Chunk.Width,
-                SizeX = Chunk.Width - 1,
-                SizeY = Chunk.Height - 1,
-                SizeZ = Chunk.Width - 1,
-                CompressedData = await chunk.Data.ToCompressedDataAsync()
+                Z = chunkToLoad.Z * Chunk.ChunkWidth,
+                SizeX = Chunk.ChunkWidth - 1,
+                SizeY = Chunk.ChunkHeight - 1,
+                SizeZ = Chunk.ChunkWidth - 1,
+                CompressedData = await chunk.ToCompressedDataAsync()
             });
         }
 

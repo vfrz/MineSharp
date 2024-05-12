@@ -9,10 +9,11 @@ public class PlayerPositionAndLookClientPacketHandler : IClientPacketHandler<Pla
     {
         var player = context.RemoteClient.Player!;
         player.Position = new Vector3d(packet.X, packet.Y, packet.Z);
-        player.Yaw = packet.Yaw;
-        player.Pitch = packet.Pitch;
         player.Stance = packet.Stance;
         player.OnGround = packet.OnGround;
+
+        player.Yaw = packet.Yaw;
+        player.Pitch = packet.Pitch;
 
         player.PositionDirty = true; //TODO Calculate this
 
