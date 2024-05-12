@@ -1,3 +1,4 @@
+using AsyncKeyedLock;
 using Microsoft.Extensions.Logging;
 using MineSharp.Core;
 using MineSharp.Network.Packets;
@@ -14,13 +15,13 @@ public class MinecraftWorld
 
     public long Time => Timer.CurrentTime;
 
-    public MinecraftServer Server { get; }
+    private MinecraftServer Server { get; }
     private readonly ILogger<MinecraftWorld> _logger;
 
-    private static readonly object Locker = new();
-
     public int Seed { get; }
-    public IWorldGenerator WorldGenerator { get; }
+    private IWorldGenerator WorldGenerator { get; }
+
+    private readonly AsyncKeyedLocker<Vector2i> _chunkLoadingLocker = new();
 
     public MinecraftWorld(MinecraftServer server, int seed)
     {
@@ -64,24 +65,24 @@ public class MinecraftWorld
         }, readyOnly: true);
     }
 
-    public void LoadInitialChunks()
+    public async Task LoadInitialChunksAsync()
     {
         var initialChunks = GetChunksAround(Vector2i.Zero, Server.Configuration.VisibleChunksDistance);
         _logger.LogInformation("Generating world...");
-        Parallel.ForEach(initialChunks, chunk => GetOrLoadChunk(chunk));
+        await Parallel.ForEachAsync(initialChunks, async (chunkPosition, _) => await GetOrLoadChunkAsync(chunkPosition));
     }
 
-    public byte GetBlockId(Vector3i worldPosition)
+    public async Task<byte> GetBlockIdAsync(Vector3i worldPosition)
     {
         var chunkPosition = Chunk.GetChunkPositionForWorldPosition(worldPosition);
-        var chunk = GetOrLoadChunk(chunkPosition);
+        var chunk = await GetOrLoadChunkAsync(chunkPosition);
         return chunk.Data.GetBlock(Chunk.WorldToLocal(worldPosition), out _);
     }
 
-    public int GetHighestBlockHeight(Vector2i worldPosition)
+    public async Task<int> GetHighestBlockHeightAsync(Vector2i worldPosition)
     {
         var chunkPosition = Chunk.GetChunkPositionForWorldPosition(worldPosition);
-        var chunk = GetOrLoadChunk(chunkPosition);
+        var chunk = await GetOrLoadChunkAsync(chunkPosition);
         return chunk.GetHighestBlockHeight(Chunk.WorldToLocal(worldPosition));
     }
 
@@ -89,7 +90,7 @@ public class MinecraftWorld
     {
         var chunkPosition = Chunk.GetChunkPositionForWorldPosition(worldPosition);
 
-        var chunk = GetOrLoadChunk(chunkPosition);
+        var chunk = await GetOrLoadChunkAsync(chunkPosition);
 
         var localPosition = Chunk.WorldToLocal(worldPosition);
         chunk.UpdateBlock(localPosition, blockId, metadata);
@@ -106,29 +107,31 @@ public class MinecraftWorld
         await Server.BroadcastPacketAsync(blockUpdatePacket);
     }
 
-    public Chunk GetOrLoadChunk(Vector2i chunkPosition)
+    public async Task<Chunk> GetOrLoadChunkAsync(Vector2i chunkPosition)
     {
-        //TODO Be careful about thread safety here
-        var chunk = Chunks[chunkPosition];
-        if (chunk is null)
+        using (await _chunkLoadingLocker.LockAsync(chunkPosition))
         {
-            var chunkData = new ChunkData();
-            WorldGenerator.GenerateChunkTerrain(chunkPosition, chunkData);
-            WorldGenerator.GenerateChunkDecorations(chunkPosition, chunkData);
-
-            //TODO Move ligth calculation somewhere else
-            for (var x = 0; x < Chunk.Width; x++)
-            for (var y = 0; y < Chunk.Height; y++)
-            for (var z = 0; z < Chunk.Width; z++)
+            var chunk = Chunks[chunkPosition];
+            if (chunk is null)
             {
-                chunkData.SetLight(new Vector3i(x, y, z), 15, 15);
+                var chunkData = new ChunkData();
+                WorldGenerator.GenerateChunkTerrain(chunkPosition, chunkData);
+                WorldGenerator.GenerateChunkDecorations(chunkPosition, chunkData);
+
+                //TODO Move ligth calculation somewhere else
+                for (var x = 0; x < Chunk.Width; x++)
+                for (var y = 0; y < Chunk.Height; y++)
+                for (var z = 0; z < Chunk.Width; z++)
+                {
+                    chunkData.SetLight(new Vector3i(x, y, z), 15, 15);
+                }
+
+                chunk = new Chunk(chunkPosition.X, chunkPosition.Z, chunkData);
+                Chunks[chunkPosition] = chunk;
             }
 
-            chunk = new Chunk(chunkPosition.X, chunkPosition.Z, chunkData);
-            Chunks[chunkPosition] = chunk;
+            return chunk;
         }
-
-        return chunk;
     }
 
     public async Task StartRainAsync()

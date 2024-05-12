@@ -6,7 +6,7 @@ using MineSharp.World;
 
 namespace MineSharp.Core;
 
-public class MinecraftRemoteClient : IDisposable
+public class RemoteClient : IDisposable
 {
     public enum ClientState
     {
@@ -25,7 +25,7 @@ public class MinecraftRemoteClient : IDisposable
 
     private HashSet<Vector2i> _loadedChunks = new();
 
-    public MinecraftRemoteClient(Socket socket, MinecraftServer server)
+    public RemoteClient(Socket socket, MinecraftServer server)
     {
         Socket = socket;
         Server = server;
@@ -74,7 +74,7 @@ public class MinecraftRemoteClient : IDisposable
         }
         catch (Exception ex)
         {
-            Server.GetLogger<MinecraftRemoteClient>().LogError(ex, "Failed to send data to client: {networkId}", NetworkId);
+            Server.GetLogger<RemoteClient>().LogError(ex, "Failed to send data to client: {networkId}", NetworkId);
             return false;
         }
     }
@@ -91,8 +91,6 @@ public class MinecraftRemoteClient : IDisposable
             Message = message
         });
     }
-
-    //TODO optimize (remove LINQ)
 
     public async Task UnloadChunksAsync()
     {
@@ -115,10 +113,9 @@ public class MinecraftRemoteClient : IDisposable
         var chunksToLoad = visibleChunks.Except(_loadedChunks);
         var chunksToUnload = _loadedChunks.Except(visibleChunks);
 
-        //TODO Maybe parallelize this when network is using batching with channels
         foreach (var chunkToLoad in chunksToLoad)
         {
-            var chunk = Server.World.GetOrLoadChunk(chunkToLoad);
+            var chunk = await Server.World.GetOrLoadChunkAsync(chunkToLoad);
 
             await SendPacketAsync(new PreChunkPacket
             {

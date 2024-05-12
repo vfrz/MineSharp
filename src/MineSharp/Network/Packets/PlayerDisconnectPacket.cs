@@ -7,7 +7,6 @@ namespace MineSharp.Network.Packets;
 public class PlayerDisconnectPacket : IClientPacket, IServerPacket
 {
     public const int Id = 0xFF;
-
     public byte PacketId => Id;
 
     public string Reason { get; set; } = string.Empty;

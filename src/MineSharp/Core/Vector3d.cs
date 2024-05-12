@@ -1,8 +1,14 @@
 namespace MineSharp.Core;
 
-public record struct Vector3d(double X, double Y, double Z)
+public readonly struct Vector3d(double x, double y, double z)
 {
     public static readonly Vector3d One = new(1);
+
+    public readonly double X = x;
+
+    public readonly double Y = y;
+
+    public readonly double Z = z;
 
     public Vector3d(double value) : this(value, value, value)
     {
@@ -30,10 +36,5 @@ public record struct Vector3d(double X, double Y, double Z)
     public override string ToString()
     {
         return $"{X}, {Y}, {Z}";
-    }
-
-    public override int GetHashCode()
-    {
-        return HashCode.Combine(X, Y, Z);
     }
 }

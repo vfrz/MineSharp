@@ -25,7 +25,7 @@ public class PlayerDiggingPacketHandler : IClientPacketHandler<PlayerDiggingPack
 
     public async Task HandleAsync(PlayerDiggingPacket packet, ClientPacketHandlerContext context)
     {
-        var blockId = context.Server.World.GetBlockId(packet.PositionAsVector3i);
+        var blockId = await context.Server.World.GetBlockIdAsync(packet.PositionAsVector3i);
 
         if (packet.Status is PlayerDiggingStatus.Finished)
         {
@@ -35,7 +35,7 @@ public class PlayerDiggingPacketHandler : IClientPacketHandler<PlayerDiggingPack
         else
         {
             if (packet.Status is PlayerDiggingStatus.Started or PlayerDiggingStatus.Finished
-                && InstantlyDestroyedBlocks.Contains(context.Server.World.GetBlockId(packet.PositionAsVector3i)))
+                && InstantlyDestroyedBlocks.Contains(await context.Server.World.GetBlockIdAsync(packet.PositionAsVector3i)))
             {
                 await context.Server.World.UpdateBlockAsync(packet.PositionAsVector3i, 0);
                 await GeneratePickupItemAsync(blockId, packet.PositionAsVector3i, context);

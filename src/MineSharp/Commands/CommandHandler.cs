@@ -5,7 +5,7 @@ namespace MineSharp.Commands;
 
 public class CommandHandler
 {
-    public delegate Task<bool> CommandCallback(MinecraftServer server, MinecraftRemoteClient? remoteClient, params string[] args);
+    public delegate Task<bool> CommandCallback(MinecraftServer server, RemoteClient? remoteClient, params string[] args);
 
     private readonly ConcurrentDictionary<string, CommandCallback> _commands = new();
 
@@ -14,7 +14,7 @@ public class CommandHandler
         return _commands.TryAdd(command, callback);
     }
 
-    public async Task<bool> TryExecuteCommandAsync(string completeCommand, MinecraftServer server, MinecraftRemoteClient? remoteClient)
+    public async Task<bool> TryExecuteCommandAsync(string completeCommand, MinecraftServer server, RemoteClient? remoteClient)
     {
         if (!CommandParser.TryParse(completeCommand, out var parsedCommand))
         {

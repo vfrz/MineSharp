@@ -3,7 +3,7 @@ using System.Numerics;
 namespace MineSharp.Core;
 
 // ReSharper disable once InconsistentNaming
-public struct Vector2i(int x, int z)
+public readonly struct Vector2i(int x, int z)
 {
     public static readonly Vector2i Zero = new(0);
 

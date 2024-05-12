@@ -5,7 +5,6 @@ namespace MineSharp.Network.Packets;
 public class EntityTeleportPacket : IServerPacket
 {
     public const int Id = 0x22;
-
     public byte PacketId => Id;
 
     public int EntityId { get; set; }

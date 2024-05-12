@@ -7,7 +7,6 @@ namespace MineSharp.Network.Packets;
 public class HoldingChangePacket : IClientPacket
 {
     public const int Id = 0x10;
-
     public byte PacketId => Id;
 
     public short SlotId { get; set; }

@@ -7,7 +7,6 @@ namespace MineSharp.Network.Packets;
 public class PlayerBlockPlacementPacket : IClientPacket
 {
     public const int Id = 0x0F;
-
     public byte PacketId => Id;
 
     public int X { get; set; }

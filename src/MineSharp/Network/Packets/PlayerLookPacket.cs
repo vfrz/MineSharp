@@ -7,7 +7,6 @@ namespace MineSharp.Network.Packets;
 public class PlayerLookPacket : IClientPacket
 {
     public const int Id = 0x0C;
-
     public byte PacketId => Id;
 
     public float Yaw { get; set; }

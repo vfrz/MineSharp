@@ -8,13 +8,9 @@ public class EntityEquipmentPacket : IServerPacket
     public byte PacketId => Id;
 
     public int EntityId { get; set; }
-
     public short Slot { get; set; }
-
     public short ItemId { get; set; }
-
-    //TODO Try to determine
-    public short Unknown { get; set; }
+    public short Unknown { get; set; } //TODO Try to determine
 
     public void Write(PacketWriter writer)
     {

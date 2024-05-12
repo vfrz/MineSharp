@@ -5,7 +5,6 @@ namespace MineSharp.Network.Packets;
 public class NamedEntitySpawnPacket : IServerPacket
 {
     public const int Id = 0x14;
-
     public byte PacketId => Id;
 
     public int EntityId { get; set; }

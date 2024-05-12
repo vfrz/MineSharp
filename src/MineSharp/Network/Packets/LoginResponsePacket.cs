@@ -6,13 +6,10 @@ namespace MineSharp.Network.Packets;
 public class LoginResponsePacket : IServerPacket
 {
     public const int Id = 0x01;
-
     public byte PacketId => Id;
 
     public int EntityId { get; set; }
-
-    // Unused by the client
-    public long MapSeed { get; set; }
+    public long MapSeed { get; set; } // Unused by the client
     public MinecraftDimension Dimension { get; set; }
 
     public void Write(PacketWriter writer)

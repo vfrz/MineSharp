@@ -1,3 +1,3 @@
 namespace MineSharp.Core.Packets;
 
-public record ClientPacketHandlerContext(MinecraftServer Server, MinecraftRemoteClient RemoteClient);
+public record ClientPacketHandlerContext(MinecraftServer Server, RemoteClient RemoteClient);

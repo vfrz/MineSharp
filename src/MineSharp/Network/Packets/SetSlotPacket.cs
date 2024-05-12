@@ -5,7 +5,6 @@ namespace MineSharp.Network.Packets;
 public class SetSlotPacket : IServerPacket
 {
     public const int Id = 0x67;
-
     public byte PacketId => Id;
 
     public byte WindowId { get; set; }

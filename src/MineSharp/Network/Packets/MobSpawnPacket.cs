@@ -7,7 +7,6 @@ namespace MineSharp.Network.Packets;
 public class MobSpawnPacket : IServerPacket
 {
     public const int Id = 0x18;
-
     public byte PacketId => Id;
 
     public int EntityId { get; set; }

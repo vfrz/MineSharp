@@ -7,7 +7,6 @@ namespace MineSharp.Network.Packets;
 public class ChatMessagePacket : IClientPacket, IServerPacket
 {
     public const int Id = 0x03;
-
     public byte PacketId => Id;
 
     public string Message { get; set; } = string.Empty;

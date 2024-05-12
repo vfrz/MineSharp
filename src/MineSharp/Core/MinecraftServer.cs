@@ -22,8 +22,8 @@ public class MinecraftServer : IDisposable
 
     private readonly SemaphoreSlim _addClientSemaphore = new(1, 1);
 
-    public IEnumerable<MinecraftRemoteClient> RemoteClients => _remoteClients.Values;
-    private readonly ConcurrentDictionary<string, MinecraftRemoteClient> _remoteClients;
+    public IEnumerable<RemoteClient> RemoteClients => _remoteClients.Values;
+    private readonly ConcurrentDictionary<string, RemoteClient> _remoteClients;
 
     private readonly Socket _socket;
     private readonly PacketDispatcher _packetDispatcher;
@@ -47,7 +47,7 @@ public class MinecraftServer : IDisposable
         _logger = logger;
         _serviceProvider = serviceProvider;
         _commandHandler = commandHandler;
-        _remoteClients = new ConcurrentDictionary<string, MinecraftRemoteClient>();
+        _remoteClients = new ConcurrentDictionary<string, RemoteClient>();
 
         World = new MinecraftWorld(this, new Random().Next());
 
@@ -62,11 +62,11 @@ public class MinecraftServer : IDisposable
         _socket.Bind(ip);
     }
 
-    public void Start(CancellationToken cancellationToken)
+    public async Task StartAsync(CancellationToken cancellationToken)
     {
         _logger.LogInformation("Server starting...");
 
-        World.LoadInitialChunks();
+        await World.LoadInitialChunksAsync();
         World.Start();
 
         Looper.RegisterLoop(TimeSpan.FromSeconds(1), EntityManager.ProcessPickupItemsAsync);
@@ -84,7 +84,7 @@ public class MinecraftServer : IDisposable
         Looper.Start();
 
         _socket.Listen();
-        Task.Run(async () =>
+        _ = Task.Run(async () =>
         {
             while (!cancellationToken.IsCancellationRequested)
             {
@@ -239,20 +239,20 @@ public class MinecraftServer : IDisposable
         });
     }
 
-    public async Task BroadcastPacketAsync(IServerPacket packet, MinecraftRemoteClient? except = null, bool readyOnly = false)
+    public async Task BroadcastPacketAsync(IServerPacket packet, RemoteClient? except = null, bool readyOnly = false)
     {
         await using var writer = new PacketWriter(packet.PacketId);
         packet.Write(writer);
         var data = writer.ToByteArray();
         await Parallel.ForEachAsync(RemoteClients, async (client, _) =>
         {
-            if (client == except || (readyOnly && client.State != MinecraftRemoteClient.ClientState.Ready))
+            if (client == except || (readyOnly && client.State != RemoteClient.ClientState.Ready))
                 return;
             await client.TrySendAsync(data);
         });
     }
 
-    public async Task BroadcastChatAsync(string message, MinecraftRemoteClient? except = null)
+    public async Task BroadcastChatAsync(string message, RemoteClient? except = null)
     {
         await BroadcastPacketAsync(new ChatMessagePacket
         {
@@ -314,7 +314,7 @@ public class MinecraftServer : IDisposable
 
     private async Task HandleClientAsync(Socket socket, CancellationToken cancellationToken)
     {
-        var remoteClient = new MinecraftRemoteClient(socket, this);
+        var remoteClient = new RemoteClient(socket, this);
 
         await _addClientSemaphore.WaitAsync(cancellationToken);
         try
@@ -380,13 +380,13 @@ public class MinecraftServer : IDisposable
         }
     }
 
-    private void AddRemoteClient(MinecraftRemoteClient remoteClient)
+    private void AddRemoteClient(RemoteClient remoteClient)
     {
         if (!_remoteClients.TryAdd(remoteClient.NetworkId, remoteClient))
             throw new Exception("Failed to add client to list");
     }
 
-    private async Task RemoveRemoteClientAsync(MinecraftRemoteClient remoteClient)
+    private async Task RemoveRemoteClientAsync(RemoteClient remoteClient)
     {
         if (!_remoteClients.Remove(remoteClient.NetworkId, out _))
             throw new Exception("Failed to remove client");
@@ -395,7 +395,7 @@ public class MinecraftServer : IDisposable
         await PlayerDisconnectedAsync(remoteClient);
     }
 
-    private async Task PlayerDisconnectedAsync(MinecraftRemoteClient remoteClient)
+    private async Task PlayerDisconnectedAsync(RemoteClient remoteClient)
     {
         if (remoteClient.Player is not null)
         {

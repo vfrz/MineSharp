@@ -16,9 +16,9 @@ public class PlayerEntity : LivingEntity
 
     public bool Respawning { get; set; }
 
-    private MinecraftRemoteClient RemoteClient { get; }
+    private RemoteClient RemoteClient { get; }
 
-    public PlayerEntity(MinecraftRemoteClient remoteClient)
+    public PlayerEntity(RemoteClient remoteClient)
     {
         RemoteClient = remoteClient;
     }
@@ -66,7 +66,7 @@ public class PlayerEntity : LivingEntity
 
         Respawning = true;
 
-        var spawnHeight = Server!.World.GetHighestBlockHeight(new Vector2i(0, 0)) + 1.6200000047683716;
+        var spawnHeight = await Server!.World.GetHighestBlockHeightAsync(new Vector2i(0, 0)) + 1.6200000047683716;
         Position = new Vector3d(0.5, spawnHeight, 0.5);
         Stance = Position.Y + Height;
         OnGround = true;

@@ -5,7 +5,6 @@ namespace MineSharp.Network.Packets;
 public class ChunkPacket : IServerPacket
 {
     public const int Id = 0x33;
-
     public byte PacketId => Id;
 
     public int X { get; set; }

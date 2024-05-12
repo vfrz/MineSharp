@@ -7,21 +7,14 @@ namespace MineSharp.Network.Packets;
 public class UpdateSignPacket : IServerPacket, IClientPacket
 {
     public const byte Id = 0x82;
-
     public byte PacketId => Id;
 
     public int X { get; set; }
-
     public short Y { get; set; }
-
     public int Z { get; set; }
-
     public string Text1 { get; set; } = string.Empty;
-
     public string Text2 { get; set; } = string.Empty;
-
     public string Text3 { get; set; } = string.Empty;
-
     public string Text4 { get; set; } = string.Empty;
 
     public void Read(ref SequenceReader<byte> reader)

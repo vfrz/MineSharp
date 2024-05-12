@@ -1,9 +1,15 @@
 namespace MineSharp.Core;
 
 // ReSharper disable once InconsistentNaming
-public record struct Vector3i(int X, int Y, int Z)
+public readonly struct Vector3i(int x, int y, int z)
 {
     public static readonly Vector3i One = new(1);
+
+    public readonly int X = x;
+
+    public readonly int Y = y;
+
+    public readonly int Z = z;
 
     public Vector3i(int value) : this(value, value, value)
     {
@@ -26,9 +32,4 @@ public record struct Vector3i(int X, int Y, int Z)
     public static Vector3i operator -(Vector3i vector) => new(-vector.X, -vector.Y, -vector.Z);
 
     public Vector3d ToVector3() => new(X, Y, Z);
-
-    public override int GetHashCode()
-    {
-        return HashCode.Combine(X, Y, Z);
-    }
 }

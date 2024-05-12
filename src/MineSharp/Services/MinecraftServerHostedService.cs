@@ -11,11 +11,10 @@ public class MinecraftServerHostedService : IHostedService
     {
         _server = server;
     }
-    
-    public Task StartAsync(CancellationToken cancellationToken)
+
+    public async Task StartAsync(CancellationToken cancellationToken)
     {
-        _server.Start(cancellationToken);
-        return Task.CompletedTask;
+        await _server.StartAsync(cancellationToken);
     }
 
     public async Task StopAsync(CancellationToken cancellationToken)

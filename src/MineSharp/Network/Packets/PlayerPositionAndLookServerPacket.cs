@@ -5,7 +5,6 @@ namespace MineSharp.Network.Packets;
 public class PlayerPositionAndLookServerPacket : IServerPacket
 {
     public const int Id = 0x0D;
-
     public byte PacketId => Id;
 
     public double X { get; set; }

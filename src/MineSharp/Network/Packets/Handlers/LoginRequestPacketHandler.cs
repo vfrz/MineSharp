@@ -54,7 +54,7 @@ public class LoginRequestPacketHandler : IClientPacketHandler<LoginRequestPacket
             }
         }
 
-        var spawnHeight = context.Server.World.GetHighestBlockHeight(new Vector2i(0, 0)) + 1;
+        var spawnHeight = await context.Server.World.GetHighestBlockHeightAsync(new Vector2i(0, 0)) + 1;
         var currentPlayer = context.RemoteClient.InitializePlayer(new Vector3d(0.5, spawnHeight + .1, 0.5));
 
         await context.RemoteClient.SendPacketAsync(new LoginResponsePacket

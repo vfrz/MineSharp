@@ -8,23 +8,14 @@ public class PickupSpawnPacket : IServerPacket
     public byte PacketId => Id;
 
     public int EntityId { get; set; }
-
     public short ItemId { get; set; }
-
     public byte Count { get; set; }
-
     public short Metadata { get; set; }
-
     public int AbsoluteX { get; set; }
-
     public int AbsoluteY { get; set; }
-
     public int AbsoluteZ { get; set; }
-
     public byte Rotation { get; set; }
-
     public byte Pitch { get; set; }
-
     public byte Roll { get; set; }
 
     public void Write(PacketWriter writer)

@@ -22,7 +22,7 @@ public class UseEntityPacketHandler : IClientPacketHandler<UseEntityPacket>
             });
 
             var multiplier = targetLivingEntity.KnockBackMultiplier;
-            await context.Server.BroadcastPacketAsync(new EntityVelocity
+            await context.Server.BroadcastPacketAsync(new EntityVelocityPacket
             {
                 EntityId = targetLivingEntity.EntityId,
                 VelocityX = (short) (-MinecraftMath.SinDegree(remotePlayer.Yaw) * 3000 * multiplier.X),

@@ -7,7 +7,6 @@ namespace MineSharp.Network.Packets;
 public class PlayerPositionPacket : IClientPacket
 {
     public const int Id = 0x0B;
-
     public byte PacketId => Id;
 
     public double X { get; set; }

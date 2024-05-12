@@ -7,7 +7,6 @@ namespace MineSharp.Network.Packets;
 public class CloseWindowPacket : IClientPacket, IServerPacket
 {
     public const int Id = 0x65;
-
     public byte PacketId => Id;
 
     public byte WindowId { get; set; }

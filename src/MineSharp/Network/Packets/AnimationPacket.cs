@@ -7,7 +7,6 @@ namespace MineSharp.Network.Packets;
 public class AnimationPacket : IClientPacket, IServerPacket
 {
     public const byte Id = 0x12;
-
     public byte PacketId => Id;
 
     public int EntityId { get; set; }

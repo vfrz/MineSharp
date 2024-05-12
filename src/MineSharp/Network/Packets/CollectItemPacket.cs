@@ -8,7 +8,6 @@ public class CollectItemPacket : IServerPacket
     public byte PacketId => Id;
 
     public int CollectedEntityId { get; set; }
-
     public int CollectorEntityId { get; set; }
 
     public void Write(PacketWriter writer)

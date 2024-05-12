@@ -8,6 +8,7 @@ using MineSharp.Network.Packets;
 
 namespace MineSharp.Network;
 
+//TODO Maybe rewrite this
 public class PacketDispatcher
 {
     private record struct WrappedPacket(IClientPacket Packet, ClientPacketHandlerContext Context);
@@ -48,8 +49,10 @@ public class PacketDispatcher
             PlayerPositionAndLookClientPacket.Id => EnqueuePacket<PlayerPositionAndLookClientPacket>(ref reader, context),
             PlayerPositionPacket.Id => EnqueuePacket<PlayerPositionPacket>(ref reader, context),
             RespawnPacket.Id => EnqueuePacket<RespawnPacket>(ref reader, context),
+            TransactionPacket.Id => EnqueuePacket<TransactionPacket>(ref reader, context),
             UpdateSignPacket.Id => EnqueuePacket<UpdateSignPacket>(ref reader, context),
             UseEntityPacket.Id => EnqueuePacket<UseEntityPacket>(ref reader, context),
+            WindowClickPacket.Id => EnqueuePacket<WindowClickPacket>(ref reader, context),
             _ => HandleUnknownPacket(ref reader, context, packetId)
         };
 
@@ -91,8 +94,10 @@ public class PacketDispatcher
             PlayerPositionAndLookClientPacket.Id => GetHandler<PlayerPositionAndLookClientPacket>().HandleAsync(wrappedPacket.Packet, wrappedPacket.Context),
             PlayerPositionPacket.Id => GetHandler<PlayerPositionPacket>().HandleAsync(wrappedPacket.Packet, wrappedPacket.Context),
             RespawnPacket.Id => GetHandler<RespawnPacket>().HandleAsync(wrappedPacket.Packet, wrappedPacket.Context),
+            TransactionPacket.Id => GetHandler<TransactionPacket>().HandleAsync(wrappedPacket.Packet, wrappedPacket.Context),
             UpdateSignPacket.Id => GetHandler<UpdateSignPacket>().HandleAsync(wrappedPacket.Packet, wrappedPacket.Context),
             UseEntityPacket.Id => GetHandler<UseEntityPacket>().HandleAsync(wrappedPacket.Packet, wrappedPacket.Context),
+            WindowClickPacket.Id => GetHandler<WindowClickPacket>().HandleAsync(wrappedPacket.Packet, wrappedPacket.Context),
             _ => throw new Exception()
         };
     }
