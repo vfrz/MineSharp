@@ -310,25 +310,25 @@ public class MinecraftServer : IDisposable
 
     public async Task<IMobEntity> SpawnMobAsync(MobType type, Vector3i position)
     {
-        var mob = await (type switch
+        IMobEntity mob = type switch
         {
-            MobType.Creeper => SpawnMobAsync(new Creeper(), position),
-            MobType.Skeleton => SpawnMobAsync(new Skeleton(), position),
-            MobType.Spider => SpawnMobAsync(new Spider(), position),
-            MobType.GiantZombie => SpawnMobAsync(new GiantZombie(), position),
-            MobType.Zombie => SpawnMobAsync(new Zombie(), position),
-            MobType.Slime => SpawnMobAsync(new Slime(), position),
-            MobType.Ghast => SpawnMobAsync(new Ghast(), position),
-            MobType.ZombiePigman => SpawnMobAsync(new ZombiePigman(), position),
-            MobType.Pig => SpawnMobAsync(new Pig(), position),
-            MobType.Sheep => SpawnMobAsync(new Sheep(), position),
-            MobType.Cow => SpawnMobAsync(new Cow(), position),
-            MobType.Chicken => SpawnMobAsync(new Chicken(), position),
-            MobType.Squid => SpawnMobAsync(new Squid(), position),
-            MobType.Wolf => SpawnMobAsync(new Wolf(), position),
+            MobType.Creeper => new Creeper(),
+            MobType.Skeleton => new Skeleton(),
+            MobType.Spider => new Spider(),
+            MobType.GiantZombie => new GiantZombie(),
+            MobType.Zombie => new Zombie(),
+            MobType.Slime => new Slime(),
+            MobType.Ghast => new Ghast(),
+            MobType.ZombiePigman => new ZombiePigman(),
+            MobType.Pig => new Pig(),
+            MobType.Sheep => new Sheep(),
+            MobType.Cow => new Cow(),
+            MobType.Chicken => new Chicken(),
+            MobType.Squid => new Squid(),
+            MobType.Wolf => new Wolf(),
             _ => throw new ArgumentOutOfRangeException(nameof(type), type, null)
-        });
-        return mob;
+        };
+        return await SpawnMobAsync(mob, position);
     }
 
     public async Task<T> SpawnMobAsync<T>(Vector3i position) where T : IMobEntity, new()

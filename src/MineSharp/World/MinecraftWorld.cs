@@ -116,7 +116,7 @@ public class MinecraftWorld
             {
                 chunk = new Chunk(chunkPosition);
                 WorldGenerator.GenerateChunkTerrain(chunkPosition, chunk);
-                //WorldGenerator.GenerateChunkDecorations(chunkPosition, chunk);
+                WorldGenerator.GenerateChunkDecorations(chunkPosition, chunk);
 
                 //TODO Move ligth calculation somewhere else
                 for (var x = 0; x < Chunk.ChunkWidth; x++)

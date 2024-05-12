@@ -157,6 +157,15 @@ public class LoginRequestPacketHandler : IClientPacketHandler<LoginRequestPacket
             Yaw = MinecraftMath.RotationFloatToSByte(currentPlayer.Yaw)
         }, context.RemoteClient);
 
+        // To crouch a player
+        /*var metadataContainer = new EntityMetadataContainer();
+        metadataContainer.Set(0, new EntityByteMetadata(0x2));
+        await context.Server.BroadcastPacketAsync(new EntityMetadataPacket
+        {
+            EntityId = currentPlayer.EntityId,
+            Metadata = metadataContainer
+        });*/
+
         _logger.LogInformation($"Player {context.RemoteClient.Username} ({context.RemoteClient.NetworkId}) has joined the server");
 
         var welcomeMessage = $"Welcome on MineSharp, {ChatColors.Blue}{context.RemoteClient.Username}{ChatColors.White}!";
@@ -196,17 +205,8 @@ public class LoginRequestPacketHandler : IClientPacketHandler<LoginRequestPacket
         {
             WindowId = 0,
             Slot = 39,
-            ItemId = 345,
+            ItemId = 95,
             ItemCount = 1,
-            ItemUses = 0
-        });
-
-        await context.RemoteClient.SendPacketAsync(new SetSlotPacket
-        {
-            WindowId = 0,
-            Slot = 39,
-            ItemId = 323,
-            ItemCount = 10,
             ItemUses = 0
         });
 
