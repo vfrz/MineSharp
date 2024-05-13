@@ -1,6 +1,6 @@
 namespace MineSharp.Blocks;
 
-public enum BlockType : byte
+public enum BlockId : byte
 {
     Air = 0,
     Stone = 1,

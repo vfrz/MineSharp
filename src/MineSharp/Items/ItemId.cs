@@ -1,7 +1,9 @@
 namespace MineSharp.Items;
 
-public enum ItemType : short
+public enum ItemId : short
 {
+    // Special
+    Empty = -1,
     // Blocks
     StoneBlockBlock = 1,
     GrassBlockBlock = 2,

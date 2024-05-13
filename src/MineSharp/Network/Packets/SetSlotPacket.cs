@@ -1,4 +1,6 @@
+using MineSharp.Core;
 using MineSharp.Core.Packets;
+using MineSharp.Items;
 
 namespace MineSharp.Network.Packets;
 
@@ -7,19 +9,19 @@ public class SetSlotPacket : IServerPacket
     public const int Id = 0x67;
     public byte PacketId => Id;
 
-    public byte WindowId { get; set; }
+    public WindowId WindowId { get; set; }
     public short Slot { get; set; }
-    public short ItemId { get; set; }
+    public ItemId ItemId { get; set; }
     public byte ItemCount { get; set; }
-    public short ItemUses { get; set; }
+    public short ItemMetadata { get; set; }
 
     public void Write(PacketWriter writer)
     {
-        writer.WriteByte(WindowId);
+        writer.WriteByte((byte) WindowId);
         writer.WriteShort(Slot);
-        writer.WriteShort(ItemId);
+        writer.WriteShort((short) ItemId);
         writer.WriteByte(ItemCount);
-        if (ItemId != -1)
-            writer.WriteShort(ItemUses);
+        if (ItemId != ItemId.Empty)
+            writer.WriteShort(ItemMetadata);
     }
 }

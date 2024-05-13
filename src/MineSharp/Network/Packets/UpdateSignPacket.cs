@@ -4,7 +4,7 @@ using MineSharp.Extensions;
 
 namespace MineSharp.Network.Packets;
 
-public class UpdateSignPacket : IServerPacket, IClientPacket
+public class UpdateSignPacket : IClientPacket, IServerPacket
 {
     public const byte Id = 0x82;
     public byte PacketId => Id;

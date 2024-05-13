@@ -10,6 +10,7 @@ using MineSharp.Configuration;
 using MineSharp.Core.Packets;
 using MineSharp.Entities;
 using MineSharp.Entities.Mobs;
+using MineSharp.Items;
 using MineSharp.Network;
 using MineSharp.Network.Packets;
 using MineSharp.World;
@@ -25,6 +26,8 @@ public class MinecraftServer : IDisposable
     public IEnumerable<RemoteClient> RemoteClients => _remoteClients.Values;
     private readonly ConcurrentDictionary<string, RemoteClient> _remoteClients;
 
+    public int PlayerCount => _remoteClients.Count;
+
     private readonly Socket _socket;
     private readonly PacketDispatcher _packetDispatcher;
     public ServerConfiguration Configuration { get; }
@@ -35,6 +38,8 @@ public class MinecraftServer : IDisposable
     public MinecraftWorld World { get; }
     public EntityManager EntityManager { get; }
     public Looper Looper { get; }
+
+    private bool _saveOnNextLoop;
 
     public MinecraftServer(PacketDispatcher packetDispatcher,
         IOptions<ServerConfiguration> configuration,
@@ -54,6 +59,18 @@ public class MinecraftServer : IDisposable
         EntityManager = new EntityManager(this);
 
         Looper = new Looper(TimeSpan.FromMilliseconds(50), ProcessAsync);
+        Looper.RegisterLoop(TimeSpan.FromSeconds(1), EntityManager.ProcessPickupItemsAsync);
+        Looper.RegisterLoop(TimeSpan.FromSeconds(5), SendKeepAlivePacketsAsync);
+        Looper.RegisterLoop(TimeSpan.FromSeconds(1), World.SendTimeUpdateAsync);
+        Looper.RegisterLoop(TimeSpan.FromSeconds(1), async token =>
+        {
+            await Parallel.ForEachAsync(RemoteClients, token, async (client, _) =>
+            {
+                if (client.Player is not null && !client.Player.Respawning)
+                    await client.UpdateLoadedChunksAsync();
+            });
+        });
+        Looper.RegisterLoop(TimeSpan.FromMinutes(configuration.Value.AutomaticSaveIntervalInMinutes), _ => TriggerSave(), executeOnStart: false);
 
         RegisterDefaultCommands();
 
@@ -68,18 +85,6 @@ public class MinecraftServer : IDisposable
 
         await World.LoadInitialChunksAsync();
         World.Start();
-
-        Looper.RegisterLoop(TimeSpan.FromSeconds(1), EntityManager.ProcessPickupItemsAsync);
-        Looper.RegisterLoop(TimeSpan.FromSeconds(5), SendKeepAlivePacketsAsync);
-        Looper.RegisterLoop(TimeSpan.FromSeconds(1), World.SendTimeUpdateAsync);
-        Looper.RegisterLoop(TimeSpan.FromSeconds(1), async (token) =>
-        {
-            await Parallel.ForEachAsync(RemoteClients, token, async (client, _) =>
-            {
-                if (client.Player is not null && !client.Player.Respawning)
-                    await client.UpdateLoadedChunksAsync();
-            });
-        });
 
         Looper.Start();
 
@@ -101,12 +106,14 @@ public class MinecraftServer : IDisposable
         await BroadcastPacketAsync(new KeepAlivePacket(), readyOnly: true);
     }
 
-    public async Task StopAsync()
+    public async Task StopAsync(CancellationToken cancellationToken)
     {
         await DisconnectAllPlayersAsync("Server stopped.");
 
         await Looper.StopAsync();
         World.Stop();
+
+        await SaveAsync(cancellationToken);
 
         _logger.LogInformation("Server stoping...");
         //_socket.Shutdown(SocketShutdown.Both);
@@ -192,9 +199,24 @@ public class MinecraftServer : IDisposable
             return true;
         });
 
+        _commandHandler.TryRegisterCommand("give", async (_, client, args) =>
+        {
+            var itemId = (ItemId) short.Parse(args[0]);
+            var count = args.Length > 1 ? byte.Parse(args[1]) : (byte) 1;
+            var metadata = args.Length > 2 ? short.Parse(args[2]) : (byte) 0;
+
+            return await client!.Player!.TryGiveItemAsync(new ItemStack(itemId, count, metadata));
+        });
+
+        _commandHandler.TryRegisterCommand("clear", async (_, client, args) =>
+        {
+            await client!.Player!.ClearInventoryAsync();
+            return true;
+        });
+
         _commandHandler.TryRegisterCommand("tp", async (server, client, args) =>
         {
-            var target = new Vector3d();
+            Vector3d target;
 
             if (args.Length == 1)
             {
@@ -230,7 +252,7 @@ public class MinecraftServer : IDisposable
                 Pitch = player.Pitch,
                 Yaw = player.Yaw,
                 OnGround = player.OnGround,
-                Stance = player.Position.Y + PlayerEntity.Height
+                Stance = player.Position.Y + Player.Height
             });
             return true;
         });
@@ -238,7 +260,7 @@ public class MinecraftServer : IDisposable
 
     public RemoteClient? GetRemoteClientByUsername(string username)
     {
-        return _remoteClients.Values.FirstOrDefault(remoteClient => remoteClient.Username == username);
+        return _remoteClients.Values.FirstOrDefault(remoteClient => remoteClient.Player?.Username == username);
     }
 
     public ILogger<T> GetLogger<T>()
@@ -277,14 +299,30 @@ public class MinecraftServer : IDisposable
 
         await World.ProcessAsync(elapsed);
         await EntityManager.ProcessAsync(elapsed);
+
+        if (_saveOnNextLoop)
+        {
+            await SaveAsync(cancellationToken);
+            _saveOnNextLoop = false;
+        }
     }
 
     public async Task DisconnectAllPlayersAsync(string message)
     {
+        foreach (var remoteClient in RemoteClients)
+        {
+            await SavePlayerAsync(remoteClient);
+        }
+
         await BroadcastPacketAsync(new PlayerDisconnectPacket
         {
             Reason = message
         });
+    }
+
+    private Task SavePlayerAsync(RemoteClient client)
+    {
+        return Task.CompletedTask;
     }
 
     public async Task BroadcastPacketAsync(IServerPacket packet, RemoteClient? except = null, bool readyOnly = false)
@@ -367,14 +405,14 @@ public class MinecraftServer : IDisposable
         await _addClientSemaphore.WaitAsync(cancellationToken);
         try
         {
-            if (_remoteClients.Count >= Configuration.MaxPlayers)
+            if (PlayerCount >= Configuration.MaxPlayers)
             {
                 await remoteClient.SendPacketAsync(new PlayerDisconnectPacket
                 {
                     Reason = $"Server is full: {_remoteClients.Count}/{Configuration.MaxPlayers}"
                 });
-                await remoteClient.DisconnectSocketAsync();
                 _logger.LogInformation("Client {networkId} tried to connect but the server is full", remoteClient.NetworkId);
+                await remoteClient.DisconnectSocketAsync();
                 return;
             }
 
@@ -421,11 +459,35 @@ public class MinecraftServer : IDisposable
         }
         finally
         {
-            if (remoteClient.Username is not null)
-                _logger.LogInformation("Player {username} with network id: {networkId}", remoteClient.Username, remoteClient.NetworkId);
-            _logger.LogInformation("Client disconnected with network id: {networkId}", remoteClient.NetworkId);
+            if (remoteClient.Player is not null)
+                _logger.LogInformation("Player {username} ({networkId}) has left the server", remoteClient.Player.Username, remoteClient.NetworkId);
+            _logger.LogInformation("Client {networkId} disconnected", remoteClient.NetworkId);
             await RemoveRemoteClientAsync(remoteClient);
         }
+    }
+
+    public void TriggerSave()
+    {
+        _saveOnNextLoop = true;
+    }
+
+    private async Task SaveAsync(CancellationToken cancellationToken)
+    {
+        _logger.LogInformation("Saving everything...");
+
+        foreach (var remoteClient in RemoteClients)
+        {
+            await SavePlayerAsync(remoteClient);
+        }
+
+        await SaveWorldAsync();
+        
+        _logger.LogInformation("Saved successfully");
+    }
+
+    private Task SaveWorldAsync()
+    {
+        return Task.CompletedTask;
     }
 
     private void AddRemoteClient(RemoteClient remoteClient)
@@ -447,7 +509,7 @@ public class MinecraftServer : IDisposable
     {
         if (remoteClient.Player is not null)
         {
-            var leftMessage = $"{ChatColors.Blue}{remoteClient.Username} {ChatColors.White}has left the server!";
+            var leftMessage = $"{ChatColors.Blue}{remoteClient.Player.Username} {ChatColors.White}has left the server!";
             await BroadcastChatAsync(leftMessage, remoteClient);
 
             await BroadcastPacketAsync(new DestroyEntityPacket

@@ -3,16 +3,16 @@ using MineSharp.Core.Packets;
 
 namespace MineSharp.Network.Packets;
 
-public class KeepAlivePacket : IServerPacket, IClientPacket
+public class KeepAlivePacket : IClientPacket, IServerPacket
 {
     public const int Id = 0x00;
     public byte PacketId => Id;
 
-    public void Write(PacketWriter writer)
+    public void Read(ref SequenceReader<byte> reader)
     {
     }
 
-    public void Read(ref SequenceReader<byte> reader)
+    public void Write(PacketWriter writer)
     {
     }
 }

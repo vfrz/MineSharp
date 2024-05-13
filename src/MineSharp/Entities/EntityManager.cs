@@ -7,11 +7,11 @@ namespace MineSharp.Entities;
 public class EntityManager
 {
     public IEnumerable<IEntity> Entities => _entities.Values;
-    
+
     private readonly ThreadSafeIdGenerator _idGenerator;
     private readonly ConcurrentDictionary<int, IEntity> _entities;
     private readonly MinecraftServer _server;
-    
+
     public EntityManager(MinecraftServer server)
     {
         _server = server;
@@ -37,7 +37,7 @@ public class EntityManager
     }
 
     public bool EntityExists(int id) => _entities.ContainsKey(id);
-    
+
     public async Task ProcessPickupItemsAsync(CancellationToken cancellationToken)
     {
         foreach (var pickupItem in _entities.Values.OfType<PickupItem>())

@@ -4,16 +4,21 @@ namespace MineSharp.Network.Packets.Handlers;
 
 public class EntityActionPacketHandler : IClientPacketHandler<EntityActionPacket>
 {
-    public Task HandleAsync(EntityActionPacket packet, ClientPacketHandlerContext context)
+    public async Task HandleAsync(EntityActionPacket packet, ClientPacketHandlerContext context)
     {
-        if (packet.Action is EntityActionPacket.ActionType.Crouch)
+        switch (packet.Action)
         {
-            //TODO Update player entity metadata
+            case EntityActionPacket.ActionType.Crouch:
+                await context.RemoteClient.Player!.ToggleCrouchAsync(true);
+                break;
+            case EntityActionPacket.ActionType.Uncrouch:
+                await context.RemoteClient.Player!.ToggleCrouchAsync(false);
+                break;
+            case EntityActionPacket.ActionType.LeaveBed:
+                //TODO Handle if needed
+                break;
+            default:
+                throw new Exception();
         }
-        else if (packet.Action is EntityActionPacket.ActionType.Uncrouch)
-        {
-            //TODO Update player entity metadata
-        }
-        return Task.CompletedTask;
     }
 }

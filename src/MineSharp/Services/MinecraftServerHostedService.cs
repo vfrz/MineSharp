@@ -19,6 +19,6 @@ public class MinecraftServerHostedService : IHostedService
 
     public async Task StopAsync(CancellationToken cancellationToken)
     {
-        await _server.StopAsync();
+        await _server.StopAsync(cancellationToken);
     }
 }

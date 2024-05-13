@@ -13,17 +13,17 @@ public class TransactionPacket : IClientPacket, IServerPacket
     public short ActionNumber { get; set; }
     public bool Accepted { get; set; }
 
-    public void Write(PacketWriter writer)
-    {
-        writer.WriteByte(WindowId);
-        writer.WriteShort(ActionNumber);
-        writer.WriteBool(Accepted);
-    }
-
     public void Read(ref SequenceReader<byte> reader)
     {
         WindowId = reader.ReadByte();
         ActionNumber = reader.ReadShort();
         Accepted = reader.ReadBool();
+    }
+
+    public void Write(PacketWriter writer)
+    {
+        writer.WriteByte(WindowId);
+        writer.WriteShort(ActionNumber);
+        writer.WriteBool(Accepted);
     }
 }

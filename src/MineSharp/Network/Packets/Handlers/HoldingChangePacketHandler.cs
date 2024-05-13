@@ -4,8 +4,9 @@ namespace MineSharp.Network.Packets.Handlers;
 
 public class HoldingChangePacketHandler : IClientPacketHandler<HoldingChangePacket>
 {
-    public Task HandleAsync(HoldingChangePacket packet, ClientPacketHandlerContext context)
+    public async Task HandleAsync(HoldingChangePacket packet, ClientPacketHandlerContext context)
     {
-        return Task.CompletedTask;
+        var player = context.RemoteClient.Player!;
+        await player.HoldItemChangedAsync(packet.SlotId);
     }
 }

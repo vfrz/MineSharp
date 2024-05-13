@@ -76,6 +76,15 @@ public class Looper : IDisposable
         _loops.Add(new LoopRegistration(func, longInterval, executeOnStart ? -longInterval : 0));
     }
 
+    public void RegisterLoop(TimeSpan interval, Action<CancellationToken> func, bool executeOnStart = true)
+    {
+        RegisterLoop(interval, token =>
+        {
+            func(token);
+            return Task.CompletedTask;
+        }, executeOnStart);
+    }
+
     private async Task ProcessAsync()
     {
         var stopwatch = new Stopwatch();

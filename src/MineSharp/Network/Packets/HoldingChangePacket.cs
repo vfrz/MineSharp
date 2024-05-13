@@ -4,7 +4,7 @@ using MineSharp.Extensions;
 
 namespace MineSharp.Network.Packets;
 
-public class HoldingChangePacket : IClientPacket
+public class HoldingChangePacket : IClientPacket, IServerPacket
 {
     public const int Id = 0x10;
     public byte PacketId => Id;
@@ -14,5 +14,10 @@ public class HoldingChangePacket : IClientPacket
     public void Read(ref SequenceReader<byte> reader)
     {
         SlotId = reader.ReadShort();
+    }
+
+    public void Write(PacketWriter writer)
+    {
+        writer.WriteShort(SlotId);
     }
 }

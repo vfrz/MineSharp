@@ -14,8 +14,7 @@ public class RemoteClient : IDisposable
         Ready
     }
 
-    public PlayerEntity? Player { get; private set; }
-    public string? Username { get; set; }
+    public Player? Player { get; private set; }
     public string NetworkId { get; }
 
     public ClientState State { get; private set; }
@@ -33,14 +32,15 @@ public class RemoteClient : IDisposable
         NetworkId = socket.RemoteEndPoint?.ToString() ?? throw new Exception();
     }
 
-    public PlayerEntity InitializePlayer(Vector3d position)
+    public Player InitializePlayer(string username, Vector3d position)
     {
         if (Player is not null)
             throw new Exception($"Can't initialize player because it has already been initialized");
-        var player = new PlayerEntity(this)
+        var player = new Player(this)
         {
+            Username = username,
             Position = position,
-            Stance = position.Y + PlayerEntity.Height,
+            Stance = position.Y + Player.Height,
             OnGround = true,
             Pitch = 0,
             Yaw = 0,

@@ -27,35 +27,33 @@ public class LoginRequestPacketHandler : IClientPacketHandler<LoginRequestPacket
             return;
         }
 
+        var username = packet.Username;
+
         if (context.Server.Configuration.Debug)
         {
-            context.RemoteClient.Username = packet.Username + Guid.NewGuid().ToString()[..4];
+            username = packet.Username + Guid.NewGuid().ToString()[..4];
         }
-        else
-        {
-            await Semaphore.WaitAsync();
-            try
-            {
-                if (context.Server.RemoteClients.Any(c => c.Username == packet.Username))
-                {
-                    var message = $"{ChatColors.Gold}A user with the same username is already connected, retry later.";
-                    await context.RemoteClient.SendPacketAsync(new PlayerDisconnectPacket
-                    {
-                        Reason = message
-                    });
-                    return;
-                }
 
-                context.RemoteClient.Username = packet.Username;
-            }
-            finally
+        await Semaphore.WaitAsync();
+        try
+        {
+            if (context.Server.RemoteClients.Any(c => c.Player?.Username == packet.Username))
             {
-                Semaphore.Release();
+                var message = $"{ChatColors.Gold}A user with the same username is already connected, retry later.";
+                await context.RemoteClient.SendPacketAsync(new PlayerDisconnectPacket
+                {
+                    Reason = message
+                });
+                return;
             }
+        }
+        finally
+        {
+            Semaphore.Release();
         }
 
         var spawnHeight = await context.Server.World.GetHighestBlockHeightAsync(new Vector2i(0, 0)) + 1;
-        var currentPlayer = context.RemoteClient.InitializePlayer(new Vector3d(0.5, spawnHeight + .1, 0.5));
+        var currentPlayer = context.RemoteClient.InitializePlayer(username, new Vector3d(0.5, spawnHeight + .1, 0.5));
 
         await context.RemoteClient.SendPacketAsync(new LoginResponsePacket
         {
@@ -120,7 +118,7 @@ public class LoginRequestPacketHandler : IClientPacketHandler<LoginRequestPacket
                 Z = player.Position.Z.ToAbsoluteInt(),
                 Pitch = MinecraftMath.RotationFloatToSByte(player.Pitch),
                 Yaw = MinecraftMath.RotationFloatToSByte(player.Yaw),
-                Username = remoteClient.Username!,
+                Username = player.Username,
                 CurrentItem = 0
             });
 
@@ -143,7 +141,7 @@ public class LoginRequestPacketHandler : IClientPacketHandler<LoginRequestPacket
             Z = currentPlayer.Position.Z.ToAbsoluteInt(),
             Pitch = MinecraftMath.RotationFloatToSByte(currentPlayer.Pitch),
             Yaw = MinecraftMath.RotationFloatToSByte(currentPlayer.Yaw),
-            Username = context.RemoteClient.Username!,
+            Username = currentPlayer.Username,
             CurrentItem = 0
         }, context.RemoteClient);
 
@@ -166,66 +164,12 @@ public class LoginRequestPacketHandler : IClientPacketHandler<LoginRequestPacket
             Metadata = metadataContainer
         });*/
 
-        _logger.LogInformation($"Player {context.RemoteClient.Username} ({context.RemoteClient.NetworkId}) has joined the server");
+        _logger.LogInformation($"Player {currentPlayer.Username} ({context.RemoteClient.NetworkId}) has joined the server");
 
-        var welcomeMessage = $"Welcome on MineSharp, {ChatColors.Blue}{context.RemoteClient.Username}{ChatColors.White}!";
+        var welcomeMessage = $"Welcome on MineSharp, {ChatColors.Blue}{currentPlayer.Username}{ChatColors.White}!";
         await context.RemoteClient.SendChatAsync(welcomeMessage);
 
-        var joinedMessage = $"{ChatColors.Blue}{context.RemoteClient.Username} {ChatColors.White}has joined the server!";
+        var joinedMessage = $"{ChatColors.Blue}{currentPlayer.Username} {ChatColors.White}has joined the server!";
         await context.Server.BroadcastChatAsync(joinedMessage, context.RemoteClient);
-
-        await context.RemoteClient.SendPacketAsync(new SetSlotPacket
-        {
-            WindowId = 0,
-            Slot = 36,
-            ItemId = 3,
-            ItemCount = 64,
-            ItemUses = 0
-        });
-
-        await context.RemoteClient.SendPacketAsync(new SetSlotPacket
-        {
-            WindowId = 0,
-            Slot = 37,
-            ItemId = 277,
-            ItemCount = 1,
-            ItemUses = 0
-        });
-
-        await context.RemoteClient.SendPacketAsync(new SetSlotPacket
-        {
-            WindowId = 0,
-            Slot = 38,
-            ItemId = 1,
-            ItemCount = 80,
-            ItemUses = 0
-        });
-
-        await context.RemoteClient.SendPacketAsync(new SetSlotPacket
-        {
-            WindowId = 0,
-            Slot = 39,
-            ItemId = 95,
-            ItemCount = 1,
-            ItemUses = 0
-        });
-
-        await context.RemoteClient.SendPacketAsync(new SetSlotPacket
-        {
-            WindowId = 0,
-            Slot = 40,
-            ItemId = 324,
-            ItemCount = 10,
-            ItemUses = 0
-        });
-
-        await context.RemoteClient.SendPacketAsync(new SetSlotPacket
-        {
-            WindowId = 0,
-            Slot = 41,
-            ItemId = 278,
-            ItemCount = 1,
-            ItemUses = 0
-        });
     }
 }

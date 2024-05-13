@@ -8,7 +8,7 @@ public class EntityMetadataContainer
 
     public void Set(byte index, IEntityMetadata value)
     {
-        _container[index] = value;
+        _container[index] = value ?? throw new Exception();
     }
 
     public bool TryGet<T>(byte index, out T? metadata) where T : IEntityMetadata
@@ -21,6 +21,11 @@ public class EntityMetadataContainer
 
         metadata = default;
         return false;
+    }
+
+    public T GetOrDefault<T>(byte index, T defaultValue) where T : IEntityMetadata
+    {
+        return TryGet<T>(index, out var metadata) ? metadata! : defaultValue;
     }
 
     public void Write(PacketWriter writer)

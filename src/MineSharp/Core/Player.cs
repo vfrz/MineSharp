@@ -1,10 +1,13 @@
 using MineSharp.Entities;
+using MineSharp.Entities.Metadata;
+using MineSharp.Items;
+using MineSharp.Items.Infos;
 using MineSharp.Network.Packets;
 using MineSharp.World;
 
 namespace MineSharp.Core;
 
-public class PlayerEntity : LivingEntity
+public class Player : LivingEntity
 {
     public const double Height = 1.62;
 
@@ -16,11 +19,123 @@ public class PlayerEntity : LivingEntity
 
     public bool Respawning { get; set; }
 
+    public required string Username { get; init; }
+
+    private Inventory Inventory { get; }
+
     private RemoteClient RemoteClient { get; }
 
-    public PlayerEntity(RemoteClient remoteClient)
+    public short SelectedHotbarSlot { get; private set; }
+    public ItemStack HoldItem => Inventory.Hotbar[SelectedHotbarSlot];
+
+    public bool Crouched
+    {
+        get
+        {
+            var entityFlags = Metadata.GetOrDefault(0, new EntityFlagsMetadata(EntityFlags.Default)).FlagsValue;
+            return entityFlags.HasFlag(EntityFlags.Crouched);
+        }
+        private set
+        {
+            var entityFlags = Metadata.GetOrDefault(0, new EntityFlagsMetadata(EntityFlags.Default)).FlagsValue;
+            Metadata.Set(0, value
+                ? new EntityFlagsMetadata(entityFlags | EntityFlags.Crouched)
+                : new EntityFlagsMetadata(entityFlags & ~EntityFlags.Crouched));
+        }
+    }
+
+    public Player(RemoteClient remoteClient)
     {
         RemoteClient = remoteClient;
+        Inventory = new Inventory();
+        SelectedHotbarSlot = 0;
+    }
+
+    public async Task<bool> TryGiveItemAsync(ItemStack itemStack)
+    {
+        var emptyIndex = Inventory.GetFirstEmptyStorageSlot();
+        if (!emptyIndex.HasValue)
+            return false;
+        Inventory.SetSlot(emptyIndex.Value, itemStack);
+        await RemoteClient.SendPacketAsync(new SetSlotPacket
+        {
+            WindowId = WindowId.Inventory,
+            Slot = emptyIndex.Value,
+            ItemId = itemStack.ItemId,
+            ItemCount = itemStack.Count,
+            ItemMetadata = itemStack.Metadata
+        });
+        if (emptyIndex.Value == Inventory.HotbarSlotToInventorySlot(SelectedHotbarSlot))
+            await BroadcastHoldItemAsync();
+        return true;
+    }
+
+    public async Task ClearInventoryAsync()
+    {
+        var heldItem = Inventory.Hotbar[SelectedHotbarSlot];
+        Inventory.Clear();
+        await RemoteClient.SendPacketAsync(new WindowItemsPacket
+        {
+            WindowId = WindowId.Inventory,
+            Items = Inventory.Slots
+        });
+        if (heldItem != ItemStack.Empty)
+            await BroadcastHoldItemAsync();
+    }
+
+    public async Task HoldItemChangedAsync(short slotId)
+    {
+        SelectedHotbarSlot = slotId;
+        await BroadcastHoldItemAsync();
+    }
+
+    public async Task ToggleCrouchAsync(bool crouched)
+    {
+        if (Crouched == crouched)
+            return;
+        Crouched = crouched;
+        await BroadcastEntityMetadataAsync();
+    }
+
+    protected override async Task BroadcastEntityMetadataAsync()
+    {
+        await Server!.BroadcastPacketAsync(new EntityMetadataPacket
+        {
+            EntityId = EntityId,
+            Metadata = Metadata
+        }, RemoteClient);
+    }
+
+    public async Task AttackEntityAsync(ILivingEntity targetEntity)
+    {
+        await Server!.BroadcastPacketAsync(new EntityStatusPacket
+        {
+            EntityId = targetEntity.EntityId,
+            Status = EntityStatus.Hurt
+        });
+
+        var multiplier = targetEntity.KnockBackMultiplier;
+        await Server.BroadcastPacketAsync(new EntityVelocityPacket
+        {
+            EntityId = targetEntity.EntityId,
+            VelocityX = (short) (-MinecraftMath.SinDegree(Yaw) * 3000 * multiplier.X),
+            VelocityY = (short) (targetEntity.OnGround ? 3000 * multiplier.Y : 0),
+            VelocityZ = (short) (MinecraftMath.CosDegree(Yaw) * 3000 * multiplier.Z)
+        });
+        //TODO Adapt damage depending on player's weapon/tool
+        //var selectedItem = remotePlayer.
+        var damage = HoldItem == ItemStack.Empty ? 1 : ItemInfo.Get(HoldItem.ItemId).DamageOnEntity;
+        await targetEntity.SetHealthAsync((short) (targetEntity.Health - damage));
+    }
+
+    private async Task BroadcastHoldItemAsync()
+    {
+        await Server!.BroadcastPacketAsync(new EntityEquipmentPacket
+        {
+            EntityId = EntityId,
+            Slot = 0,
+            ItemId = HoldItem.ItemId
+        }, RemoteClient);
     }
 
     public override async Task SetHealthAsync(short health)
@@ -120,7 +235,7 @@ public class PlayerEntity : LivingEntity
             await RemoteClient.SendPacketAsync(new NamedEntitySpawnPacket
             {
                 EntityId = player.EntityId,
-                Username = remoteClient.Username!,
+                Username = Username,
                 X = player.Position.X.ToAbsoluteInt(),
                 Y = player.Position.Y.ToAbsoluteInt(),
                 Z = player.Position.Z.ToAbsoluteInt(),
@@ -139,7 +254,7 @@ public class PlayerEntity : LivingEntity
             Z = Position.Z.ToAbsoluteInt(),
             Yaw = MinecraftMath.RotationFloatToSByte(Yaw),
             Pitch = MinecraftMath.RotationFloatToSByte(Pitch),
-            Username = RemoteClient.Username!,
+            Username = Username,
             CurrentItem = 0
         }, RemoteClient);
 
