@@ -31,7 +31,17 @@ public class PlayerBlockPlacementPacketHandler : IClientPacketHandler<PlayerBloc
         {
             var coordinates = new Vector3i(packet.X, packet.Y, packet.Z);
             var directedCoordinates = ApplyDirectionToPosition(coordinates, packet.Direction);
-            await context.Server.World.SetBlockAsync(directedCoordinates, (byte) packet.ItemId);
+            var player = context.RemoteClient.Player!;
+
+            var success = await player.SubtractSelectedItemAsync();
+            if (success)
+            {
+                await context.Server.World.SetBlockAsync(directedCoordinates, (byte) packet.ItemId);
+            }
+            else
+            {
+                await context.Server.World.SetBlockAsync(directedCoordinates, 0);
+            }
         }
     }
 

@@ -15,7 +15,7 @@ public abstract class Entity : IEntity
     {
         if (EntityId != -1)
             throw new Exception("Entity has already been initialized");
-        EntityId = entityId;
+        EntityId = entityId; 
         Server = server;
     }
 

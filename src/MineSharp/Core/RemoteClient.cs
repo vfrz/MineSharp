@@ -79,11 +79,6 @@ public class RemoteClient : IDisposable
         }
     }
 
-    public async Task DisconnectSocketAsync()
-    {
-        await Socket.DisconnectAsync(false);
-    }
-
     public async Task SendChatAsync(string message)
     {
         await SendPacketAsync(new ChatMessagePacket
@@ -177,6 +172,11 @@ public class RemoteClient : IDisposable
 
     public Vector2i GetCurrentChunk() => Chunk.GetChunkPositionForWorldPosition(Player!.Position);
 
+    public async Task DisconnectSocketAsync()
+    {
+        await Socket.DisconnectAsync(false);
+    }
+    
     public void Dispose()
     {
         Socket.Dispose();

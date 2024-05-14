@@ -34,10 +34,10 @@ public class Inventory : ItemContainer
         return null;
     }
 
-    public static short? HotbarSlotToInventorySlot(short hotbarSlot)
+    public static short HotbarSlotToInventorySlot(short hotbarSlot)
     {
         if (hotbarSlot is < 0 or > 8)
-            return null;
+            throw new Exception();
         return (short) (hotbarSlot + HotbarOffset);
     }
 }

@@ -1,6 +1,7 @@
 using System.IO.Compression;
 using System.Runtime.CompilerServices;
 using MineSharp.Core;
+using MineSharp.Saves;
 
 namespace MineSharp.World;
 
@@ -10,7 +11,8 @@ public class Chunk : IBlockChunkData
     public const int ChunkHeight = 128;
     private const int ArraySize = ChunkWidth * ChunkWidth * ChunkHeight;
 
-    private readonly byte[] _blocks;
+    private readonly byte[] _data;
+    private readonly ArraySegment<byte> _blocks;
     private readonly NibbleArray _metadata;
     private readonly NibbleArray _light;
     private readonly NibbleArray _skyLight;
@@ -20,10 +22,24 @@ public class Chunk : IBlockChunkData
     public Chunk(Vector2i chunkPosition)
     {
         ChunkPosition = chunkPosition;
-        _blocks = new byte[ArraySize + 3 * (ArraySize / 2)];
-        _metadata = new NibbleArray(_blocks, ArraySize);
-        _light = new NibbleArray(_blocks, ArraySize + ArraySize / 2);
-        _skyLight = new NibbleArray(_blocks, ArraySize * 2);
+        _data = new byte[ArraySize + 3 * (ArraySize / 2)];
+        _blocks = new ArraySegment<byte>(_data, 0, ArraySize);
+        _metadata = new NibbleArray(_data, ArraySize);
+        _light = new NibbleArray(_data, ArraySize + ArraySize / 2);
+        _skyLight = new NibbleArray(_data, ArraySize * 2);
+    }
+
+    public void LoadFromSaveData(ChunkSaveData saveData)
+    {
+        Array.Copy(saveData.Data, _data, saveData.Data.Length);
+    }
+
+    public ChunkSaveData GetSaveData()
+    {
+        return new ChunkSaveData
+        {
+            Data = _data
+        };
     }
 
     public void SetBlock(Vector3i localPosition, byte blockId, byte metadata = 0)
@@ -73,15 +89,17 @@ public class Chunk : IBlockChunkData
         => new(ChunkPosition.X * ChunkWidth + position.X, position.Y, ChunkPosition.Z * ChunkWidth + position.Z);
 
     public static Vector2i WorldToLocal(Vector2i position)
-        => new((position.X % ChunkWidth + ChunkWidth) % ChunkWidth, (position.Z % ChunkWidth + ChunkWidth) % ChunkWidth);
+        => new((position.X % ChunkWidth + ChunkWidth) % ChunkWidth,
+            (position.Z % ChunkWidth + ChunkWidth) % ChunkWidth);
 
     public static Vector3i WorldToLocal(Vector3i position)
-        => new((position.X % ChunkWidth + ChunkWidth) % ChunkWidth, position.Y, (position.Z % ChunkWidth + ChunkWidth) % ChunkWidth);
+        => new((position.X % ChunkWidth + ChunkWidth) % ChunkWidth, position.Y,
+            (position.Z % ChunkWidth + ChunkWidth) % ChunkWidth);
 
     public static Vector2i GetChunkPositionForWorldPosition(Vector3d position)
     {
-        var chunkX = (int) position.X / ChunkWidth - (position.X < 0 ? 1 : 0);
-        var chunkZ = (int) position.Z / ChunkWidth - (position.Z < 0 ? 1 : 0);
+        var chunkX = (int)position.X / ChunkWidth - (position.X < 0 ? 1 : 0);
+        var chunkZ = (int)position.Z / ChunkWidth - (position.Z < 0 ? 1 : 0);
         return new Vector2i(chunkX, chunkZ);
     }
 
@@ -104,7 +122,7 @@ public class Chunk : IBlockChunkData
         await using var output = new MemoryStream();
         await using (var stream = new ZLibStream(output, CompressionMode.Compress))
         {
-            await stream.WriteAsync(_blocks);
+            await stream.WriteAsync(_data);
         }
 
         return output.ToArray();

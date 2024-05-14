@@ -2,6 +2,7 @@ using AsyncKeyedLock;
 using Microsoft.Extensions.Logging;
 using MineSharp.Core;
 using MineSharp.Network.Packets;
+using MineSharp.Saves;
 using MineSharp.World.Generation;
 
 namespace MineSharp.World;
@@ -69,7 +70,8 @@ public class MinecraftWorld
     {
         var initialChunks = GetChunksAround(Vector2i.Zero, Server.Configuration.VisibleChunksDistance);
         _logger.LogInformation("Generating world...");
-        await Parallel.ForEachAsync(initialChunks, async (chunkPosition, _) => await GetOrLoadChunkAsync(chunkPosition));
+        await Parallel.ForEachAsync(initialChunks,
+            async (chunkPosition, _) => await GetOrLoadChunkAsync(chunkPosition));
     }
 
     public async Task<byte> GetBlockIdAsync(Vector3i worldPosition)
@@ -98,7 +100,7 @@ public class MinecraftWorld
         var blockUpdatePacket = new BlockUpdatePacket
         {
             X = worldPosition.X,
-            Y = (sbyte) worldPosition.Y,
+            Y = (sbyte)worldPosition.Y,
             Z = worldPosition.Z,
             BlockId = blockId,
             Metadata = metadata
@@ -115,15 +117,26 @@ public class MinecraftWorld
             if (chunk is null)
             {
                 chunk = new Chunk(chunkPosition);
-                WorldGenerator.GenerateChunkTerrain(chunkPosition, chunk);
-                WorldGenerator.GenerateChunkDecorations(chunkPosition, chunk);
 
-                //TODO Move ligth calculation somewhere else
-                for (var x = 0; x < Chunk.ChunkWidth; x++)
-                for (var y = 0; y < Chunk.ChunkHeight; y++)
-                for (var z = 0; z < Chunk.ChunkWidth; z++)
+                if (Server.SaveManager.IsChunkSaved(chunkPosition))
                 {
-                    chunk.SetLight(new Vector3i(x, y, z), 15, 15);
+                    var saveData = await Server.SaveManager.LoadChunkAsync(chunkPosition);
+                    chunk.LoadFromSaveData(saveData);
+                }
+                else
+                {
+                    WorldGenerator.GenerateChunkTerrain(chunkPosition, chunk);
+                    WorldGenerator.GenerateChunkDecorations(chunkPosition, chunk);
+
+                    //TODO Move ligth calculation somewhere else
+                    for (var x = 0; x < Chunk.ChunkWidth; x++)
+                    for (var y = 0; y < Chunk.ChunkHeight; y++)
+                    for (var z = 0; z < Chunk.ChunkWidth; z++)
+                    {
+                        chunk.SetLight(new Vector3i(x, y, z), 15, 15);
+                    }
+
+                    await SaveChunkAsync(chunk);
                 }
 
                 Chunks[chunkPosition] = chunk;
@@ -149,6 +162,20 @@ public class MinecraftWorld
         {
             Reason = NewStatePacket.ReasonType.EndRaining
         });
+    }
+
+    public async Task SaveAsync()
+    {
+        foreach (var chunk in Chunks)
+        {
+            await SaveChunkAsync(chunk);
+        }
+    }
+
+    private async Task SaveChunkAsync(Chunk chunk)
+    {
+        var saveData = chunk.GetSaveData();
+        await Server.SaveManager.SaveChunkAsync(chunk.ChunkPosition, saveData);
     }
 
     private static double Distance(Vector2i a, Vector2i b)

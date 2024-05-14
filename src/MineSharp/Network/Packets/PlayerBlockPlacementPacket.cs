@@ -15,7 +15,7 @@ public class PlayerBlockPlacementPacket : IClientPacket
     public sbyte Direction { get; set; }
     public short ItemId { get; set; }
     public byte? Amount { get; set; }
-    public short? Damage { get; set; }
+    public short? Metadata { get; set; }
 
     public void Read(ref SequenceReader<byte> reader)
     {
@@ -25,6 +25,6 @@ public class PlayerBlockPlacementPacket : IClientPacket
         Direction = reader.ReadSByte();
         ItemId = reader.ReadShort();
         Amount = ItemId != -1 ? reader.ReadByte() : null;
-        Damage = ItemId != -1 ? reader.ReadShort() : null;
+        Metadata = ItemId != -1 ? reader.ReadShort() : null;
     }
 }

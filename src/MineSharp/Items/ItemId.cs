@@ -5,10 +5,10 @@ public enum ItemId : short
     // Special
     Empty = -1,
     // Blocks
-    StoneBlockBlock = 1,
-    GrassBlockBlock = 2,
-    DirtBlockBlock = 3,
-    CobblestoneBlockBlock = 4,
+    StoneBlock = 1,
+    GrassBlock = 2,
+    DirtBlock = 3,
+    CobblestoneBlock = 4,
     PlanksBlock = 5,
     SaplingBlock = 6,
     BedrockBlock = 7,

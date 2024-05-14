@@ -11,8 +11,10 @@ using MineSharp.Core.Packets;
 using MineSharp.Entities;
 using MineSharp.Entities.Mobs;
 using MineSharp.Items;
+using MineSharp.Items.Infos;
 using MineSharp.Network;
 using MineSharp.Network.Packets;
+using MineSharp.Saves;
 using MineSharp.World;
 
 namespace MineSharp.Core;
@@ -39,6 +41,8 @@ public class MinecraftServer : IDisposable
     public EntityManager EntityManager { get; }
     public Looper Looper { get; }
 
+    public SaveManager SaveManager { get; }
+
     private bool _saveOnNextLoop;
 
     public MinecraftServer(PacketDispatcher packetDispatcher,
@@ -58,6 +62,8 @@ public class MinecraftServer : IDisposable
 
         EntityManager = new EntityManager(this);
 
+        SaveManager = new SaveManager();
+
         Looper = new Looper(TimeSpan.FromMilliseconds(50), ProcessAsync);
         Looper.RegisterLoop(TimeSpan.FromSeconds(1), EntityManager.ProcessPickupItemsAsync);
         Looper.RegisterLoop(TimeSpan.FromSeconds(5), SendKeepAlivePacketsAsync);
@@ -70,7 +76,8 @@ public class MinecraftServer : IDisposable
                     await client.UpdateLoadedChunksAsync();
             });
         });
-        Looper.RegisterLoop(TimeSpan.FromMinutes(configuration.Value.AutomaticSaveIntervalInMinutes), _ => TriggerSave(), executeOnStart: false);
+        Looper.RegisterLoop(TimeSpan.FromMinutes(configuration.Value.AutomaticSaveIntervalInMinutes),
+            _ => TriggerSave(), executeOnStart: false);
 
         RegisterDefaultCommands();
 
@@ -82,6 +89,8 @@ public class MinecraftServer : IDisposable
     public async Task StartAsync(CancellationToken cancellationToken)
     {
         _logger.LogInformation("Server starting...");
+
+        SaveManager.Initialize();
 
         await World.LoadInitialChunksAsync();
         World.Start();
@@ -110,16 +119,16 @@ public class MinecraftServer : IDisposable
     {
         await DisconnectAllPlayersAsync("Server stopped.");
 
+        _logger.LogInformation("Server stoping...");
+        _socket.Shutdown(SocketShutdown.Both);
+        _socket.Close();
+        _socket.Dispose();
+        _logger.LogInformation("Server stopped");
+
         await Looper.StopAsync();
         World.Stop();
 
         await SaveAsync(cancellationToken);
-
-        _logger.LogInformation("Server stoping...");
-        //_socket.Shutdown(SocketShutdown.Both);
-        //_socket.Close();
-        _socket.Dispose();
-        _logger.LogInformation("Server stopped");
     }
 
     private void RegisterDefaultCommands()
@@ -183,7 +192,7 @@ public class MinecraftServer : IDisposable
 
         _commandHandler.TryRegisterCommand("mob", async (server, client, args) =>
         {
-            await server.SpawnMobAsync((MobType) byte.Parse(args[0]), client!.Player!.Position.ToVector3i());
+            await server.SpawnMobAsync((MobType)byte.Parse(args[0]), client!.Player!.Position.ToVector3i());
             return true;
         });
 
@@ -201,9 +210,9 @@ public class MinecraftServer : IDisposable
 
         _commandHandler.TryRegisterCommand("give", async (_, client, args) =>
         {
-            var itemId = (ItemId) short.Parse(args[0]);
-            var count = args.Length > 1 ? byte.Parse(args[1]) : (byte) 1;
-            var metadata = args.Length > 2 ? short.Parse(args[2]) : (byte) 0;
+            var itemId = (ItemId)short.Parse(args[0]);
+            var count = args.Length > 1 ? byte.Parse(args[1]) : ItemInfoProvider.Get(itemId).StackMax;
+            var metadata = args.Length > 2 ? short.Parse(args[2]) : (byte)0;
 
             return await client!.Player!.TryGiveItemAsync(new ItemStack(itemId, count, metadata));
         });
@@ -411,7 +420,8 @@ public class MinecraftServer : IDisposable
                 {
                     Reason = $"Server is full: {_remoteClients.Count}/{Configuration.MaxPlayers}"
                 });
-                _logger.LogInformation("Client {networkId} tried to connect but the server is full", remoteClient.NetworkId);
+                _logger.LogInformation("Client {networkId} tried to connect but the server is full",
+                    remoteClient.NetworkId);
                 await remoteClient.DisconnectSocketAsync();
                 return;
             }
@@ -460,7 +470,8 @@ public class MinecraftServer : IDisposable
         finally
         {
             if (remoteClient.Player is not null)
-                _logger.LogInformation("Player {username} ({networkId}) has left the server", remoteClient.Player.Username, remoteClient.NetworkId);
+                _logger.LogInformation("Player {username} ({networkId}) has left the server",
+                    remoteClient.Player.Username, remoteClient.NetworkId);
             _logger.LogInformation("Client {networkId} disconnected", remoteClient.NetworkId);
             await RemoveRemoteClientAsync(remoteClient);
         }
@@ -480,14 +491,9 @@ public class MinecraftServer : IDisposable
             await SavePlayerAsync(remoteClient);
         }
 
-        await SaveWorldAsync();
-        
-        _logger.LogInformation("Saved successfully");
-    }
+        await World.SaveAsync();
 
-    private Task SaveWorldAsync()
-    {
-        return Task.CompletedTask;
+        _logger.LogInformation("Saved successfully");
     }
 
     private void AddRemoteClient(RemoteClient remoteClient)

@@ -4,7 +4,7 @@ namespace MineSharp.Configuration;
 
 public class ServerConfiguration
 {
-    [Range(0, 100)]
+    [Range(1, 100)]
     public int MaxPlayers { get; set; } = 10;
 
     public int Port { get; set; } = 25565;
