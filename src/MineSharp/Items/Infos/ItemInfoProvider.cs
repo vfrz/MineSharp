@@ -22,6 +22,8 @@ public static class ItemInfoProvider
         { ItemId.StillLavaBlock, new StillLavaBlockItemInfo() },
         { ItemId.SandBlock, new SandBlockItemInfo() },
         { ItemId.GravelBlock, new GravelBlockItemInfo() },
+        { ItemId.TorchBlock, new TorchBlockItemInfo() },
+        { ItemId.LadderBlock, new LadderBlockItemInfo() },
 
         //Items
         { ItemId.DiamondSword, new DiamondSwordItemInfo() },

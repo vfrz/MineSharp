@@ -70,7 +70,7 @@ public class Player : LivingEntity
         return true;
     }
 
-    public async Task<bool> SubtractSelectedItemAsync(byte quantity = 1)
+    public async Task<bool> PopSelectedItemStackAsync(byte quantity = 1)
     {
         var itemStack = Inventory.Hotbar[SelectedHotbarSlot];
         if (itemStack != ItemStack.Empty && itemStack.Count >= quantity)

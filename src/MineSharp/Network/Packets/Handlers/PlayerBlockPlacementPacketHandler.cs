@@ -11,36 +11,46 @@ public class PlayerBlockPlacementPacketHandler : IClientPacketHandler<PlayerBloc
         if (packet.Direction == -1)
             return;
 
-        if (packet.ItemId == -1)
+        var itemId = packet.ItemId;
+
+        if (itemId == -1)
         {
             await context.RemoteClient.SendChatAsync($"Position: {packet.X} {packet.Y} {packet.Z}");
         }
-        else if (packet.ItemId == 50)
-        {
-            await PlaceTorchAsync(packet, context);
-        }
-        else if (packet.ItemId == 323)
-        {
-            await PlaceSignAsync(packet, context);
-        }
-        else if (packet.ItemId == 324)
-        {
-            await PlaceDoorAsync(packet, context);
-        }
         else
         {
-            var coordinates = new Vector3i(packet.X, packet.Y, packet.Z);
-            var directedCoordinates = ApplyDirectionToPosition(coordinates, packet.Direction);
             var player = context.RemoteClient.Player!;
 
-            var success = await player.SubtractSelectedItemAsync();
-            if (success)
+            var holdItem = player.HoldItem;
+            if (holdItem.Count == packet.Amount)
+                return;
+
+            var coordinates = new Vector3i(packet.X, packet.Y, packet.Z);
+            var directedCoordinates = ApplyDirectionToPosition(coordinates, packet.Direction);
+
+            if (packet.ItemId == 50)
             {
-                await context.Server.World.SetBlockAsync(directedCoordinates, (byte) packet.ItemId);
+                await PlaceTorchAsync(packet, context);
+            }
+            else if (packet.ItemId == 323)
+            {
+                await PlaceSignAsync(packet, context);
+            }
+            else if (packet.ItemId == 324)
+            {
+                await PlaceDoorAsync(packet, context);
             }
             else
             {
-                await context.Server.World.SetBlockAsync(directedCoordinates, 0);
+                var success = await player.PopSelectedItemStackAsync();
+                if (success)
+                {
+                    await context.Server.World.SetBlockAsync(directedCoordinates, (byte)packet.ItemId, 5);
+                }
+                else
+                {
+                    await context.Server.World.SetBlockAsync(directedCoordinates, 0);
+                }
             }
         }
     }
@@ -51,6 +61,7 @@ public class PlayerBlockPlacementPacketHandler : IClientPacketHandler<PlayerBloc
         var directedPosition = ApplyDirectionToPosition(position, packet.Direction);
 
         // Torches can't be placed at the bottom of a block
+        // TODO Actually they can if there is no block at Y-1 and a block at Y-1 and (X-1 or X+1 or Z-1 or Z+1)
         if (packet.Direction == 0)
         {
             //TODO Give back the item to the player
@@ -58,8 +69,8 @@ public class PlayerBlockPlacementPacketHandler : IClientPacketHandler<PlayerBloc
             return;
         }
 
-        var orientationMetadata = (byte) packet.Direction;
-        await context.Server.World.SetBlockAsync(directedPosition, (byte) packet.ItemId, orientationMetadata);
+        var orientationMetadata = (byte)packet.Direction;
+        await context.Server.World.SetBlockAsync(directedPosition, (byte)packet.ItemId, orientationMetadata);
     }
 
     private async Task PlaceSignAsync(PlayerBlockPlacementPacket packet, ClientPacketHandlerContext context)
@@ -76,14 +87,14 @@ public class PlayerBlockPlacementPacketHandler : IClientPacketHandler<PlayerBloc
         }
 
         var onFloor = packet.Direction == 1;
-        var blockId = (byte) (onFloor ? 63 : 68);
-        var orientationMetadata = (byte) packet.Direction;
+        var blockId = (byte)(onFloor ? 63 : 68);
+        var orientationMetadata = (byte)packet.Direction;
         if (onFloor)
         {
             var rotation = context.RemoteClient.Player!.Yaw + 180 % 360;
             if (rotation < 0)
                 rotation += 360;
-            orientationMetadata = (byte) (rotation / 22.5);
+            orientationMetadata = (byte)(rotation / 22.5);
         }
 
         await context.Server.World.SetBlockAsync(directedPosition, blockId, orientationMetadata);
@@ -105,7 +116,7 @@ public class PlayerBlockPlacementPacketHandler : IClientPacketHandler<PlayerBloc
         await context.RemoteClient.SendPacketAsync(new BlockUpdatePacket
         {
             X = position.X,
-            Y = (sbyte) position.Y,
+            Y = (sbyte)position.Y,
             Z = position.Z,
             BlockId = 0,
             Metadata = 0

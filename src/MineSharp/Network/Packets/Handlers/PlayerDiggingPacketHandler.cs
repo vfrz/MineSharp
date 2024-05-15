@@ -7,7 +7,7 @@ namespace MineSharp.Network.Packets.Handlers;
 public class PlayerDiggingPacketHandler : IClientPacketHandler<PlayerDiggingPacket>
 {
     // Sometime client doesn't send a packet with Finished status for some blocks
-    private static readonly byte[] InstantlyDestroyedBlocks =
+    private static readonly byte[] InstantDigBlocks =
     [
         6,
         31,
@@ -35,7 +35,7 @@ public class PlayerDiggingPacketHandler : IClientPacketHandler<PlayerDiggingPack
         else
         {
             if (packet.Status is PlayerDiggingStatus.Started or PlayerDiggingStatus.Finished
-                && InstantlyDestroyedBlocks.Contains(await context.Server.World.GetBlockIdAsync(packet.PositionAsVector3i)))
+                && InstantDigBlocks.Contains(await context.Server.World.GetBlockIdAsync(packet.PositionAsVector3i)))
             {
                 await context.Server.World.SetBlockAsync(packet.PositionAsVector3i, 0);
                 await GeneratePickupItemAsync(blockId, packet.PositionAsVector3i, context);
