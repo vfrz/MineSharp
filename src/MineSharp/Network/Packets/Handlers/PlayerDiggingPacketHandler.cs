@@ -1,26 +1,29 @@
+using MineSharp.Blocks;
 using MineSharp.Core;
 using MineSharp.Core.Packets;
 using MineSharp.Entities;
+using MineSharp.Items;
 
 namespace MineSharp.Network.Packets.Handlers;
 
 public class PlayerDiggingPacketHandler : IClientPacketHandler<PlayerDiggingPacket>
 {
     // Sometime client doesn't send a packet with Finished status for some blocks
-    private static readonly byte[] InstantDigBlocks =
+    private static readonly BlockId[] InstantDigBlocks =
     [
-        6,
-        31,
-        32,
-        37,
-        38,
-        39,
-        40,
-        50,
-        59,
-        75,
-        76,
-        83
+        BlockId.Sapling,
+        BlockId.TallGrass,
+        BlockId.DeadShrub,
+        BlockId.YellowFlower,
+        BlockId.RedFlower,
+        BlockId.BrownMushroom,
+        BlockId.RedMushroom,
+        BlockId.Torch,
+        BlockId.Wheat,
+        BlockId.RedstoneTorch,
+        BlockId.GlowingRedstoneTorch,
+        BlockId.SugarCane,
+        BlockId.Sapling
     ];
 
     public async Task HandleAsync(PlayerDiggingPacket packet, ClientPacketHandlerContext context)
@@ -43,13 +46,14 @@ public class PlayerDiggingPacketHandler : IClientPacketHandler<PlayerDiggingPack
         }
     }
 
-    private async Task GeneratePickupItemAsync(byte blockId, Vector3i blockPosition, ClientPacketHandlerContext context)
+    private async Task GeneratePickupItemAsync(BlockId blockId, Vector3i blockPosition,
+        ClientPacketHandlerContext context)
     {
         var pickupItem = new PickupItem(TimeSpan.FromSeconds(10))
         {
-            ItemId = blockId,
+            ItemId = (ItemId)blockId,
             Count = 1,
-            Metadata = 0,
+            PickupMetadata = 0,
             Pitch = 0,
             Roll = 0,
             Rotation = 0,
@@ -63,7 +67,7 @@ public class PlayerDiggingPacketHandler : IClientPacketHandler<PlayerDiggingPack
             EntityId = pickupItem.EntityId,
             ItemId = pickupItem.ItemId,
             Count = pickupItem.Count,
-            Metadata = pickupItem.Metadata,
+            Metadata = pickupItem.PickupMetadata,
             AbsoluteX = pickupItem.AbsoluteX,
             AbsoluteY = pickupItem.AbsoluteY,
             AbsoluteZ = pickupItem.AbsoluteZ,

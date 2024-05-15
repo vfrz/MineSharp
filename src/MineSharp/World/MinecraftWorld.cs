@@ -1,5 +1,6 @@
 using AsyncKeyedLock;
 using Microsoft.Extensions.Logging;
+using MineSharp.Blocks;
 using MineSharp.Core;
 using MineSharp.Network.Packets;
 using MineSharp.Saves;
@@ -24,7 +25,7 @@ public class MinecraftWorld
 
     private readonly AsyncKeyedLocker<Vector2i> _chunkLoadLocker = new();
 
-    public MinecraftWorld(MinecraftServer server, int seed)
+    private MinecraftWorld(MinecraftServer server, int seed)
     {
         Server = server;
         Seed = seed;
@@ -35,6 +36,18 @@ public class MinecraftWorld
         _logger = server.GetLogger<MinecraftWorld>();
         Timer = new WorldTimer();
         Chunks = new ChunksContainer();
+    }
+
+    public static MinecraftWorld New(MinecraftServer server, int seed) => new MinecraftWorld(server, seed);
+
+    public static MinecraftWorld FromSaveData(MinecraftServer server, WorldSaveData worldSaveData)
+    {
+        var world = new MinecraftWorld(server, worldSaveData.Seed)
+        {
+            Raining = worldSaveData.Raining
+        };
+        world.Timer.SetTime(worldSaveData.Time);
+        return world;
     }
 
     public void Start()
@@ -74,11 +87,18 @@ public class MinecraftWorld
             async (chunkPosition, _) => await GetOrLoadChunkAsync(chunkPosition));
     }
 
-    public async Task<byte> GetBlockIdAsync(Vector3i worldPosition)
+    public async Task<BlockId> GetBlockIdAsync(Vector3i worldPosition)
     {
         var chunkPosition = Chunk.GetChunkPositionForWorldPosition(worldPosition);
         var chunk = await GetOrLoadChunkAsync(chunkPosition);
-        return chunk.GetBlock(Chunk.WorldToLocal(worldPosition), out _);
+        return chunk.GetBlockId(Chunk.WorldToLocal(worldPosition));
+    }
+
+    public async Task<Block> GetBlockAsync(Vector3i worldPosition)
+    {
+        var chunkPosition = Chunk.GetChunkPositionForWorldPosition(worldPosition);
+        var chunk = await GetOrLoadChunkAsync(chunkPosition);
+        return chunk.GetBlock(Chunk.WorldToLocal(worldPosition));
     }
 
     public async Task<int> GetHighestBlockHeightAsync(Vector2i worldPosition)
@@ -88,7 +108,7 @@ public class MinecraftWorld
         return chunk.GetHighestBlockHeight(Chunk.WorldToLocal(worldPosition));
     }
 
-    public async Task SetBlockAsync(Vector3i worldPosition, byte blockId, byte metadata = 0)
+    public async Task SetBlockAsync(Vector3i worldPosition, BlockId blockId, byte metadata = 0)
     {
         var chunkPosition = Chunk.GetChunkPositionForWorldPosition(worldPosition);
 
@@ -166,10 +186,22 @@ public class MinecraftWorld
 
     public async Task SaveAsync()
     {
+        Server.SaveManager.SaveWorld(GetSaveData());
+
         foreach (var chunk in Chunks)
         {
             await SaveChunkAsync(chunk);
         }
+    }
+
+    public WorldSaveData GetSaveData()
+    {
+        return new WorldSaveData
+        {
+            Seed = Seed,
+            Time = Time,
+            Raining = Raining
+        };
     }
 
     private async Task SaveChunkAsync(Chunk chunk)

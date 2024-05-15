@@ -1,3 +1,5 @@
+using MineSharp.Items;
+
 namespace MineSharp.Entities;
 
 public class PickupItem : Entity
@@ -7,11 +9,11 @@ public class PickupItem : Entity
 
     public bool IsExpired => TimeProvider.System.GetElapsedTime(_creationTimestamp) >= _expiration;
 
-    public short ItemId { get; set; }
+    public ItemId ItemId { get; set; }
 
     public byte Count { get; set; }
 
-    public short Metadata { get; set; }
+    public short PickupMetadata { get; set; }
 
     public int AbsoluteX { get; set; }
 

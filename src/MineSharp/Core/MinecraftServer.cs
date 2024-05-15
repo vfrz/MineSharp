@@ -58,11 +58,20 @@ public class MinecraftServer : IDisposable
         _commandHandler = commandHandler;
         _remoteClients = new ConcurrentDictionary<string, RemoteClient>();
 
-        World = new MinecraftWorld(this, new Random().Next());
+        SaveManager = new SaveManager();
+
+        if (SaveManager.IsWorldSaved())
+        {
+            var worldSaveData = SaveManager.LoadWorld();
+            World = MinecraftWorld.FromSaveData(this, worldSaveData);
+        }
+        else
+        {
+            World = MinecraftWorld.New(this, new Random().Next());
+            SaveManager.SaveWorld(World.GetSaveData());
+        }
 
         EntityManager = new EntityManager(this);
-
-        SaveManager = new SaveManager();
 
         Looper = new Looper(TimeSpan.FromMilliseconds(50), ProcessAsync);
         Looper.RegisterLoop(TimeSpan.FromSeconds(1), EntityManager.ProcessPickupItemsAsync);
@@ -486,12 +495,12 @@ public class MinecraftServer : IDisposable
     {
         _logger.LogInformation("Saving everything...");
 
+        await World.SaveAsync();
+
         foreach (var remoteClient in RemoteClients)
         {
             await SavePlayerAsync(remoteClient);
         }
-
-        await World.SaveAsync();
 
         _logger.LogInformation("Saved successfully");
     }

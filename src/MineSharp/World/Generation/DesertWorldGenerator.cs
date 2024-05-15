@@ -1,3 +1,4 @@
+using MineSharp.Blocks;
 using MineSharp.Core;
 
 namespace MineSharp.World.Generation;
@@ -35,24 +36,25 @@ public class DesertWorldGenerator : IWorldGenerator
             for (var localZ = 0; localZ < Chunk.ChunkWidth; localZ++)
             {
                 // Bedrock
-                chunkData.SetBlock(new Vector3i(localX, 0, localZ), 7);
+                chunkData.SetBlock(new Vector3i(localX, 0, localZ), BlockId.Bedrock);
 
                 var height = GetHeight(new Vector2i(localX, localZ), chunkPosition);
                 for (var y = 1; y <= height; y++)
                 {
                     if (y == height)
                     {
-                        chunkData.SetBlock(new Vector3i(localX, y, localZ), 12);
+                        chunkData.SetBlock(new Vector3i(localX, y, localZ), BlockId.Sand);
 
-                        var otherNoiseValue = (OtherNoise.GetNoise(chunkPosition.X * Chunk.ChunkWidth + localX, chunkPosition.Z * Chunk.ChunkWidth + localZ) + 1) / 2f;
+                        var otherNoiseValue = (OtherNoise.GetNoise(chunkPosition.X * Chunk.ChunkWidth + localX,
+                            chunkPosition.Z * Chunk.ChunkWidth + localZ) + 1) / 2f;
                         if (otherNoiseValue < 0.2f)
                         {
-                            chunkData.SetBlock(new Vector3i(localX, y + 1, localZ), 31, 0);
+                            chunkData.SetBlock(new Vector3i(localX, y + 1, localZ), BlockId.TallGrass);
                         }
                     }
                     else
                     {
-                        chunkData.SetBlock(new Vector3i(localX, y, localZ), 12);
+                        chunkData.SetBlock(new Vector3i(localX, y, localZ), BlockId.Sand);
                     }
                 }
             }
@@ -61,7 +63,8 @@ public class DesertWorldGenerator : IWorldGenerator
 
     public void GenerateChunkDecorations(Vector2i chunkPosition, IBlockChunkData chunkData)
     {
-        var trees = PoissonDiskSampler.SampleRectangle(chunkPosition.X * Chunk.ChunkWidth, chunkPosition.Z * Chunk.ChunkWidth, Chunk.ChunkWidth, Chunk.ChunkWidth, 6);
+        var trees = PoissonDiskSampler.SampleRectangle(chunkPosition.X * Chunk.ChunkWidth,
+            chunkPosition.Z * Chunk.ChunkWidth, Chunk.ChunkWidth, Chunk.ChunkWidth, 6);
 
         foreach (var treePosition in trees)
         {
@@ -70,14 +73,15 @@ public class DesertWorldGenerator : IWorldGenerator
 
             for (var h = 1; h < 4; h++)
             {
-                chunkData.SetBlock(new Vector3i(localPosition.X, height + h, localPosition.Z), 81);
+                chunkData.SetBlock(new Vector3i(localPosition.X, height + h, localPosition.Z), BlockId.Cactus);
             }
         }
     }
 
     private int GetHeight(Vector2i local, Vector2i chunkPosition)
     {
-        var noiseValue = (Noise.GetNoise(chunkPosition.X * Chunk.ChunkWidth + local.X, chunkPosition.Z * Chunk.ChunkWidth + local.Z) + 1) / 2f;
-        return (int) (noiseValue * 30f + 5);
+        var noiseValue = (Noise.GetNoise(chunkPosition.X * Chunk.ChunkWidth + local.X,
+            chunkPosition.Z * Chunk.ChunkWidth + local.Z) + 1) / 2f;
+        return (int)(noiseValue * 30f + 5);
     }
 }

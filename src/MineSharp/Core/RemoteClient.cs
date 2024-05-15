@@ -130,7 +130,8 @@ public class RemoteClient : IDisposable
 
     public async Task UpdateLoadedChunksAsync()
     {
-        var visibleChunks = MinecraftWorld.GetChunksAround(GetCurrentChunk(), Server.Configuration.VisibleChunksDistance);
+        var visibleChunks =
+            MinecraftWorld.GetChunksAround(GetCurrentChunk(), Server.Configuration.VisibleChunksDistance);
         var chunksToLoad = visibleChunks.Except(_loadedChunks);
         var chunksToUnload = _loadedChunks.Except(visibleChunks);
 
@@ -172,11 +173,20 @@ public class RemoteClient : IDisposable
 
     public Vector2i GetCurrentChunk() => Chunk.GetChunkPositionForWorldPosition(Player!.Position);
 
+    public async Task KickAsync(string reason)
+    {
+        await SendPacketAsync(new PlayerDisconnectPacket
+        {
+            Reason = reason
+        });
+        await DisconnectSocketAsync();
+    }
+
     public async Task DisconnectSocketAsync()
     {
         await Socket.DisconnectAsync(false);
     }
-    
+
     public void Dispose()
     {
         Socket.Dispose();

@@ -1,4 +1,5 @@
 using MineSharp.Core.Packets;
+using MineSharp.Items;
 
 namespace MineSharp.Network.Packets;
 
@@ -8,7 +9,7 @@ public class PickupSpawnPacket : IServerPacket
     public byte PacketId => Id;
 
     public int EntityId { get; set; }
-    public short ItemId { get; set; }
+    public ItemId ItemId { get; set; }
     public byte Count { get; set; }
     public short Metadata { get; set; }
     public int AbsoluteX { get; set; }
@@ -21,7 +22,7 @@ public class PickupSpawnPacket : IServerPacket
     public void Write(PacketWriter writer)
     {
         writer.WriteInt(EntityId);
-        writer.WriteShort(ItemId);
+        writer.WriteShort((short)ItemId);
         writer.WriteByte(Count);
         writer.WriteShort(Metadata);
         writer.WriteInt(AbsoluteX);

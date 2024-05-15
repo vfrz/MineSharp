@@ -1,5 +1,6 @@
 using System.IO.Compression;
 using System.Runtime.CompilerServices;
+using MineSharp.Blocks;
 using MineSharp.Core;
 using MineSharp.Saves;
 
@@ -10,6 +11,8 @@ public class Chunk : IBlockChunkData
     public const int ChunkWidth = 16;
     public const int ChunkHeight = 128;
     private const int ArraySize = ChunkWidth * ChunkWidth * ChunkHeight;
+
+    private const int SaveRegionSize = 32;
 
     private readonly byte[] _data;
     private readonly ArraySegment<byte> _blocks;
@@ -38,11 +41,11 @@ public class Chunk : IBlockChunkData
     {
         return new ChunkSaveData
         {
-            Data = _data
+            Data = _data.ToArray()
         };
     }
 
-    public void SetBlock(Vector3i localPosition, byte blockId, byte metadata = 0)
+    public void SetBlock(Vector3i localPosition, BlockId blockId, byte metadata = 0)
     {
         //TODO Maybe should throw exception when world generation is reworked with multiple phases
         if (localPosition.X is < 0 or >= ChunkWidth
@@ -50,15 +53,20 @@ public class Chunk : IBlockChunkData
             || localPosition.Z is < 0 or >= ChunkWidth)
             return;
         var index = LocalToIndex(localPosition);
-        _blocks[index] = blockId;
+        _blocks[index] = (byte)blockId;
         _metadata[index] = metadata;
     }
 
-    public byte GetBlock(Vector3i localPosition, out byte metadata)
+    public BlockId GetBlockId(Vector3i localPosition)
     {
         var index = LocalToIndex(localPosition);
-        metadata = _metadata[index];
-        return _blocks[index];
+        return (BlockId)_blocks[index];
+    }
+
+    public Block GetBlock(Vector3i localPosition)
+    {
+        var index = LocalToIndex(localPosition);
+        return new Block((BlockId)_blocks[index], _metadata[index], _light[index], _skyLight[index]);
     }
 
     public void SetLight(Vector3i localPosition, byte light, byte skyLight)
@@ -72,7 +80,7 @@ public class Chunk : IBlockChunkData
     {
         for (var y = ChunkHeight - 1; y >= 0; y--)
         {
-            if (GetBlock(new Vector3i(localPosition.X, y, localPosition.Z), out _) != 0)
+            if (GetBlock(new Vector3i(localPosition.X, y, localPosition.Z)).BlockId != BlockId.Air)
                 return y;
         }
 
@@ -115,6 +123,13 @@ public class Chunk : IBlockChunkData
         var chunkX = position.X / ChunkWidth - (position.X < 0 ? 1 : 0);
         var chunkZ = position.Z / ChunkWidth - (position.Z < 0 ? 1 : 0);
         return new Vector2i(chunkX, chunkZ);
+    }
+
+    public static int GetSaveFileIndex(Vector2i chunkPosition)
+    {
+        var regionX = chunkPosition.X / SaveRegionSize - (chunkPosition.X < 0 ? 1 : 0);
+        var regionZ = chunkPosition.Z / SaveRegionSize - (chunkPosition.Z < 0 ? 1 : 0);
+        return regionX + regionZ * SaveRegionSize;
     }
 
     public async Task<byte[]> ToCompressedDataAsync()

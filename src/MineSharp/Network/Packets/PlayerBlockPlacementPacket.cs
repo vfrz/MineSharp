@@ -1,6 +1,7 @@
 using System.Buffers;
 using MineSharp.Core.Packets;
 using MineSharp.Extensions;
+using MineSharp.Items;
 
 namespace MineSharp.Network.Packets;
 
@@ -13,7 +14,7 @@ public class PlayerBlockPlacementPacket : IClientPacket
     public sbyte Y { get; set; }
     public int Z { get; set; }
     public sbyte Direction { get; set; }
-    public short ItemId { get; set; }
+    public ItemId ItemId { get; set; }
     public byte? Amount { get; set; }
     public short? Metadata { get; set; }
 
@@ -23,8 +24,8 @@ public class PlayerBlockPlacementPacket : IClientPacket
         Y = reader.ReadSByte();
         Z = reader.ReadInt();
         Direction = reader.ReadSByte();
-        ItemId = reader.ReadShort();
-        Amount = ItemId != -1 ? reader.ReadByte() : null;
-        Metadata = ItemId != -1 ? reader.ReadShort() : null;
+        ItemId = (ItemId) reader.ReadShort();
+        Amount = ItemId != ItemId.Empty ? reader.ReadByte() : null;
+        Metadata = ItemId != ItemId.Empty ? reader.ReadShort() : null;
     }
 }

@@ -1,3 +1,4 @@
+using MineSharp.Blocks;
 using MineSharp.Core.Packets;
 
 namespace MineSharp.Network.Packets;
@@ -10,7 +11,7 @@ public class BlockUpdatePacket : IServerPacket
     public int X { get; set; }
     public sbyte Y { get; set; }
     public int Z { get; set; }
-    public byte BlockId { get; set; }
+    public BlockId BlockId { get; set; }
     public byte Metadata { get; set; }
 
     public void Write(PacketWriter writer)
@@ -18,7 +19,7 @@ public class BlockUpdatePacket : IServerPacket
         writer.WriteInt(X);
         writer.WriteSByte(Y);
         writer.WriteInt(Z);
-        writer.WriteByte(BlockId);
+        writer.WriteByte((byte)BlockId);
         writer.WriteByte(Metadata);
     }
 }

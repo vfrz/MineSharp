@@ -26,7 +26,7 @@ public class Player : LivingEntity
     private RemoteClient RemoteClient { get; }
 
     public short SelectedHotbarSlot { get; private set; }
-    public ItemStack HoldItem => Inventory.Hotbar[SelectedHotbarSlot];
+    public ItemStack HoldItemStack => Inventory.Hotbar[SelectedHotbarSlot];
 
     public bool Crouched
     {
@@ -85,7 +85,7 @@ public class Player : LivingEntity
             {
                 Inventory.SetSlot(slotIndex, itemStack with { Count = (byte)(itemStack.Count - quantity) });
             }
-            
+
             return true;
         }
 
@@ -146,7 +146,7 @@ public class Player : LivingEntity
         });
         //TODO Adapt damage depending on player's weapon/tool
         //var selectedItem = remotePlayer.
-        var damage = HoldItem == ItemStack.Empty ? 1 : ItemInfoProvider.Get(HoldItem.ItemId).DamageOnEntity;
+        var damage = HoldItemStack == ItemStack.Empty ? 1 : ItemInfoProvider.Get(HoldItemStack.ItemId).DamageOnEntity;
         await targetEntity.SetHealthAsync((short)(targetEntity.Health - damage));
     }
 
@@ -156,7 +156,7 @@ public class Player : LivingEntity
         {
             EntityId = EntityId,
             Slot = 0,
-            ItemId = HoldItem.ItemId
+            ItemId = HoldItemStack.ItemId
         }, RemoteClient);
     }
 

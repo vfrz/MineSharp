@@ -1,13 +1,14 @@
+using MineSharp.Blocks;
 using MineSharp.Core;
 
 namespace MineSharp.World.Generation;
 
 public class FlatWorldGenerator : IWorldGenerator
 {
-    private readonly byte _blockId;
+    private readonly BlockId _blockId;
     private readonly byte _height;
 
-    public FlatWorldGenerator(byte blockId = 1, byte height = 42)
+    public FlatWorldGenerator(BlockId blockId = BlockId.Stone, byte height = 42)
     {
         _blockId = blockId;
         _height = height;

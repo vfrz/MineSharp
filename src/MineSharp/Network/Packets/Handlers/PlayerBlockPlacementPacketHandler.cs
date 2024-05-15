@@ -1,5 +1,7 @@
+using MineSharp.Blocks;
 using MineSharp.Core;
 using MineSharp.Core.Packets;
+using MineSharp.Items;
 
 namespace MineSharp.Network.Packets.Handlers;
 
@@ -13,44 +15,68 @@ public class PlayerBlockPlacementPacketHandler : IClientPacketHandler<PlayerBloc
 
         var itemId = packet.ItemId;
 
-        if (itemId == -1)
+        if (itemId is ItemId.Empty)
         {
-            await context.RemoteClient.SendChatAsync($"Position: {packet.X} {packet.Y} {packet.Z}");
+            if (context.Server.Configuration.Debug)
+            {
+                await context.RemoteClient.SendChatAsync($"Position: {packet.X} {packet.Y} {packet.Z}");
+            }
+
+            return;
+        }
+
+        var player = context.RemoteClient.Player!;
+        var holdItemStack = player.HoldItemStack;
+
+        if (holdItemStack.Count == packet.Amount)
+            return;
+
+        if (holdItemStack.ItemId != packet.ItemId)
+        {
+            await context.RemoteClient.KickAsync("Invalid block placement");
+            return;
+        }
+
+        var coordinates = new Vector3i(packet.X, packet.Y, packet.Z);
+        var directedCoordinates = ApplyDirectionToPosition(coordinates, packet.Direction);
+
+        var popItemSuccess = await player.PopSelectedItemStackAsync();
+
+        if (!popItemSuccess)
+        {
+            var actualBlock = await context.Server.World.GetBlockAsync(directedCoordinates);
+            await context.RemoteClient.SendPacketAsync(new BlockUpdatePacket
+            {
+                X = directedCoordinates.X,
+                Y = (sbyte)directedCoordinates.Y,
+                Z = directedCoordinates.Z,
+                BlockId = actualBlock.BlockId,
+                Metadata = actualBlock.Metadata
+            });
+            return;
+        }
+
+        if (packet.ItemId is ItemId.TorchBlock)
+        {
+            await PlaceTorchAsync(packet, context);
+        }
+        else if (packet.ItemId is ItemId.Sign)
+        {
+            await PlaceSignAsync(packet, context);
+        }
+        else if (packet.ItemId is ItemId.Door)
+        {
+            await PlaceDoorAsync(packet, context);
         }
         else
         {
-            var player = context.RemoteClient.Player!;
-
-            var holdItem = player.HoldItem;
-            if (holdItem.Count == packet.Amount)
-                return;
-
-            var coordinates = new Vector3i(packet.X, packet.Y, packet.Z);
-            var directedCoordinates = ApplyDirectionToPosition(coordinates, packet.Direction);
-
-            if (packet.ItemId == 50)
+            if (popItemSuccess)
             {
-                await PlaceTorchAsync(packet, context);
-            }
-            else if (packet.ItemId == 323)
-            {
-                await PlaceSignAsync(packet, context);
-            }
-            else if (packet.ItemId == 324)
-            {
-                await PlaceDoorAsync(packet, context);
+                await context.Server.World.SetBlockAsync(directedCoordinates, (BlockId)packet.ItemId, 5);
             }
             else
             {
-                var success = await player.PopSelectedItemStackAsync();
-                if (success)
-                {
-                    await context.Server.World.SetBlockAsync(directedCoordinates, (byte)packet.ItemId, 5);
-                }
-                else
-                {
-                    await context.Server.World.SetBlockAsync(directedCoordinates, 0);
-                }
+                await context.Server.World.SetBlockAsync(directedCoordinates, 0);
             }
         }
     }
@@ -70,7 +96,7 @@ public class PlayerBlockPlacementPacketHandler : IClientPacketHandler<PlayerBloc
         }
 
         var orientationMetadata = (byte)packet.Direction;
-        await context.Server.World.SetBlockAsync(directedPosition, (byte)packet.ItemId, orientationMetadata);
+        await context.Server.World.SetBlockAsync(directedPosition, BlockId.Torch, orientationMetadata);
     }
 
     private async Task PlaceSignAsync(PlayerBlockPlacementPacket packet, ClientPacketHandlerContext context)
@@ -87,7 +113,6 @@ public class PlayerBlockPlacementPacketHandler : IClientPacketHandler<PlayerBloc
         }
 
         var onFloor = packet.Direction == 1;
-        var blockId = (byte)(onFloor ? 63 : 68);
         var orientationMetadata = (byte)packet.Direction;
         if (onFloor)
         {
@@ -96,6 +121,8 @@ public class PlayerBlockPlacementPacketHandler : IClientPacketHandler<PlayerBloc
                 rotation += 360;
             orientationMetadata = (byte)(rotation / 22.5);
         }
+
+        var blockId = onFloor ? BlockId.FloorSign : BlockId.WallSign;
 
         await context.Server.World.SetBlockAsync(directedPosition, blockId, orientationMetadata);
     }
