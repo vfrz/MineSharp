@@ -1,6 +1,7 @@
 using System.IO.Compression;
-using System.Text;
 using MineSharp.Core;
+using MineSharp.Nbt;
+using MineSharp.Nbt.Tags;
 
 namespace MineSharp.Saves;
 
@@ -8,14 +9,14 @@ public class SaveManager
 {
     public void Initialize()
     {
-        if (!Directory.Exists("save"))
-            Directory.CreateDirectory("save");
+        if (!Directory.Exists("world"))
+            Directory.CreateDirectory("world");
 
-        if (!Directory.Exists("save/players"))
-            Directory.CreateDirectory("save/players");
+        if (!Directory.Exists("world/players"))
+            Directory.CreateDirectory("world/players");
 
-        if (!Directory.Exists("save/chunks"))
-            Directory.CreateDirectory("save/chunks");
+        if (!Directory.Exists("world/region"))
+            Directory.CreateDirectory("world/region");
     }
 
     public async Task SaveChunkAsync(Vector2i chunkPosition, ChunkSaveData chunkSaveData)
@@ -42,37 +43,59 @@ public class SaveManager
 
     public void SaveWorld(WorldSaveData worldSaveData)
     {
-        using var compressedFileStream = File.OpenWrite(GetWorldFilePath());
-        using var compressor = new DeflateStream(compressedFileStream, CompressionMode.Compress);
-        using var writer = new BinaryWriter(compressor);
+        var dataCompound = new CompoundNbtTag("Data")
+            .AddTag(new LongNbtTag("RandomSeed", worldSaveData.Seed))
+            .AddTag(new IntNbtTag("SpawnX", worldSaveData.SpawnLocation.X))
+            .AddTag(new IntNbtTag("SpawnY", worldSaveData.SpawnLocation.Y))
+            .AddTag(new IntNbtTag("SpawnZ", worldSaveData.SpawnLocation.Z))
+            .AddTag(new ByteNbtTag("raining", worldSaveData.Raining))
+            .AddTag(new IntNbtTag("rainTime", worldSaveData.RainTime))
+            .AddTag(new ByteNbtTag("thundering", worldSaveData.Thundering))
+            .AddTag(new IntNbtTag("thunderTime", worldSaveData.ThunderTime))
+            .AddTag(new LongNbtTag("Time", worldSaveData.Time))
+            .AddTag(new IntNbtTag("version", worldSaveData.Version))
+            .AddTag(new LongNbtTag("LastPlayed", worldSaveData.LastPlayed))
+            .AddTag(new StringNbtTag("LevelName", worldSaveData.LevelName))
+            .AddTag(new LongNbtTag("SizeOnDisk", worldSaveData.SizeOnDisk));
 
-        writer.Write(worldSaveData.Seed);
-        writer.Write(worldSaveData.Time);
-        writer.Write(worldSaveData.Raining);
+        var fileCompound = new CompoundNbtTag(null)
+            .AddTag(dataCompound);
+
+        using var fileStream = File.OpenWrite(GetLevelFilePath());
+        NbtSerializer.Serialize(fileCompound, fileStream, NbtCompression.Gzip);
     }
 
     public WorldSaveData LoadWorld()
     {
-        using var compressedFileStream = File.OpenRead(GetWorldFilePath());
-        using var decompressor = new DeflateStream(compressedFileStream, CompressionMode.Decompress);
-        using var reader = new BinaryReader(decompressor);
+        using var fileStream = File.OpenRead(GetLevelFilePath());
+        var fileCompound = (CompoundNbtTag)NbtSerializer.Deserialize(fileStream, NbtCompression.Gzip);
+        var data = fileCompound.Get<CompoundNbtTag>("Data");
 
-        var seed = reader.ReadInt32();
-        var time = reader.ReadInt64();
-        var raining = reader.ReadBoolean();
+        var spawnX = data.Get<IntNbtTag>("SpawnX").Value;
+        var spawnY = data.Get<IntNbtTag>("SpawnY").Value;
+        var spawnZ = data.Get<IntNbtTag>("SpawnZ").Value;
+
         var saveData = new WorldSaveData
         {
-            Seed = seed,
-            Time = time,
-            Raining = raining
+            Seed = (int)data.Get<LongNbtTag>("RandomSeed").Value,
+            SpawnLocation = new Vector3i(spawnX, spawnY, spawnZ),
+            Raining = data.Get<ByteNbtTag>("raining").ValueAsBool,
+            RainTime = data.Get<IntNbtTag>("rainTime").Value,
+            Thundering = data.Get<ByteNbtTag>("thundering").ValueAsBool,
+            ThunderTime = data.Get<IntNbtTag>("thunderTime").Value,
+            Time = data.Get<LongNbtTag>("Time").Value,
+            Version = data.Get<IntNbtTag>("version").Value,
+            LastPlayed = data.Get<LongNbtTag>("LastPlayed").Value,
+            LevelName = data.Get<StringNbtTag>("LevelName").Value!,
+            SizeOnDisk = data.Get<LongNbtTag>("SizeOnDisk").Value
         };
         return saveData;
     }
 
-    public bool IsWorldSaved() => File.Exists(GetWorldFilePath());
+    public bool IsWorldSaved() => File.Exists(GetLevelFilePath());
 
     private static string GetChunkFilePath(Vector2i chunkPosition)
-        => $"save/chunks/x{chunkPosition.X}y{chunkPosition.Z}.dat";
+        => $"world/region/x{chunkPosition.X}y{chunkPosition.Z}.dat";
 
-    private static string GetWorldFilePath() => "save/world.dat";
+    private static string GetLevelFilePath() => "world/level.dat";
 }

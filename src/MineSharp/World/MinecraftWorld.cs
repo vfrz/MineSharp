@@ -38,7 +38,7 @@ public class MinecraftWorld
         Chunks = new ChunksContainer();
     }
 
-    public static MinecraftWorld New(MinecraftServer server, int seed) => new MinecraftWorld(server, seed);
+    public static MinecraftWorld New(MinecraftServer server, int seed) => new(server, seed);
 
     public static MinecraftWorld FromSaveData(MinecraftServer server, WorldSaveData worldSaveData)
     {
@@ -200,7 +200,15 @@ public class MinecraftWorld
         {
             Seed = Seed,
             Time = Time,
-            Raining = Raining
+            SpawnLocation = new Vector3i(0, 70, 0),
+            Raining = Raining,
+            RainTime = 0,
+            Thundering = false,
+            ThunderTime = 0,
+            Version = 19132,
+            LastPlayed = TimeProvider.System.GetUtcNow().ToUnixTimeMilliseconds(),
+            LevelName = "world",
+            SizeOnDisk = 0
         };
     }
 

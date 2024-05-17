@@ -14,6 +14,7 @@ public class MinecraftServerHostedService : IHostedService
 
     public async Task StartAsync(CancellationToken cancellationToken)
     {
+        await _server.InitializeAsync(cancellationToken);
         await _server.StartAsync(cancellationToken);
     }
 

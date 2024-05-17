@@ -32,12 +32,12 @@ public class Player : LivingEntity
     {
         get
         {
-            var entityFlags = Metadata.GetOrDefault(0, new EntityFlagsMetadata(EntityFlags.Default)).FlagsValue;
+            var entityFlags = Metadata.GetOrDefault(0, () => new EntityFlagsMetadata(EntityFlags.Default)).FlagsValue;
             return entityFlags.HasFlag(EntityFlags.Crouched);
         }
         private set
         {
-            var entityFlags = Metadata.GetOrDefault(0, new EntityFlagsMetadata(EntityFlags.Default)).FlagsValue;
+            var entityFlags = Metadata.GetOrDefault(0, () => new EntityFlagsMetadata(EntityFlags.Default)).FlagsValue;
             Metadata.Set(0, value
                 ? new EntityFlagsMetadata(entityFlags | EntityFlags.Crouched)
                 : new EntityFlagsMetadata(entityFlags & ~EntityFlags.Crouched));

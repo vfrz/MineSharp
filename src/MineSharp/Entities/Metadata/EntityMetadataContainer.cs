@@ -23,9 +23,9 @@ public class EntityMetadataContainer
         return false;
     }
 
-    public T GetOrDefault<T>(byte index, T defaultValue) where T : IEntityMetadata
+    public T GetOrDefault<T>(byte index, Func<T> defaultValueProvider) where T : IEntityMetadata
     {
-        return TryGet<T>(index, out var metadata) ? metadata! : defaultValue;
+        return TryGet<T>(index, out var metadata) ? metadata! : defaultValueProvider();
     }
 
     public void Write(PacketWriter writer)

@@ -37,7 +37,7 @@ public class MinecraftServer : IDisposable
     private readonly IServiceProvider _serviceProvider;
     private readonly CommandHandler _commandHandler;
 
-    public MinecraftWorld World { get; }
+    public MinecraftWorld World { get; private set; }
     public EntityManager EntityManager { get; }
     public Looper Looper { get; }
 
@@ -60,6 +60,21 @@ public class MinecraftServer : IDisposable
 
         SaveManager = new SaveManager();
 
+        EntityManager = new EntityManager(this);
+
+        Looper = new Looper(TimeSpan.FromMilliseconds(50), ProcessAsync);
+
+        var ip = new IPEndPoint(IPAddress.Any, configuration.Value.Port);
+        _socket = new Socket(ip.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
+        _socket.Bind(ip);
+    }
+
+    public async Task InitializeAsync(CancellationToken cancellationToken)
+    {
+        _logger.LogInformation("Server initializing...");
+
+        SaveManager.Initialize();
+
         if (SaveManager.IsWorldSaved())
         {
             var worldSaveData = SaveManager.LoadWorld();
@@ -67,13 +82,12 @@ public class MinecraftServer : IDisposable
         }
         else
         {
-            World = MinecraftWorld.New(this, new Random().Next());
+            World = MinecraftWorld.New(this, Configuration.WorldSeed.GetValueOrDefault(new Random().Next()));
             SaveManager.SaveWorld(World.GetSaveData());
         }
 
-        EntityManager = new EntityManager(this);
+        await World.LoadInitialChunksAsync();
 
-        Looper = new Looper(TimeSpan.FromMilliseconds(50), ProcessAsync);
         Looper.RegisterLoop(TimeSpan.FromSeconds(1), EntityManager.ProcessPickupItemsAsync);
         Looper.RegisterLoop(TimeSpan.FromSeconds(5), SendKeepAlivePacketsAsync);
         Looper.RegisterLoop(TimeSpan.FromSeconds(1), World.SendTimeUpdateAsync);
@@ -85,23 +99,18 @@ public class MinecraftServer : IDisposable
                     await client.UpdateLoadedChunksAsync();
             });
         });
-        Looper.RegisterLoop(TimeSpan.FromMinutes(configuration.Value.AutomaticSaveIntervalInMinutes),
+        Looper.RegisterLoop(TimeSpan.FromMinutes(Configuration.AutomaticSaveIntervalInMinutes),
             _ => TriggerSave(), executeOnStart: false);
 
         RegisterDefaultCommands();
 
-        var ip = new IPEndPoint(IPAddress.Any, configuration.Value.Port);
-        _socket = new Socket(ip.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
-        _socket.Bind(ip);
+        _logger.LogInformation("Server initialized");
     }
 
     public async Task StartAsync(CancellationToken cancellationToken)
     {
         _logger.LogInformation("Server starting...");
 
-        SaveManager.Initialize();
-
-        await World.LoadInitialChunksAsync();
         World.Start();
 
         Looper.Start();
