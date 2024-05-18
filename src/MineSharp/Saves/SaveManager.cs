@@ -1,5 +1,6 @@
 using System.IO.Compression;
 using MineSharp.Core;
+using MineSharp.Items;
 using MineSharp.Nbt;
 using MineSharp.Nbt.Tags;
 
@@ -112,11 +113,23 @@ public class SaveManager
         var yaw = rotationList.Get<FloatNbtTag>(0).Value;
         var pitch = rotationList.Get<FloatNbtTag>(1).Value;
 
+        var inventoryList = playerCompound.Get<ListNbtTag>("Inventory");
+        var inventory = inventoryList.Tags.Cast<CompoundNbtTag>()
+            .Select(slotTag =>
+            {
+                var slot = slotTag.Get<ByteNbtTag>("Slot").Value;
+                var itemId = (ItemId)slotTag.Get<ShortNbtTag>("id").Value;
+                var count = slotTag.Get<ByteNbtTag>("Count").Value;
+                var metadata = slotTag.Get<ShortNbtTag>("Damage").Value;
+                return new InventorySlotSaveData(Inventory.DataSlotToNetworkSlot(slot), new ItemStack(itemId, count, metadata));
+            }).ToArray();
+
         var playerSaveData = new PlayerSaveData
         {
             Position = new Vector3d(positionX, positionY, positionZ),
             Yaw = yaw,
-            Pitch = pitch
+            Pitch = pitch,
+            Inventory = inventory
         };
 
         return playerSaveData;
@@ -137,9 +150,19 @@ public class SaveManager
             new FloatNbtTag(null, playerSaveData.Pitch)
         };
 
+        var inventoryCompounds = playerSaveData.Inventory
+            .Select(slot => new CompoundNbtTag(null)
+                .AddTag(new ByteNbtTag("Slot", Inventory.NetworkSlotToDataSlot(slot.Slot)))
+                .AddTag(new ShortNbtTag("id", (short)slot.ItemStack.ItemId))
+                .AddTag(new ByteNbtTag("Count", slot.ItemStack.Count))
+                .AddTag(new ShortNbtTag("Damage", slot.ItemStack.Metadata)))
+            .Cast<INbtTag>()
+            .ToList();
+
         var playerCompound = new CompoundNbtTag(null)
             .AddTag(new ListNbtTag("Pos", TagType.Double, positionList))
-            .AddTag(new ListNbtTag("Rotation", TagType.Float, rotationList));
+            .AddTag(new ListNbtTag("Rotation", TagType.Float, rotationList))
+            .AddTag(new ListNbtTag("Inventory", TagType.Compound, inventoryCompounds));
 
         using var fileStream = File.OpenWrite(GetPlayerSaveFile(username));
         NbtSerializer.Serialize(playerCompound, fileStream, NbtCompression.Gzip);

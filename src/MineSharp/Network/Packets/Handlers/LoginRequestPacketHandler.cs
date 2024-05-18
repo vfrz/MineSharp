@@ -66,6 +66,8 @@ public class LoginRequestPacketHandler : IClientPacketHandler<LoginRequestPacket
 
         await currentPlayer.SetHealthAsync(20);
 
+        await currentPlayer.SendInventoryAsync();
+
         // World chunks and more
 
         await context.RemoteClient.UpdateLoadedChunksAsync();
@@ -154,15 +156,6 @@ public class LoginRequestPacketHandler : IClientPacketHandler<LoginRequestPacket
             Pitch = MinecraftMath.RotationFloatToSByte(currentPlayer.Pitch),
             Yaw = MinecraftMath.RotationFloatToSByte(currentPlayer.Yaw)
         }, context.RemoteClient);
-
-        // To crouch a player
-        /*var metadataContainer = new EntityMetadataContainer();
-        metadataContainer.Set(0, new EntityByteMetadata(0x2));
-        await context.Server.BroadcastPacketAsync(new EntityMetadataPacket
-        {
-            EntityId = currentPlayer.EntityId,
-            Metadata = metadataContainer
-        });*/
 
         _logger.LogInformation($"Player {currentPlayer.Username} ({context.RemoteClient.NetworkId}) has joined the server");
 

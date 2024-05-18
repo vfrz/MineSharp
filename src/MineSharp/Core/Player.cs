@@ -77,7 +77,7 @@ public class Player : LivingEntity
     {
         var saveData = server.SaveManager.LoadPlayer(username);
 
-        return new Player(server, remoteClient)
+        var player = new Player(server, remoteClient)
         {
             Username = username,
             Position = saveData.Position,
@@ -86,6 +86,13 @@ public class Player : LivingEntity
             Pitch = saveData.Pitch,
             Yaw = saveData.Yaw
         };
+
+        foreach (var slot in saveData.Inventory)
+        {
+            player.Inventory.SetSlot(slot.Slot, slot.ItemStack);
+        }
+
+        return player;
     }
 
     public void Save()
@@ -96,11 +103,17 @@ public class Player : LivingEntity
 
     private PlayerSaveData GetSaveData()
     {
+        var inventory = Inventory.Slots
+            .Where(itemStack => itemStack != ItemStack.Empty)
+            .Select((itemStack, index) => new InventorySlotSaveData((byte)index, itemStack))
+            .ToArray();
+
         return new PlayerSaveData
         {
             Position = Position,
             Yaw = Yaw,
-            Pitch = Pitch
+            Pitch = Pitch,
+            Inventory = inventory
         };
     }
 
@@ -145,17 +158,20 @@ public class Player : LivingEntity
         return false;
     }
 
-    public async Task ClearInventoryAsync()
+    public async Task SendInventoryAsync()
     {
-        var heldItem = Inventory.Hotbar[SelectedHotbarSlot];
-        Inventory.Clear();
         await RemoteClient.SendPacketAsync(new WindowItemsPacket
         {
             WindowId = WindowId.Inventory,
             Items = Inventory.Slots
         });
-        if (heldItem != ItemStack.Empty)
-            await BroadcastHoldItemAsync();
+        await BroadcastHoldItemAsync();
+    }
+
+    public async Task ClearInventoryAsync()
+    {
+        Inventory.Clear();
+        await SendInventoryAsync();
     }
 
     public async Task HoldItemChangedAsync(short slotId)
@@ -183,7 +199,7 @@ public class Player : LivingEntity
 
     public async Task AttackEntityAsync(ILivingEntity targetEntity)
     {
-        await Server!.BroadcastPacketAsync(new EntityStatusPacket
+        await Server.BroadcastPacketAsync(new EntityStatusPacket
         {
             EntityId = targetEntity.EntityId,
             Status = EntityStatus.Hurt
@@ -223,18 +239,18 @@ public class Player : LivingEntity
 
         if (Health == 0)
         {
-            await Server!.BroadcastPacketAsync(new EntityStatusPacket
+            await Server.BroadcastPacketAsync(new EntityStatusPacket
             {
                 EntityId = EntityId,
                 Status = EntityStatus.Dead
             }, RemoteClient);
 
             //TODO This is a bit dirty
-            Server!.Looper.Schedule(TimeSpan.FromSeconds(1.5), async _ =>
+            Server.Looper.Schedule(TimeSpan.FromSeconds(1.5), async _ =>
             {
                 if (Health == 0)
                 {
-                    await Server!.BroadcastPacketAsync(new DestroyEntityPacket
+                    await Server.BroadcastPacketAsync(new DestroyEntityPacket
                     {
                         EntityId = EntityId
                     }, RemoteClient);
@@ -246,7 +262,7 @@ public class Player : LivingEntity
     public async Task RespawnAsync(MinecraftDimension dimension)
     {
         //TODO This is a bit dirty
-        if (Server!.EntityManager.EntityExists(RemoteClient.Player!.EntityId))
+        if (Server.EntityManager.EntityExists(RemoteClient.Player!.EntityId))
         {
             await Server.BroadcastPacketAsync(new DestroyEntityPacket
             {
@@ -256,7 +272,7 @@ public class Player : LivingEntity
 
         Respawning = true;
 
-        var spawnHeight = await Server!.World.GetHighestBlockHeightAsync(new Vector2i(0, 0)) + 1.6200000047683716;
+        var spawnHeight = await Server.World.GetHighestBlockHeightAsync(new Vector2i(0, 0)) + 1.6200000047683716;
         Position = new Vector3d(0.5, spawnHeight, 0.5);
         Stance = Position.Y + Height;
         OnGround = true;
@@ -321,7 +337,7 @@ public class Player : LivingEntity
         }
 
         //TODO Handle spawn point correctly
-        await Server!.BroadcastPacketAsync(new NamedEntitySpawnPacket
+        await Server.BroadcastPacketAsync(new NamedEntitySpawnPacket
         {
             EntityId = EntityId,
             X = Position.X.ToAbsolutePosition(),
