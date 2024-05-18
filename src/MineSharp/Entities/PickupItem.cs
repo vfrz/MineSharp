@@ -9,17 +9,9 @@ public class PickupItem(MinecraftServer server, TimeSpan expiration) : Entity(se
 
     public bool IsExpired => TimeProvider.System.GetElapsedTime(_creationTimestamp) >= expiration;
 
-    public ItemId ItemId { get; set; }
+    public ItemStack Item { get; set; }
 
-    public byte Count { get; set; }
-
-    public short PickupMetadata { get; set; }
-
-    public int AbsoluteX { get; set; }
-
-    public int AbsoluteY { get; set; }
-
-    public int AbsoluteZ { get; set; }
+    public Vector3i AbsolutePosition { get; set; }
 
     public byte Rotation { get; set; }
 

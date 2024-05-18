@@ -113,9 +113,9 @@ public class LoginRequestPacketHandler : IClientPacketHandler<LoginRequestPacket
             await context.RemoteClient.SendPacketAsync(new NamedEntitySpawnPacket
             {
                 EntityId = player.EntityId,
-                X = player.Position.X.ToAbsoluteInt(),
-                Y = player.Position.Y.ToAbsoluteInt(),
-                Z = player.Position.Z.ToAbsoluteInt(),
+                X = player.Position.X.ToAbsolutePosition(),
+                Y = player.Position.Y.ToAbsolutePosition(),
+                Z = player.Position.Z.ToAbsolutePosition(),
                 Pitch = MinecraftMath.RotationFloatToSByte(player.Pitch),
                 Yaw = MinecraftMath.RotationFloatToSByte(player.Yaw),
                 Username = player.Username,
@@ -125,9 +125,9 @@ public class LoginRequestPacketHandler : IClientPacketHandler<LoginRequestPacket
             await context.RemoteClient.SendPacketAsync(new EntityTeleportPacket
             {
                 EntityId = player.EntityId,
-                X = player.Position.X.ToAbsoluteInt(),
-                Y = player.Position.Y.ToAbsoluteInt(),
-                Z = player.Position.Z.ToAbsoluteInt(),
+                X = player.Position.X.ToAbsolutePosition(),
+                Y = player.Position.Y.ToAbsolutePosition(),
+                Z = player.Position.Z.ToAbsolutePosition(),
                 Pitch = MinecraftMath.RotationFloatToSByte(player.Pitch),
                 Yaw = MinecraftMath.RotationFloatToSByte(player.Yaw)
             });
@@ -136,9 +136,9 @@ public class LoginRequestPacketHandler : IClientPacketHandler<LoginRequestPacket
         await context.Server.BroadcastPacketAsync(new NamedEntitySpawnPacket
         {
             EntityId = currentPlayer.EntityId,
-            X = currentPlayer.Position.X.ToAbsoluteInt(),
-            Y = currentPlayer.Position.Y.ToAbsoluteInt(),
-            Z = currentPlayer.Position.Z.ToAbsoluteInt(),
+            X = currentPlayer.Position.X.ToAbsolutePosition(),
+            Y = currentPlayer.Position.Y.ToAbsolutePosition(),
+            Z = currentPlayer.Position.Z.ToAbsolutePosition(),
             Pitch = MinecraftMath.RotationFloatToSByte(currentPlayer.Pitch),
             Yaw = MinecraftMath.RotationFloatToSByte(currentPlayer.Yaw),
             Username = currentPlayer.Username,
@@ -148,9 +148,9 @@ public class LoginRequestPacketHandler : IClientPacketHandler<LoginRequestPacket
         await context.Server.BroadcastPacketAsync(new EntityTeleportPacket
         {
             EntityId = currentPlayer.EntityId,
-            X = currentPlayer.Position.X.ToAbsoluteInt(),
-            Y = currentPlayer.Position.Y.ToAbsoluteInt(),
-            Z = currentPlayer.Position.Z.ToAbsoluteInt(),
+            X = currentPlayer.Position.X.ToAbsolutePosition(),
+            Y = currentPlayer.Position.Y.ToAbsolutePosition(),
+            Z = currentPlayer.Position.Z.ToAbsolutePosition(),
             Pitch = MinecraftMath.RotationFloatToSByte(currentPlayer.Pitch),
             Yaw = MinecraftMath.RotationFloatToSByte(currentPlayer.Yaw)
         }, context.RemoteClient);

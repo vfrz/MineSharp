@@ -72,7 +72,7 @@ public class PlayerBlockPlacementPacketHandler : IClientPacketHandler<PlayerBloc
         {
             if (popItemSuccess)
             {
-                await context.Server.World.SetBlockAsync(directedCoordinates, (BlockId)packet.ItemId, 5);
+                await context.Server.World.SetBlockAsync(directedCoordinates, (BlockId)packet.ItemId, (byte)packet.Metadata!);
             }
             else
             {

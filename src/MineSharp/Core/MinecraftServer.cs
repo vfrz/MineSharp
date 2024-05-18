@@ -318,9 +318,9 @@ public class MinecraftServer : IDisposable
             await BroadcastPacketAsync(new EntityTeleportPacket
             {
                 EntityId = player.EntityId,
-                X = player.Position.X.ToAbsoluteInt(),
-                Y = player.Position.Y.ToAbsoluteInt(),
-                Z = player.Position.Z.ToAbsoluteInt(),
+                X = player.Position.X.ToAbsolutePosition(),
+                Y = player.Position.Y.ToAbsolutePosition(),
+                Z = player.Position.Z.ToAbsolutePosition(),
                 Yaw = MinecraftMath.RotationFloatToSByte(player.Yaw),
                 Pitch = MinecraftMath.RotationFloatToSByte(player.Pitch)
             }, remoteClient, readyOnly: true);
@@ -411,9 +411,9 @@ public class MinecraftServer : IDisposable
         await BroadcastPacketAsync(new MobSpawnPacket
         {
             EntityId = mob.EntityId,
-            X = mob.Position.X.ToAbsoluteInt(),
-            Y = mob.Position.Y.ToAbsoluteInt(),
-            Z = mob.Position.Z.ToAbsoluteInt(),
+            X = mob.Position.X.ToAbsolutePosition(),
+            Y = mob.Position.Y.ToAbsolutePosition(),
+            Z = mob.Position.Z.ToAbsolutePosition(),
             Pitch = MinecraftMath.RotationFloatToSByte(mob.Pitch),
             Yaw = MinecraftMath.RotationFloatToSByte(mob.Yaw),
             Type = mob.Type,

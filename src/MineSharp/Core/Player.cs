@@ -311,9 +311,9 @@ public class Player : LivingEntity
             {
                 EntityId = player.EntityId,
                 Username = Username,
-                X = player.Position.X.ToAbsoluteInt(),
-                Y = player.Position.Y.ToAbsoluteInt(),
-                Z = player.Position.Z.ToAbsoluteInt(),
+                X = player.Position.X.ToAbsolutePosition(),
+                Y = player.Position.Y.ToAbsolutePosition(),
+                Z = player.Position.Z.ToAbsolutePosition(),
                 Yaw = MinecraftMath.RotationFloatToSByte(Yaw),
                 Pitch = MinecraftMath.RotationFloatToSByte(Pitch),
                 CurrentItem = 0
@@ -324,9 +324,9 @@ public class Player : LivingEntity
         await Server!.BroadcastPacketAsync(new NamedEntitySpawnPacket
         {
             EntityId = EntityId,
-            X = Position.X.ToAbsoluteInt(),
-            Y = Position.Y.ToAbsoluteInt(),
-            Z = Position.Z.ToAbsoluteInt(),
+            X = Position.X.ToAbsolutePosition(),
+            Y = Position.Y.ToAbsolutePosition(),
+            Z = Position.Z.ToAbsolutePosition(),
             Yaw = MinecraftMath.RotationFloatToSByte(Yaw),
             Pitch = MinecraftMath.RotationFloatToSByte(Pitch),
             Username = Username,

@@ -2,13 +2,16 @@ namespace MineSharp.Core;
 
 public static class MinecraftMath
 {
-    public static sbyte RotationFloatToSByte(float rotation) => (sbyte) (rotation % 360 / 360 * 256);
+    public static sbyte RotationFloatToSByte(float rotation) => (sbyte)(rotation % 360 / 360 * 256);
 
     public static float SByteRotationToFloat(sbyte rotation) => rotation / 256f * 360;
 
-    public static int ToAbsoluteInt(this double value) => (int) (value * 32);
+    public static int ToAbsolutePosition(this double value) => (int)(value * 32);
 
-    public static int ToAbsoluteInt(this int value) => value * 32;
+    public static int ToAbsolutePosition(this int value) => value * 32;
+
+    public static Vector3i ToAbsolutePosition(this Vector3i position)
+        => new(position.X.ToAbsolutePosition(), position.Y.ToAbsolutePosition(), position.Z.ToAbsolutePosition());
 
     public static double SinDegree(double degree) => Math.Sin(degree * (Math.PI / 180));
 

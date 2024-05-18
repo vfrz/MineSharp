@@ -1,4 +1,5 @@
 using MineSharp.Core.Packets;
+using MineSharp.Entities;
 using MineSharp.Items;
 
 namespace MineSharp.Network.Packets;
@@ -18,6 +19,23 @@ public class PickupSpawnPacket : IServerPacket
     public byte Rotation { get; set; }
     public byte Pitch { get; set; }
     public byte Roll { get; set; }
+
+    public PickupSpawnPacket(PickupItem? pickupItem = null)
+    {
+        if (pickupItem is not null)
+        {
+            EntityId = pickupItem.EntityId;
+            ItemId = pickupItem.Item.ItemId;
+            Count = pickupItem.Item.Count;
+            Metadata = pickupItem.Item.Metadata;
+            AbsoluteX = pickupItem.AbsolutePosition.X;
+            AbsoluteY = pickupItem.AbsolutePosition.Y;
+            AbsoluteZ = pickupItem.AbsolutePosition.Z;
+            Rotation = pickupItem.Rotation;
+            Pitch = pickupItem.Pitch;
+            Roll = pickupItem.Roll;
+        }
+    }
 
     public void Write(PacketWriter writer)
     {
