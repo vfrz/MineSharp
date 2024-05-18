@@ -37,7 +37,8 @@ public class MinecraftServer : IDisposable
     private readonly IServiceProvider _serviceProvider;
     private readonly CommandHandler _commandHandler;
 
-    public MinecraftWorld World { get; private set; }
+    public MinecraftWorld World { get; private set; } = null!;
+
     public EntityManager EntityManager { get; }
     public Looper Looper { get; }
 
@@ -107,7 +108,7 @@ public class MinecraftServer : IDisposable
         _logger.LogInformation("Server initialized");
     }
 
-    public async Task StartAsync(CancellationToken cancellationToken)
+    public Task StartAsync(CancellationToken cancellationToken)
     {
         _logger.LogInformation("Server starting...");
 
@@ -126,6 +127,8 @@ public class MinecraftServer : IDisposable
         }, cancellationToken);
 
         _logger.LogInformation("Server started on port: {port}", Configuration.Port);
+
+        return Task.CompletedTask;
     }
 
     private async Task SendKeepAlivePacketsAsync(CancellationToken cancellationToken)
@@ -235,7 +238,7 @@ public class MinecraftServer : IDisposable
             return await client!.Player!.TryGiveItemAsync(new ItemStack(itemId, count, metadata));
         });
 
-        _commandHandler.TryRegisterCommand("clear", async (_, client, args) =>
+        _commandHandler.TryRegisterCommand("clear", async (_, client, _) =>
         {
             await client!.Player!.ClearInventoryAsync();
             return true;
@@ -349,6 +352,7 @@ public class MinecraftServer : IDisposable
 
     private Task SavePlayerAsync(RemoteClient client)
     {
+        client.Player?.Save();
         return Task.CompletedTask;
     }
 
@@ -377,30 +381,23 @@ public class MinecraftServer : IDisposable
     {
         IMobEntity mob = type switch
         {
-            MobType.Creeper => new Creeper(),
-            MobType.Skeleton => new Skeleton(),
-            MobType.Spider => new Spider(),
-            MobType.GiantZombie => new GiantZombie(),
-            MobType.Zombie => new Zombie(),
-            MobType.Slime => new Slime(),
-            MobType.Ghast => new Ghast(),
-            MobType.ZombiePigman => new ZombiePigman(),
-            MobType.Pig => new Pig(),
-            MobType.Sheep => new Sheep(),
-            MobType.Cow => new Cow(),
-            MobType.Chicken => new Chicken(),
-            MobType.Squid => new Squid(),
-            MobType.Wolf => new Wolf(),
+            MobType.Creeper => new Creeper(this),
+            MobType.Skeleton => new Skeleton(this),
+            MobType.Spider => new Spider(this),
+            MobType.GiantZombie => new GiantZombie(this),
+            MobType.Zombie => new Zombie(this),
+            MobType.Slime => new Slime(this),
+            MobType.Ghast => new Ghast(this),
+            MobType.ZombiePigman => new ZombiePigman(this),
+            MobType.Pig => new Pig(this),
+            MobType.Sheep => new Sheep(this),
+            MobType.Cow => new Cow(this),
+            MobType.Chicken => new Chicken(this),
+            MobType.Squid => new Squid(this),
+            MobType.Wolf => new Wolf(this),
             _ => throw new ArgumentOutOfRangeException(nameof(type), type, null)
         };
         return await SpawnMobAsync(mob, position);
-    }
-
-    public async Task<T> SpawnMobAsync<T>(Vector3i position) where T : IMobEntity, new()
-    {
-        var mob = new T();
-        await SpawnMobAsync(mob, position);
-        return mob;
     }
 
     public async Task<IMobEntity> SpawnMobAsync(IMobEntity mob, Vector3i position)
@@ -488,8 +485,11 @@ public class MinecraftServer : IDisposable
         finally
         {
             if (remoteClient.Player is not null)
-                _logger.LogInformation("Player {username} ({networkId}) has left the server",
-                    remoteClient.Player.Username, remoteClient.NetworkId);
+            {
+                _logger.LogInformation("Player {username} ({networkId}) has left the server", remoteClient.Player.Username, remoteClient.NetworkId);
+                remoteClient.Player.Save();
+            }
+
             _logger.LogInformation("Client {networkId} disconnected", remoteClient.NetworkId);
             await RemoveRemoteClientAsync(remoteClient);
         }

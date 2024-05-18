@@ -3,6 +3,7 @@ using MineSharp.Entities.Metadata;
 using MineSharp.Items;
 using MineSharp.Items.Infos;
 using MineSharp.Network.Packets;
+using MineSharp.Saves;
 using MineSharp.World;
 
 namespace MineSharp.Core;
@@ -10,6 +11,7 @@ namespace MineSharp.Core;
 public class Player : LivingEntity
 {
     public const double Height = 1.62;
+    public const double YMinOffset = 0.000000005;
 
     public override short MaxHealth => 20;
 
@@ -44,11 +46,62 @@ public class Player : LivingEntity
         }
     }
 
-    public Player(RemoteClient remoteClient)
+    private Player(MinecraftServer server, RemoteClient remoteClient) : base(server)
     {
         RemoteClient = remoteClient;
         Inventory = new Inventory();
         SelectedHotbarSlot = 0;
+    }
+
+    public static async Task<Player> NewPlayerAsync(MinecraftServer server, RemoteClient remoteClient, string username)
+    {
+        var spawnHeight = await server.World.GetHighestBlockHeightAsync(new Vector2i(0, 0)) + 1;
+        var position = new Vector3d(0.5, spawnHeight + YMinOffset, 0.5);
+
+        var player = new Player(server, remoteClient)
+        {
+            Username = username,
+            Position = position,
+            Stance = position.Y + Height,
+            OnGround = true,
+            Pitch = 0,
+            Yaw = 0
+        };
+
+        player.Save();
+
+        return player;
+    }
+
+    public static async Task<Player> LoadPlayerAsync(MinecraftServer server, RemoteClient remoteClient, string username)
+    {
+        var saveData = server.SaveManager.LoadPlayer(username);
+
+        return new Player(server, remoteClient)
+        {
+            Username = username,
+            Position = saveData.Position,
+            Stance = saveData.Position.Y + Height + YMinOffset,
+            OnGround = true,
+            Pitch = saveData.Pitch,
+            Yaw = saveData.Yaw
+        };
+    }
+
+    public void Save()
+    {
+        var saveData = GetSaveData();
+        Server.SaveManager.SavePlayer(Username, saveData);
+    }
+
+    private PlayerSaveData GetSaveData()
+    {
+        return new PlayerSaveData
+        {
+            Position = Position,
+            Yaw = Yaw,
+            Pitch = Pitch
+        };
     }
 
     public async Task<bool> TryGiveItemAsync(ItemStack itemStack)

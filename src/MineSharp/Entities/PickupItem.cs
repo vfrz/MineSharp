@@ -1,13 +1,13 @@
+using MineSharp.Core;
 using MineSharp.Items;
 
 namespace MineSharp.Entities;
 
-public class PickupItem : Entity
+public class PickupItem(MinecraftServer server, TimeSpan expiration) : Entity(server)
 {
-    private readonly TimeSpan _expiration;
-    private readonly long _creationTimestamp;
+    private readonly long _creationTimestamp = TimeProvider.System.GetTimestamp();
 
-    public bool IsExpired => TimeProvider.System.GetElapsedTime(_creationTimestamp) >= _expiration;
+    public bool IsExpired => TimeProvider.System.GetElapsedTime(_creationTimestamp) >= expiration;
 
     public ItemId ItemId { get; set; }
 
@@ -26,10 +26,4 @@ public class PickupItem : Entity
     public byte Pitch { get; set; }
 
     public byte Roll { get; set; }
-
-    public PickupItem(TimeSpan expiration)
-    {
-        _expiration = expiration;
-        _creationTimestamp = TimeProvider.System.GetTimestamp();
-    }
 }

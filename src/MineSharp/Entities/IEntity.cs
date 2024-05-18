@@ -1,4 +1,3 @@
-using MineSharp.Core;
 using MineSharp.Entities.Metadata;
 
 namespace MineSharp.Entities;
@@ -9,5 +8,5 @@ public interface IEntity
 
     public EntityMetadataContainer Metadata { get; }
 
-    public void InitializeEntity(MinecraftServer server, int entityId);
+    public void InitializeEntity(int entityId);
 }

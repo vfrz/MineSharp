@@ -32,22 +32,22 @@ public class RemoteClient : IDisposable
         NetworkId = socket.RemoteEndPoint?.ToString() ?? throw new Exception();
     }
 
-    public Player InitializePlayer(string username, Vector3d position)
+    public async Task<Player> InitializePlayerAsync(string username)
     {
         if (Player is not null)
-            throw new Exception($"Can't initialize player because it has already been initialized");
-        var player = new Player(this)
+            throw new Exception($"Can't initialize player {username} because it has already been initialized");
+
+        if (Server.SaveManager.IsPlayerSaved(username))
         {
-            Username = username,
-            Position = position,
-            Stance = position.Y + Player.Height,
-            OnGround = true,
-            Pitch = 0,
-            Yaw = 0,
-            PositionDirty = false
-        };
-        Server.EntityManager.RegisterEntity(player);
-        return Player = player;
+            Player = await Player.LoadPlayerAsync(Server, this, username);
+        }
+        else
+        {
+            Player = await Player.NewPlayerAsync(Server, this, username);
+        }
+
+        Server.EntityManager.RegisterEntity(Player);
+        return Player;
     }
 
     public void SetReady()

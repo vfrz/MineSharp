@@ -1,6 +1,8 @@
+using MineSharp.Core;
+
 namespace MineSharp.Entities.Mobs;
 
-public class Slime : MobEntity
+public class Slime(MinecraftServer server) : MobEntity(server)
 {
     public override MobType Type => MobType.Slime;
 
@@ -18,7 +20,7 @@ public class Slime : MobEntity
         }
     }
 
-    public SizeType Size { get; }
+    public SizeType Size { get; init; }
 
     //TODO Check if values are correct
     public enum SizeType : byte

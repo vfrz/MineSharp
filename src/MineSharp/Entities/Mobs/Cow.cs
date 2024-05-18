@@ -1,6 +1,8 @@
+using MineSharp.Core;
+
 namespace MineSharp.Entities.Mobs;
 
-public class Cow : MobEntity
+public class Cow(MinecraftServer server) : MobEntity(server)
 {
     public override MobType Type => MobType.Cow;
 

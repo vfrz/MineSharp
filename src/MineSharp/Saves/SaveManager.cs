@@ -7,24 +7,21 @@ namespace MineSharp.Saves;
 
 public class SaveManager
 {
+    private const string WorldDirectory = "./world";
+    private const string PlayersDirectory = $"{WorldDirectory}/players";
+    private const string RegionDirectory = $"{WorldDirectory}/region";
+    private const string LevelFile = $"{WorldDirectory}/level.dat";
+    private static string GetPlayerSaveFile(string username) => $"{PlayersDirectory}/{username}.dat";
+    private static string GetChunkFilePath(Vector2i chunkPosition) => $"{RegionDirectory}/x{chunkPosition.X}y{chunkPosition.Z}.dat";
+
     public void Initialize()
     {
-        if (!Directory.Exists("world"))
-            Directory.CreateDirectory("world");
-
-        if (!Directory.Exists("world/players"))
-            Directory.CreateDirectory("world/players");
-
-        if (!Directory.Exists("world/region"))
-            Directory.CreateDirectory("world/region");
+        CreateDirectoryIfNotExists(WorldDirectory);
+        CreateDirectoryIfNotExists(PlayersDirectory);
+        CreateDirectoryIfNotExists(RegionDirectory);
     }
 
-    public async Task SaveChunkAsync(Vector2i chunkPosition, ChunkSaveData chunkSaveData)
-    {
-        await using var compressedFileStream = File.OpenWrite(GetChunkFilePath(chunkPosition));
-        await using var compressor = new DeflateStream(compressedFileStream, CompressionMode.Compress);
-        compressor.Write(chunkSaveData.Data);
-    }
+    public bool IsChunkSaved(Vector2i chunkPosition) => File.Exists(GetChunkFilePath(chunkPosition));
 
     public async Task<ChunkSaveData> LoadChunkAsync(Vector2i chunkPosition)
     {
@@ -39,35 +36,18 @@ public class SaveManager
         return saveData;
     }
 
-    public bool IsChunkSaved(Vector2i chunkPosition) => File.Exists(GetChunkFilePath(chunkPosition));
-
-    public void SaveWorld(WorldSaveData worldSaveData)
+    public async Task SaveChunkAsync(Vector2i chunkPosition, ChunkSaveData chunkSaveData)
     {
-        var dataCompound = new CompoundNbtTag("Data")
-            .AddTag(new LongNbtTag("RandomSeed", worldSaveData.Seed))
-            .AddTag(new IntNbtTag("SpawnX", worldSaveData.SpawnLocation.X))
-            .AddTag(new IntNbtTag("SpawnY", worldSaveData.SpawnLocation.Y))
-            .AddTag(new IntNbtTag("SpawnZ", worldSaveData.SpawnLocation.Z))
-            .AddTag(new ByteNbtTag("raining", worldSaveData.Raining))
-            .AddTag(new IntNbtTag("rainTime", worldSaveData.RainTime))
-            .AddTag(new ByteNbtTag("thundering", worldSaveData.Thundering))
-            .AddTag(new IntNbtTag("thunderTime", worldSaveData.ThunderTime))
-            .AddTag(new LongNbtTag("Time", worldSaveData.Time))
-            .AddTag(new IntNbtTag("version", worldSaveData.Version))
-            .AddTag(new LongNbtTag("LastPlayed", worldSaveData.LastPlayed))
-            .AddTag(new StringNbtTag("LevelName", worldSaveData.LevelName))
-            .AddTag(new LongNbtTag("SizeOnDisk", worldSaveData.SizeOnDisk));
-
-        var fileCompound = new CompoundNbtTag(null)
-            .AddTag(dataCompound);
-
-        using var fileStream = File.OpenWrite(GetLevelFilePath());
-        NbtSerializer.Serialize(fileCompound, fileStream, NbtCompression.Gzip);
+        await using var compressedFileStream = File.OpenWrite(GetChunkFilePath(chunkPosition));
+        await using var compressor = new DeflateStream(compressedFileStream, CompressionMode.Compress);
+        compressor.Write(chunkSaveData.Data);
     }
+
+    public bool IsWorldSaved() => File.Exists(LevelFile);
 
     public WorldSaveData LoadWorld()
     {
-        using var fileStream = File.OpenRead(GetLevelFilePath());
+        using var fileStream = File.OpenRead(LevelFile);
         var fileCompound = (CompoundNbtTag)NbtSerializer.Deserialize(fileStream, NbtCompression.Gzip);
         var data = fileCompound.Get<CompoundNbtTag>("Data");
 
@@ -92,10 +72,82 @@ public class SaveManager
         return saveData;
     }
 
-    public bool IsWorldSaved() => File.Exists(GetLevelFilePath());
+    public void SaveWorld(WorldSaveData worldSaveData)
+    {
+        var dataCompound = new CompoundNbtTag("Data")
+            .AddTag(new LongNbtTag("RandomSeed", worldSaveData.Seed))
+            .AddTag(new IntNbtTag("SpawnX", worldSaveData.SpawnLocation.X))
+            .AddTag(new IntNbtTag("SpawnY", worldSaveData.SpawnLocation.Y))
+            .AddTag(new IntNbtTag("SpawnZ", worldSaveData.SpawnLocation.Z))
+            .AddTag(new ByteNbtTag("raining", worldSaveData.Raining))
+            .AddTag(new IntNbtTag("rainTime", worldSaveData.RainTime))
+            .AddTag(new ByteNbtTag("thundering", worldSaveData.Thundering))
+            .AddTag(new IntNbtTag("thunderTime", worldSaveData.ThunderTime))
+            .AddTag(new LongNbtTag("Time", worldSaveData.Time))
+            .AddTag(new IntNbtTag("version", worldSaveData.Version))
+            .AddTag(new LongNbtTag("LastPlayed", worldSaveData.LastPlayed))
+            .AddTag(new StringNbtTag("LevelName", worldSaveData.LevelName))
+            .AddTag(new LongNbtTag("SizeOnDisk", worldSaveData.SizeOnDisk));
 
-    private static string GetChunkFilePath(Vector2i chunkPosition)
-        => $"world/region/x{chunkPosition.X}y{chunkPosition.Z}.dat";
+        var fileCompound = new CompoundNbtTag(null)
+            .AddTag(dataCompound);
 
-    private static string GetLevelFilePath() => "world/level.dat";
+        using var fileStream = File.OpenWrite(LevelFile);
+        NbtSerializer.Serialize(fileCompound, fileStream, NbtCompression.Gzip);
+    }
+
+    public bool IsPlayerSaved(string username) => File.Exists(GetPlayerSaveFile(username));
+
+    public PlayerSaveData LoadPlayer(string username)
+    {
+        using var fileStream = File.OpenRead(GetPlayerSaveFile(username));
+        var playerCompound = (CompoundNbtTag)NbtSerializer.Deserialize(fileStream, NbtCompression.Gzip);
+
+        var positionList = playerCompound.Get<ListNbtTag>("Pos");
+        var positionX = positionList.Get<DoubleNbtTag>(0).Value;
+        var positionY = positionList.Get<DoubleNbtTag>(1).Value;
+        var positionZ = positionList.Get<DoubleNbtTag>(2).Value;
+
+        var rotationList = playerCompound.Get<ListNbtTag>("Rotation");
+        var yaw = rotationList.Get<FloatNbtTag>(0).Value;
+        var pitch = rotationList.Get<FloatNbtTag>(1).Value;
+
+        var playerSaveData = new PlayerSaveData
+        {
+            Position = new Vector3d(positionX, positionY, positionZ),
+            Yaw = yaw,
+            Pitch = pitch
+        };
+
+        return playerSaveData;
+    }
+
+    public void SavePlayer(string username, PlayerSaveData playerSaveData)
+    {
+        var positionList = new List<INbtTag>
+        {
+            new DoubleNbtTag(null, playerSaveData.Position.X),
+            new DoubleNbtTag(null, playerSaveData.Position.Y),
+            new DoubleNbtTag(null, playerSaveData.Position.Z)
+        };
+
+        var rotationList = new List<INbtTag>
+        {
+            new FloatNbtTag(null, playerSaveData.Yaw),
+            new FloatNbtTag(null, playerSaveData.Pitch)
+        };
+
+        var playerCompound = new CompoundNbtTag(null)
+            .AddTag(new ListNbtTag("Pos", TagType.Double, positionList))
+            .AddTag(new ListNbtTag("Rotation", TagType.Float, rotationList));
+
+        using var fileStream = File.OpenWrite(GetPlayerSaveFile(username));
+        NbtSerializer.Serialize(playerCompound, fileStream, NbtCompression.Gzip);
+    }
+
+    private static void CreateDirectoryIfNotExists(string directory)
+    {
+        if (!Directory.Exists(directory))
+            Directory.CreateDirectory(directory);
+    }
 }

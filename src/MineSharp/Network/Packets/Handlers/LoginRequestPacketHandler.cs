@@ -52,8 +52,7 @@ public class LoginRequestPacketHandler : IClientPacketHandler<LoginRequestPacket
             Semaphore.Release();
         }
 
-        var spawnHeight = await context.Server.World.GetHighestBlockHeightAsync(new Vector2i(0, 0)) + 1;
-        var currentPlayer = context.RemoteClient.InitializePlayer(username, new Vector3d(0.5, spawnHeight + .1, 0.5));
+        var currentPlayer = await context.RemoteClient.InitializePlayerAsync(username);
 
         await context.RemoteClient.SendPacketAsync(new LoginResponsePacket
         {
@@ -85,6 +84,7 @@ public class LoginRequestPacketHandler : IClientPacketHandler<LoginRequestPacket
         }
 
         //TODO Handle spawn point correctly
+        var spawnHeight = await context.Server.World.GetHighestBlockHeightAsync(new Vector2i(0, 0)) + 1;
         await context.RemoteClient.SendPacketAsync(new SpawnPositionPacket
         {
             X = 0,

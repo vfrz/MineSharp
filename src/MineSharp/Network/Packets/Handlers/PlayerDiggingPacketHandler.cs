@@ -49,7 +49,7 @@ public class PlayerDiggingPacketHandler : IClientPacketHandler<PlayerDiggingPack
     private async Task GeneratePickupItemAsync(BlockId blockId, Vector3i blockPosition,
         ClientPacketHandlerContext context)
     {
-        var pickupItem = new PickupItem(TimeSpan.FromSeconds(10))
+        var pickupItem = new PickupItem(context.Server, TimeSpan.FromSeconds(10))
         {
             ItemId = (ItemId)blockId,
             Count = 1,

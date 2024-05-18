@@ -22,17 +22,17 @@ public static class BinaryReaderExtensions
         var value = reader.ReadBytes(sizeof(long));
         return BinaryPrimitives.ReadInt64BigEndian(value);
     }
-    
+
     public static float ReadBigEndianFloat(this BinaryReader reader)
     {
         var value = reader.ReadBytes(sizeof(float));
         return BinaryPrimitives.ReadSingleBigEndian(value);
     }
-    
+
     public static double ReadBigEndianDouble(this BinaryReader reader)
     {
         var value = reader.ReadBytes(sizeof(double));
-        return BinaryPrimitives.ReadSingleBigEndian(value);
+        return BinaryPrimitives.ReadDoubleBigEndian(value);
     }
 
     public static string? ReadNbtString(this BinaryReader reader)

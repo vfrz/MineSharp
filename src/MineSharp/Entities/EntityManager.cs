@@ -22,7 +22,7 @@ public class EntityManager
 
     public void RegisterEntity(IEntity entity)
     {
-        entity.InitializeEntity(_server, _idGenerator.NextId());
+        entity.InitializeEntity(_idGenerator.NextId());
         _entities.TryAdd(entity.EntityId, entity);
     }
 
