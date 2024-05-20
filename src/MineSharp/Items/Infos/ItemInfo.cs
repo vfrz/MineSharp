@@ -4,7 +4,7 @@ public abstract class ItemInfo
 {
     public abstract ItemId Id { get; }
 
-    public abstract short DamageOnEntity { get; }
+    public virtual short DamageOnEntity => 1;
 
-    public abstract byte StackMax { get; }
+    public virtual byte StackMax => 64;
 }
