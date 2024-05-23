@@ -104,7 +104,6 @@ public class Player : LivingEntity
     private PlayerSaveData GetSaveData()
     {
         var inventory = Inventory.Slots
-            .Where(itemStack => itemStack != ItemStack.Empty)
             .Select((itemStack, index) => new InventorySlotSaveData((byte)index, itemStack))
             .ToArray();
 

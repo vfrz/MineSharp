@@ -41,7 +41,6 @@ public class Inventory : ItemContainer
         return (short)(hotbarSlot + HotbarOffset);
     }
 
-    //TODO Conversion is not correct
     public static byte DataSlotToNetworkSlot(byte index)
     {
         if (index <= 8)
@@ -56,10 +55,9 @@ public class Inventory : ItemContainer
             index = 5;
         else if (index is >= 80 and <= 83)
             index -= 79;
-        return index; //TODO Check for crafting result slot
+        return index;
     }
 
-    //TODO Conversion is not correct
     public static byte NetworkSlotToDataSlot(byte index)
     {
         if (index is >= 36 and <= 44)
@@ -74,6 +72,6 @@ public class Inventory : ItemContainer
             index = 103;
         else if (index is >= 1 and <= 4)
             index += 79;
-        return index; //TODO Check for crafting result slot
+        return index;
     }
 }
