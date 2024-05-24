@@ -1,5 +1,5 @@
 using System.Text.Json;
-using MineSharp.Core.Packets;
+using MineSharp.Network;
 
 namespace MineSharp.Extensions;
 

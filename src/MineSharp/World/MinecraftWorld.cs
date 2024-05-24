@@ -1,6 +1,6 @@
 using AsyncKeyedLock;
 using Microsoft.Extensions.Logging;
-using MineSharp.Blocks;
+using MineSharp.Content;
 using MineSharp.Core;
 using MineSharp.Network.Packets;
 using MineSharp.Saves;

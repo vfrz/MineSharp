@@ -1,6 +1,6 @@
 using System.Net.Sockets;
 using Microsoft.Extensions.Logging;
-using MineSharp.Core.Packets;
+using MineSharp.Network;
 using MineSharp.Network.Packets;
 using MineSharp.World;
 

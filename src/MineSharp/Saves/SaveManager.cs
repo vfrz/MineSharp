@@ -1,6 +1,6 @@
 using System.IO.Compression;
+using MineSharp.Content;
 using MineSharp.Core;
-using MineSharp.Items;
 using MineSharp.Nbt;
 using MineSharp.Nbt.Tags;
 

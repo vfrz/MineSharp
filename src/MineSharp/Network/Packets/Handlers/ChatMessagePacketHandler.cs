@@ -1,5 +1,4 @@
 using MineSharp.Commands;
-using MineSharp.Core.Packets;
 
 namespace MineSharp.Network.Packets.Handlers;
 

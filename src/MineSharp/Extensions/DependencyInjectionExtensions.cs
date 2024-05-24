@@ -1,6 +1,6 @@
 using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
-using MineSharp.Core.Packets;
+using MineSharp.Network;
 
 namespace MineSharp.Extensions;
 

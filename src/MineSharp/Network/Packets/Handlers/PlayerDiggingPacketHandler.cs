@@ -1,9 +1,7 @@
-using MineSharp.Blocks;
-using MineSharp.Blocks.Infos;
+using MineSharp.Content;
+using MineSharp.Content.Blocks;
 using MineSharp.Core;
-using MineSharp.Core.Packets;
 using MineSharp.Entities;
-using MineSharp.Items;
 
 namespace MineSharp.Network.Packets.Handlers;
 
@@ -51,7 +49,7 @@ public class PlayerDiggingPacketHandler : IClientPacketHandler<PlayerDiggingPack
     {
         var blockInfo = BlockInfoProvider.Get(block.BlockId);
         var miningItem = context.RemoteClient.Player!.HoldItemStack.ItemId;
-        var droppedItems = blockInfo.GetDroppedItem(miningItem, block.Metadata);
+        var droppedItems = blockInfo.GetDroppedItems(miningItem, block.Metadata);
         foreach (var droppedItem in droppedItems)
         {
             await GeneratePickupItemAsync(droppedItem, blockPosition, context);

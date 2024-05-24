@@ -1,4 +1,4 @@
-using MineSharp.Blocks;
+using MineSharp.Content;
 using MineSharp.Core;
 
 namespace MineSharp.World;

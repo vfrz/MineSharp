@@ -1,6 +1,5 @@
-using MineSharp.Core.Packets;
+using MineSharp.Content;
 using MineSharp.Entities;
-using MineSharp.Items;
 
 namespace MineSharp.Network.Packets;
 

@@ -2,7 +2,6 @@ using System.Buffers;
 using System.Runtime.CompilerServices;
 using System.Threading.Channels;
 using Microsoft.Extensions.DependencyInjection;
-using MineSharp.Core.Packets;
 using MineSharp.Extensions;
 using MineSharp.Network.Packets;
 

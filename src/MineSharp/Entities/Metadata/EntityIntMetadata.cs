@@ -1,4 +1,4 @@
-using MineSharp.Core.Packets;
+using MineSharp.Network;
 
 namespace MineSharp.Entities.Metadata;
 

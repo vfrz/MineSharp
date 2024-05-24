@@ -1,5 +1,5 @@
+using MineSharp.Content;
 using MineSharp.Core;
-using MineSharp.Items;
 
 namespace MineSharp.Entities;
 

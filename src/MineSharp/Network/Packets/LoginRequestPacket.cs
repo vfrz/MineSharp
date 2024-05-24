@@ -1,5 +1,4 @@
 using System.Buffers;
-using MineSharp.Core.Packets;
 using MineSharp.Extensions;
 using MineSharp.World;
 

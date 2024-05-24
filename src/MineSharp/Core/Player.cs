@@ -1,7 +1,7 @@
+using MineSharp.Content;
+using MineSharp.Content.Items;
 using MineSharp.Entities;
 using MineSharp.Entities.Metadata;
-using MineSharp.Items;
-using MineSharp.Items.Infos;
 using MineSharp.Network.Packets;
 using MineSharp.Saves;
 using MineSharp.World;

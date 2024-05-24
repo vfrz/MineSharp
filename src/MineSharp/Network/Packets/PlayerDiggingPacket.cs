@@ -1,6 +1,5 @@
 using System.Buffers;
 using MineSharp.Core;
-using MineSharp.Core.Packets;
 using MineSharp.Extensions;
 
 namespace MineSharp.Network.Packets;

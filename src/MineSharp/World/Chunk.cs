@@ -1,6 +1,6 @@
 using System.IO.Compression;
 using System.Runtime.CompilerServices;
-using MineSharp.Blocks;
+using MineSharp.Content;
 using MineSharp.Core;
 using MineSharp.Saves;
 
