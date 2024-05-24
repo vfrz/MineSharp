@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using AsyncKeyedLock;
 using Microsoft.Extensions.Logging;
 using MineSharp.Content;
@@ -10,19 +11,16 @@ namespace MineSharp.World;
 
 public class MinecraftWorld
 {
-    private ChunksContainer Chunks { get; }
-
+    public int Seed { get; }
     public bool Raining { get; private set; }
-    private WorldTimer Timer { get; }
 
+    private WorldTimer Timer { get; }
     public long Time => Timer.CurrentTime;
 
     private MinecraftServer Server { get; }
     private readonly ILogger<MinecraftWorld> _logger;
-
-    public int Seed { get; }
+    private readonly ConcurrentDictionary<Vector2i, Region> _regions;
     private IWorldGenerator WorldGenerator { get; }
-
     private readonly AsyncKeyedLocker<Vector2i> _chunkLoadLocker = new();
 
     private MinecraftWorld(MinecraftServer server, int seed)
@@ -35,7 +33,7 @@ public class MinecraftWorld
         //WorldGenerator = new TestWorldGenerator(seed);
         _logger = server.GetLogger<MinecraftWorld>();
         Timer = new WorldTimer();
-        Chunks = new ChunksContainer();
+        _regions = new ConcurrentDictionary<Vector2i, Region>();
     }
 
     public static MinecraftWorld New(MinecraftServer server, int seed) => new(server, seed);
@@ -120,7 +118,7 @@ public class MinecraftWorld
         var blockUpdatePacket = new BlockUpdatePacket
         {
             X = worldPosition.X,
-            Y = (sbyte)worldPosition.Y,
+            Y = (sbyte) worldPosition.Y,
             Z = worldPosition.Z,
             BlockId = blockId,
             Metadata = metadata
@@ -133,7 +131,19 @@ public class MinecraftWorld
     {
         using (await _chunkLoadLocker.LockAsync(chunkPosition))
         {
-            var chunk = Chunks[chunkPosition];
+            var regionPosition = Region.GetRegionPositionForChunkPosition(chunkPosition);
+            Region region;
+            if (_regions.ContainsKey(regionPosition))
+            {
+                region = _regions[regionPosition];
+            }
+            else
+            {
+                region = new Region(regionPosition);
+                _regions[regionPosition] = region;
+            }
+
+            var chunk = region[chunkPosition];
             if (chunk is null)
             {
                 chunk = new Chunk(chunkPosition);
@@ -159,7 +169,7 @@ public class MinecraftWorld
                     await SaveChunkAsync(chunk);
                 }
 
-                Chunks[chunkPosition] = chunk;
+                region[chunkPosition] = chunk;
             }
 
             return chunk;
@@ -188,7 +198,7 @@ public class MinecraftWorld
     {
         Server.SaveManager.SaveWorld(GetSaveData());
 
-        foreach (var chunk in Chunks)
+        foreach (var chunk in _regions.Values.SelectMany(r => r.Chunks))
         {
             await SaveChunkAsync(chunk);
         }

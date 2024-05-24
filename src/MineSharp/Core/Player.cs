@@ -1,5 +1,4 @@
 using MineSharp.Content;
-using MineSharp.Content.Items;
 using MineSharp.Entities;
 using MineSharp.Entities.Metadata;
 using MineSharp.Network.Packets;

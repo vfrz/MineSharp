@@ -14,6 +14,8 @@ public class Chunk : IBlockChunkData
 
     private const int SaveRegionSize = 32;
 
+    public ReadOnlySpan<byte> Data => _data;
+
     private readonly byte[] _data;
     private readonly ArraySegment<byte> _blocks;
     private readonly NibbleArray _metadata;
@@ -53,20 +55,20 @@ public class Chunk : IBlockChunkData
             || localPosition.Z is < 0 or >= ChunkWidth)
             return;
         var index = LocalToIndex(localPosition);
-        _blocks[index] = (byte)blockId;
+        _blocks[index] = (byte) blockId;
         _metadata[index] = metadata;
     }
 
     public BlockId GetBlockId(Vector3i localPosition)
     {
         var index = LocalToIndex(localPosition);
-        return (BlockId)_blocks[index];
+        return (BlockId) _blocks[index];
     }
 
     public Block GetBlock(Vector3i localPosition)
     {
         var index = LocalToIndex(localPosition);
-        return new Block((BlockId)_blocks[index], _metadata[index], _light[index], _skyLight[index]);
+        return new Block((BlockId) _blocks[index], _metadata[index], _light[index], _skyLight[index]);
     }
 
     public void SetLight(Vector3i localPosition, byte light, byte skyLight)
@@ -106,8 +108,8 @@ public class Chunk : IBlockChunkData
 
     public static Vector2i GetChunkPositionForWorldPosition(Vector3d position)
     {
-        var chunkX = (int)position.X / ChunkWidth - (position.X < 0 ? 1 : 0);
-        var chunkZ = (int)position.Z / ChunkWidth - (position.Z < 0 ? 1 : 0);
+        var chunkX = (int) position.X / ChunkWidth - (position.X < 0 ? 1 : 0);
+        var chunkZ = (int) position.Z / ChunkWidth - (position.Z < 0 ? 1 : 0);
         return new Vector2i(chunkX, chunkZ);
     }
 

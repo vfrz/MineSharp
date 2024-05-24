@@ -8,7 +8,6 @@ using Microsoft.Extensions.Options;
 using MineSharp.Commands;
 using MineSharp.Configuration;
 using MineSharp.Content;
-using MineSharp.Content.Items;
 using MineSharp.Entities;
 using MineSharp.Entities.Mobs;
 using MineSharp.Network;

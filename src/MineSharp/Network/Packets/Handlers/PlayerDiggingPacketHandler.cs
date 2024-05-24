@@ -1,5 +1,4 @@
 using MineSharp.Content;
-using MineSharp.Content.Blocks;
 using MineSharp.Core;
 using MineSharp.Entities;
 
