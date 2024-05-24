@@ -1,9 +1,14 @@
-namespace MineSharp.Content;
+using MineSharp.Content;
+using MineSharp.Core;
+using MineSharp.Extensions;
 
-public class Inventory : ItemContainer
+namespace MineSharp.Windows;
+
+public class Inventory : Window
 {
     private const int HotbarOffset = 36;
 
+    public ArrayElement<ItemStack> CraftingOutput { get; }
     public ArraySegment<ItemStack> CraftingGrid { get; }
     public ArraySegment<ItemStack> ArmorGrid { get; }
     public ArraySegment<ItemStack> MainInventory { get; }
@@ -11,6 +16,7 @@ public class Inventory : ItemContainer
 
     public Inventory() : base(45)
     {
+        CraftingOutput = new ArrayElement<ItemStack>(Slots, 0);
         CraftingGrid = new ArraySegment<ItemStack>(Slots, 0, 5);
         ArmorGrid = new ArraySegment<ItemStack>(Slots, 5, 4);
         MainInventory = new ArraySegment<ItemStack>(Slots, 9, 27);
@@ -19,26 +25,14 @@ public class Inventory : ItemContainer
 
     public short? GetFirstEmptyStorageSlot()
     {
-        for (var i = 0; i < Hotbar.Count; i++)
-        {
-            if (Hotbar[i] == ItemStack.Empty)
-                return (short)(i + Hotbar.Offset);
-        }
-
-        for (var i = 0; i < MainInventory.Count; i++)
-        {
-            if (MainInventory[i] == ItemStack.Empty)
-                return (short)(i + MainInventory.Offset);
-        }
-
-        return null;
+        return Hotbar.FirstEmptyIndex() ?? MainInventory.FirstEmptyIndex();
     }
 
     public static short HotbarSlotToInventorySlot(short hotbarSlot)
     {
         if (hotbarSlot is < 0 or > 8)
             throw new Exception();
-        return (short)(hotbarSlot + HotbarOffset);
+        return (short) (hotbarSlot + HotbarOffset);
     }
 
     public static byte DataSlotToNetworkSlot(byte index)

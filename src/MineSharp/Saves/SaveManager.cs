@@ -3,6 +3,7 @@ using MineSharp.Content;
 using MineSharp.Core;
 using MineSharp.Nbt;
 using MineSharp.Nbt.Tags;
+using MineSharp.Windows;
 
 namespace MineSharp.Saves;
 

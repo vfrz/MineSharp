@@ -4,6 +4,7 @@ using MineSharp.Entities;
 using MineSharp.Entities.Metadata;
 using MineSharp.Network.Packets;
 using MineSharp.Saves;
+using MineSharp.Windows;
 using MineSharp.World;
 
 namespace MineSharp.Core;
