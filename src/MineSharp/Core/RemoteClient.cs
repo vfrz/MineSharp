@@ -107,7 +107,7 @@ public class RemoteClient : IDisposable
         if (_loadedChunks.Contains(chunkToLoad))
             return;
 
-        var chunk = await Server.World.GetOrLoadChunkAsync(chunkToLoad);
+        var chunk = await Server.World.GetOrCreateChunkAsync(chunkToLoad);
 
         await SendPacketAsync(new PreChunkPacket
         {
@@ -137,7 +137,7 @@ public class RemoteClient : IDisposable
 
         foreach (var chunkToLoad in chunksToLoad)
         {
-            var chunk = await Server.World.GetOrLoadChunkAsync(chunkToLoad);
+            var chunk = await Server.World.GetOrCreateChunkAsync(chunkToLoad);
 
             await SendPacketAsync(new PreChunkPacket
             {

@@ -82,27 +82,27 @@ public class MinecraftWorld
         var initialChunks = GetChunksAround(Vector2i.Zero, Server.Configuration.VisibleChunksDistance);
         _logger.LogInformation("Generating world...");
         await Parallel.ForEachAsync(initialChunks,
-            async (chunkPosition, _) => await GetOrLoadChunkAsync(chunkPosition));
+            async (chunkPosition, _) => await GetOrCreateChunkAsync(chunkPosition));
     }
 
     public async Task<BlockId> GetBlockIdAsync(Vector3i worldPosition)
     {
         var chunkPosition = Chunk.GetChunkPositionForWorldPosition(worldPosition);
-        var chunk = await GetOrLoadChunkAsync(chunkPosition);
+        var chunk = await GetOrCreateChunkAsync(chunkPosition);
         return chunk.GetBlockId(Chunk.WorldToLocal(worldPosition));
     }
 
     public async Task<Block> GetBlockAsync(Vector3i worldPosition)
     {
         var chunkPosition = Chunk.GetChunkPositionForWorldPosition(worldPosition);
-        var chunk = await GetOrLoadChunkAsync(chunkPosition);
+        var chunk = await GetOrCreateChunkAsync(chunkPosition);
         return chunk.GetBlock(Chunk.WorldToLocal(worldPosition));
     }
 
     public async Task<int> GetHighestBlockHeightAsync(Vector2i worldPosition)
     {
         var chunkPosition = Chunk.GetChunkPositionForWorldPosition(worldPosition);
-        var chunk = await GetOrLoadChunkAsync(chunkPosition);
+        var chunk = await GetOrCreateChunkAsync(chunkPosition);
         return chunk.GetHighestBlockHeight(Chunk.WorldToLocal(worldPosition));
     }
 
@@ -110,7 +110,7 @@ public class MinecraftWorld
     {
         var chunkPosition = Chunk.GetChunkPositionForWorldPosition(worldPosition);
 
-        var chunk = await GetOrLoadChunkAsync(chunkPosition);
+        var chunk = await GetOrCreateChunkAsync(chunkPosition);
 
         var localPosition = Chunk.WorldToLocal(worldPosition);
         chunk.SetBlock(localPosition, blockId, metadata);
@@ -127,7 +127,7 @@ public class MinecraftWorld
         await Server.BroadcastPacketAsync(blockUpdatePacket);
     }
 
-    public async Task<Chunk> GetOrLoadChunkAsync(Vector2i chunkPosition)
+    public async Task<Chunk> GetOrCreateChunkAsync(Vector2i chunkPosition)
     {
         using (await _chunkLoadLocker.LockAsync(chunkPosition))
         {

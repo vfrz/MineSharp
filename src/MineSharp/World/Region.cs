@@ -16,7 +16,7 @@ public class Region
     {
         RegionPosition = regionPosition;
     }
-    
+
     public Chunk? this[Vector2i position]
     {
         get => _chunks.GetValueOrDefault(position);

@@ -11,7 +11,7 @@ public class NibbleArrayTests
     {
         // Arrange
         var innerArray = new byte[1];
-        var array = new NibbleArray(innerArray, 0)
+        var array = new NibbleArray(innerArray, 0, 1)
         {
             [0] = 6,
             [1] = 9

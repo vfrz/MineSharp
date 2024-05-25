@@ -1,8 +1,11 @@
+using System.Collections.Concurrent;
 using System.IO.Compression;
 using System.Runtime.CompilerServices;
 using MineSharp.Content;
 using MineSharp.Core;
+using MineSharp.Nbt.Tags;
 using MineSharp.Saves;
+using MineSharp.TileEntities;
 
 namespace MineSharp.World;
 
@@ -24,14 +27,18 @@ public class Chunk : IBlockChunkData
 
     public Vector2i ChunkPosition { get; }
 
+    private readonly ConcurrentDictionary<Vector3i, TileEntity> _tileEntities;
+
     public Chunk(Vector2i chunkPosition)
     {
         ChunkPosition = chunkPosition;
         _data = new byte[ArraySize + 3 * (ArraySize / 2)];
         _blocks = new ArraySegment<byte>(_data, 0, ArraySize);
-        _metadata = new NibbleArray(_data, ArraySize);
-        _light = new NibbleArray(_data, ArraySize + ArraySize / 2);
-        _skyLight = new NibbleArray(_data, ArraySize * 2);
+        _metadata = new NibbleArray(_data, ArraySize, ArraySize / 2);
+        _light = new NibbleArray(_data, ArraySize + ArraySize / 2, ArraySize / 2);
+        _skyLight = new NibbleArray(_data, ArraySize * 2, ArraySize / 2);
+
+        _tileEntities = new ConcurrentDictionary<Vector3i, TileEntity>();
     }
 
     public void LoadFromSaveData(ChunkSaveData saveData)
@@ -134,6 +141,21 @@ public class Chunk : IBlockChunkData
         return regionX + regionZ * SaveRegionSize;
     }
 
+    public INbtTag ToNbt()
+    {
+        //TODO Check if we can avoid .ToArray() on ArraySegment
+        //TODO Add missing tags
+        var nbt = new CompoundNbtTag("Level")
+            .AddTag(new ByteArrayNbtTag("Blocks ", _blocks.ToArray()))
+            .AddTag(new ByteArrayNbtTag("Data", _metadata.ToArray()))
+            .AddTag(new ByteArrayNbtTag("SkyLight", _skyLight.ToArray()))
+            .AddTag(new ByteArrayNbtTag("BlockLight", _light.ToArray()))
+            .AddTag(new IntNbtTag("xPos", ChunkPosition.X))
+            .AddTag(new IntNbtTag("zPos", ChunkPosition.Z));
+        
+        return nbt;
+    }
+    
     public async Task<byte[]> ToCompressedDataAsync()
     {
         await using var output = new MemoryStream();
