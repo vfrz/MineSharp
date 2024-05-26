@@ -1,118 +1,32 @@
-using System.Buffers.Binary;
-using System.IO.Compression;
 using MineSharp.Content;
 using MineSharp.Core;
 using MineSharp.Nbt;
 using MineSharp.Nbt.Tags;
 using MineSharp.Windows;
-using MineSharp.World;
 
 namespace MineSharp.Saves;
 
-public class SaveManager
+public static class SaveManager
 {
     private const string WorldDirectory = "./world";
     private const string PlayersDirectory = $"{WorldDirectory}/players";
     private const string RegionDirectory = $"{WorldDirectory}/region";
     private const string LevelFile = $"{WorldDirectory}/level.dat";
     private static string GetPlayerSaveFile(string username) => $"{PlayersDirectory}/{username}.dat";
-    private static string GetChunkFilePath(Vector2i chunkPosition) => $"{RegionDirectory}/x{chunkPosition.X}y{chunkPosition.Z}.dat";
     public static string GetRegionFilePath(Vector2i regionPosition) => $"{RegionDirectory}/r.{regionPosition.X}.{regionPosition.Z}.mcr";
 
-    public void Initialize()
+    public static void Initialize()
     {
         CreateDirectoryIfNotExists(WorldDirectory);
         CreateDirectoryIfNotExists(PlayersDirectory);
         CreateDirectoryIfNotExists(RegionDirectory);
     }
 
-    public bool IsRegionSaved(Vector2i regionPosition) => File.Exists(GetRegionFilePath(regionPosition));
+    public static bool IsRegionSaved(Vector2i regionPosition) => File.Exists(GetRegionFilePath(regionPosition));
 
-    public async Task<RegionSaveData> LoadRegionAsync(Vector2i regionPosition)
-    {
-        await using var fileStream = File.OpenRead(GetRegionFilePath(regionPosition));
+    public static bool IsWorldSaved() => File.Exists(LevelFile);
 
-        var locationsBytes = new byte[4096];
-        await fileStream.ReadExactlyAsync(locationsBytes);
-
-        var timestampsBytes = new byte[4096];
-        await fileStream.ReadExactlyAsync(timestampsBytes);
-
-        var locations = locationsBytes.Chunk(4)
-            .Select(bytes =>
-            {
-                var offset = BinaryPrimitives.ReadInt32BigEndian([..bytes.Take(3), 0]);
-                var sectorCount = bytes.Last();
-                return new ChunkLocation(offset, sectorCount);
-            })
-            .ToArray();
-
-        var timestamps = timestampsBytes.Chunk(4)
-            .Select(bytes => BinaryPrimitives.ReadInt32BigEndian(bytes))
-            .ToArray();
-
-        var chunks = new List<ChunkSaveData>();
-
-        for (var x = 0; x < Region.RegionWidth; x++)
-        {
-            for (var z = 0; z < Region.RegionWidth; z++)
-            {
-                var location = locations[x % 32 + z % 32 * 32];
-                if (location.Offset != 0)
-                {
-                    fileStream.Seek(location.Offset * 4096, SeekOrigin.Begin);
-                    var lengthBytes = new byte[4];
-                    fileStream.ReadExactly(lengthBytes);
-                    var length = BinaryPrimitives.ReadInt32BigEndian(lengthBytes);
-
-                    //TODO Implement compression
-                    var compressionTypeByte = (byte) fileStream.ReadByte();
-
-                    //TODO Use NBT
-                    var data = new byte[length];
-                    fileStream.ReadExactly(data);
-                    var chunkSaveData = new ChunkSaveData
-                    {
-                        Data = data
-                    };
-                    chunks.Add(chunkSaveData);
-                }
-            }
-        }
-
-        return new RegionSaveData
-        {
-            Chunks = chunks.ToArray()
-        };
-    }
-
-    public record ChunkLocation(int Offset, byte SectorCount);
-
-    public bool IsChunkSaved(Vector2i chunkPosition) => File.Exists(GetChunkFilePath(chunkPosition));
-
-    public async Task<ChunkSaveData> LoadChunkAsync(Vector2i chunkPosition)
-    {
-        await using var compressedFileStream = File.OpenRead(GetChunkFilePath(chunkPosition));
-        await using var decompressor = new DeflateStream(compressedFileStream, CompressionMode.Decompress);
-        using var memoryStream = new MemoryStream();
-        await decompressor.CopyToAsync(memoryStream);
-        var saveData = new ChunkSaveData
-        {
-            Data = memoryStream.ToArray()
-        };
-        return saveData;
-    }
-
-    public async Task SaveChunkAsync(Vector2i chunkPosition, ChunkSaveData chunkSaveData)
-    {
-        await using var compressedFileStream = File.OpenWrite(GetChunkFilePath(chunkPosition));
-        await using var compressor = new DeflateStream(compressedFileStream, CompressionMode.Compress);
-        compressor.Write(chunkSaveData.Data);
-    }
-
-    public bool IsWorldSaved() => File.Exists(LevelFile);
-
-    public WorldSaveData LoadWorld()
+    public static WorldSaveData LoadWorld()
     {
         using var fileStream = File.OpenRead(LevelFile);
         var fileCompound = (CompoundNbtTag) NbtSerializer.Deserialize(fileStream, NbtCompression.Gzip);
@@ -139,7 +53,7 @@ public class SaveManager
         return saveData;
     }
 
-    public void SaveWorld(WorldSaveData worldSaveData)
+    public static void SaveWorld(WorldSaveData worldSaveData)
     {
         var dataCompound = new CompoundNbtTag("Data")
             .AddTag(new LongNbtTag("RandomSeed", worldSaveData.Seed))
@@ -163,9 +77,9 @@ public class SaveManager
         NbtSerializer.Serialize(fileCompound, fileStream, NbtCompression.Gzip);
     }
 
-    public bool IsPlayerSaved(string username) => File.Exists(GetPlayerSaveFile(username));
+    public static bool IsPlayerSaved(string username) => File.Exists(GetPlayerSaveFile(username));
 
-    public PlayerSaveData LoadPlayer(string username)
+    public static PlayerSaveData LoadPlayer(string username)
     {
         using var fileStream = File.OpenRead(GetPlayerSaveFile(username));
         var playerCompound = (CompoundNbtTag) NbtSerializer.Deserialize(fileStream, NbtCompression.Gzip);
@@ -201,7 +115,7 @@ public class SaveManager
         return playerSaveData;
     }
 
-    public void SavePlayer(string username, PlayerSaveData playerSaveData)
+    public static void SavePlayer(string username, PlayerSaveData playerSaveData)
     {
         var positionList = new List<INbtTag>
         {

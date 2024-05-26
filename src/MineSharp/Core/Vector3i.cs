@@ -32,4 +32,6 @@ public readonly struct Vector3i(int x, int y, int z)
     public static Vector3i operator -(Vector3i vector) => new(-vector.X, -vector.Y, -vector.Z);
 
     public Vector3d ToVector3() => new(X, Y, Z);
+
+    public Vector2i ToVector2i() => new(X, Z);
 }

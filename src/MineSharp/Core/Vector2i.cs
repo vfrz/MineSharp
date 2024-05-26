@@ -35,6 +35,13 @@ public readonly struct Vector2i(int x, int z)
 
     public static Vector2i operator -(Vector2i vector) => new(-vector.X, -vector.Z);
 
+    public double DistanceTo(Vector2i other)
+    {
+        var dx = X - other.X;
+        var dz = Z - other.Z;
+        return Math.Sqrt(dx * dx + dz * dz);
+    }
+
     public override string ToString()
     {
         return $"{X}, {Z}";

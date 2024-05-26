@@ -4,7 +4,6 @@ using System.Runtime.CompilerServices;
 using MineSharp.Content;
 using MineSharp.Core;
 using MineSharp.Nbt.Tags;
-using MineSharp.Saves;
 using MineSharp.TileEntities;
 
 namespace MineSharp.World;
@@ -15,8 +14,6 @@ public class Chunk : IBlockChunkData
     public const int ChunkHeight = 128;
     private const int ArraySize = ChunkWidth * ChunkWidth * ChunkHeight;
 
-    private const int SaveRegionSize = 32;
-
     public ReadOnlySpan<byte> Data => _data;
 
     private readonly byte[] _data;
@@ -26,6 +23,8 @@ public class Chunk : IBlockChunkData
     private readonly NibbleArray _skyLight;
 
     public Vector2i ChunkPosition { get; }
+
+    public Vector2i ChunkLocalPosition => new(ChunkPosition.X % Region.RegionWidth, ChunkPosition.Z % Region.RegionWidth);
 
     private readonly ConcurrentDictionary<Vector3i, TileEntity> _tileEntities;
 
@@ -41,17 +40,26 @@ public class Chunk : IBlockChunkData
         _tileEntities = new ConcurrentDictionary<Vector3i, TileEntity>();
     }
 
-    public void LoadFromSaveData(ChunkSaveData saveData)
+    public static Chunk CreateFromNbt(INbtTag tag)
     {
-        Array.Copy(saveData.Data, _data, saveData.Data.Length);
-    }
+        var level = (CompoundNbtTag) tag;
 
-    public ChunkSaveData GetSaveData()
-    {
-        return new ChunkSaveData
-        {
-            Data = _data.ToArray()
-        };
+        var chunkX = level.Get<IntNbtTag>("xPos").Value;
+        var chunkZ = level.Get<IntNbtTag>("zPos").Value;
+
+        var chunk = new Chunk(new Vector2i(chunkX, chunkZ));
+
+        var blocks = level.Get<ByteArrayNbtTag>("Blocks").Value;
+        var metadata = level.Get<ByteArrayNbtTag>("Data").Value;
+        var light = level.Get<ByteArrayNbtTag>("BlockLight").Value;
+        var skyLight = level.Get<ByteArrayNbtTag>("SkyLight").Value;
+
+        Array.Copy(blocks, 0, chunk._data, chunk._blocks.Offset, blocks.Length);
+        Array.Copy(metadata, 0, chunk._data, chunk._metadata.Offset, metadata.Length);
+        Array.Copy(light, 0, chunk._data, chunk._light.Offset, light.Length);
+        Array.Copy(skyLight, 0, chunk._data, chunk._skyLight.Offset, skyLight.Length);
+
+        return chunk;
     }
 
     public void SetBlock(Vector3i localPosition, BlockId blockId, byte metadata = 0)
@@ -134,28 +142,21 @@ public class Chunk : IBlockChunkData
         return new Vector2i(chunkX, chunkZ);
     }
 
-    public static int GetSaveFileIndex(Vector2i chunkPosition)
-    {
-        var regionX = chunkPosition.X / SaveRegionSize - (chunkPosition.X < 0 ? 1 : 0);
-        var regionZ = chunkPosition.Z / SaveRegionSize - (chunkPosition.Z < 0 ? 1 : 0);
-        return regionX + regionZ * SaveRegionSize;
-    }
-
     public INbtTag ToNbt()
     {
         //TODO Check if we can avoid .ToArray() on ArraySegment
         //TODO Add missing tags
         var nbt = new CompoundNbtTag("Level")
-            .AddTag(new ByteArrayNbtTag("Blocks ", _blocks.ToArray()))
+            .AddTag(new ByteArrayNbtTag("Blocks", _blocks.ToArray()))
             .AddTag(new ByteArrayNbtTag("Data", _metadata.ToArray()))
             .AddTag(new ByteArrayNbtTag("SkyLight", _skyLight.ToArray()))
             .AddTag(new ByteArrayNbtTag("BlockLight", _light.ToArray()))
             .AddTag(new IntNbtTag("xPos", ChunkPosition.X))
             .AddTag(new IntNbtTag("zPos", ChunkPosition.Z));
-        
         return nbt;
     }
-    
+
+    [Obsolete]
     public async Task<byte[]> ToCompressedDataAsync()
     {
         await using var output = new MemoryStream();
@@ -165,5 +166,77 @@ public class Chunk : IBlockChunkData
         }
 
         return output.ToArray();
+    }
+
+    public static HashSet<Vector2i> GetChunksAround(Vector2i originChunk, int radius)
+    {
+        // Circle
+        var chunks = new HashSet<Vector2i>
+        {
+            originChunk
+        };
+
+        for (var x = originChunk.X - radius; x <= originChunk.X + radius; x++)
+        {
+            for (var z = originChunk.Z - radius; z <= originChunk.Z + radius; z++)
+            {
+                var distance = originChunk.DistanceTo(new Vector2i(x, z));
+                if (distance <= radius)
+                {
+                    chunks.Add(new Vector2i(x, z));
+                }
+            }
+        }
+
+        return chunks.OrderBy(originChunk.DistanceTo).ToHashSet();
+
+        // Diamond
+        /*
+        var chunks = new HashSet<Vector2i>
+        {
+            originChunk
+        };
+
+        // Front
+        for (var z = 1; z < radius; z++)
+        {
+            chunks.Add(new Vector2i(originChunk.X, originChunk.Z + z));
+            for (var x = 1; x < radius - z; x++)
+            {
+                chunks.Add(new Vector2i(originChunk.X - x, originChunk.Z + z));
+            }
+        }
+
+        // Right
+        for (var x = 1; x < radius; x++)
+        {
+            chunks.Add(new Vector2i(originChunk.X - x, originChunk.Z));
+            for (var z = 1; z < radius - x; z++)
+            {
+                chunks.Add(new Vector2i(originChunk.X - x, originChunk.Z - z));
+            }
+        }
+
+        // Back
+        for (var z = 1; z < radius; z++)
+        {
+            chunks.Add(new Vector2i(originChunk.X, originChunk.Z - z));
+            for (var x = 1; x < radius - z; x++)
+            {
+                chunks.Add(new Vector2i(originChunk.X + x, originChunk.Z - z));
+            }
+        }
+
+        // Left
+        for (var x = 1; x < radius; x++)
+        {
+            chunks.Add(new Vector2i(originChunk.X + x, originChunk.Z));
+            for (var z = 1; z < radius - x; z++)
+            {
+                chunks.Add(new Vector2i(originChunk.X + x, originChunk.Z + z));
+            }
+        }
+
+        return chunks;*/
     }
 }

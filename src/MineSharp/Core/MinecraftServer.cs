@@ -40,8 +40,6 @@ public class MinecraftServer : IDisposable
     public EntityManager EntityManager { get; }
     public Looper Looper { get; }
 
-    public SaveManager SaveManager { get; }
-
     private bool _saveOnNextLoop;
 
     public MinecraftServer(PacketDispatcher packetDispatcher,
@@ -56,8 +54,6 @@ public class MinecraftServer : IDisposable
         _serviceProvider = serviceProvider;
         _commandHandler = commandHandler;
         _remoteClients = new ConcurrentDictionary<string, RemoteClient>();
-
-        SaveManager = new SaveManager();
 
         EntityManager = new EntityManager(this);
 
@@ -211,7 +207,7 @@ public class MinecraftServer : IDisposable
 
         _commandHandler.TryRegisterCommand("mob", async (server, client, args) =>
         {
-            await server.SpawnMobAsync((MobType)byte.Parse(args[0]), client!.Player!.Position.ToVector3i());
+            await server.SpawnMobAsync((MobType) byte.Parse(args[0]), client!.Player!.Position.ToVector3i());
             return true;
         });
 
@@ -229,9 +225,9 @@ public class MinecraftServer : IDisposable
 
         _commandHandler.TryRegisterCommand("give", async (_, client, args) =>
         {
-            var itemId = (ItemId)short.Parse(args[0]);
+            var itemId = (ItemId) short.Parse(args[0]);
             var count = args.Length > 1 ? byte.Parse(args[1]) : ItemInfoProvider.Get(itemId).StackMax;
-            var metadata = args.Length > 2 ? short.Parse(args[2]) : (byte)0;
+            var metadata = args.Length > 2 ? short.Parse(args[2]) : (byte) 0;
 
             return await client!.Player!.TryGiveItemAsync(new ItemStack(itemId, count, metadata));
         });
@@ -239,6 +235,13 @@ public class MinecraftServer : IDisposable
         _commandHandler.TryRegisterCommand("clear", async (_, client, _) =>
         {
             await client!.Player!.ClearInventoryAsync();
+            return true;
+        });
+
+        _commandHandler.TryRegisterCommand("save", async (server, client, _) =>
+        {
+            await server.SaveAsync(CancellationToken.None);
+            await client!.SendChatAsync($"{ChatColors.Green}Saved successfully");
             return true;
         });
 

@@ -75,7 +75,7 @@ public class Player : LivingEntity
 
     public static async Task<Player> LoadPlayerAsync(MinecraftServer server, RemoteClient remoteClient, string username)
     {
-        var saveData = server.SaveManager.LoadPlayer(username);
+        var saveData = SaveManager.LoadPlayer(username);
 
         var player = new Player(server, remoteClient)
         {
@@ -98,7 +98,7 @@ public class Player : LivingEntity
     public void Save()
     {
         var saveData = GetSaveData();
-        Server.SaveManager.SavePlayer(Username, saveData);
+        SaveManager.SavePlayer(Username, saveData);
     }
 
     private PlayerSaveData GetSaveData()

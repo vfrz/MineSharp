@@ -32,6 +32,12 @@ public class NbtSerializer
         throw new Exception($"Unknown NBT compression type: {compression}");
     }
 
+    public static INbtTag Deserialize(byte[] bytes, NbtCompression compression = NbtCompression.None)
+    {
+        using var memoryStream = new MemoryStream(bytes);
+        return Deserialize(memoryStream, compression);
+    }
+
     public static void Serialize(INbtTag tag, Stream stream, NbtCompression compression = NbtCompression.None)
     {
         if (compression is NbtCompression.None)
@@ -66,7 +72,7 @@ public class NbtSerializer
 
     private static INbtTag ParseTag(BinaryReader reader)
     {
-        var tagType = (TagType)reader.ReadByte();
+        var tagType = (TagType) reader.ReadByte();
         return tagType switch
         {
             TagType.End => EndNbtTag.Instance,
@@ -144,7 +150,7 @@ public class NbtSerializer
     private static ListNbtTag ParseListTag(BinaryReader reader)
     {
         var name = reader.ReadNbtString();
-        var tagType = (TagType)reader.ReadByte();
+        var tagType = (TagType) reader.ReadByte();
         var length = reader.ReadBigEndianInt();
         var tags = new List<INbtTag>();
         for (var i = 0; i < length; i++)
@@ -258,49 +264,49 @@ public class NbtSerializer
 
     private static void WriteByteTag(ByteNbtTag tag, BinaryWriter writer)
     {
-        writer.Write((byte)TagType.Byte);
+        writer.Write((byte) TagType.Byte);
         writer.WriteNbtString(tag.Name);
         writer.Write(tag.Value);
     }
 
     private static void WriteShortTag(ShortNbtTag tag, BinaryWriter writer)
     {
-        writer.Write((byte)TagType.Short);
+        writer.Write((byte) TagType.Short);
         writer.WriteNbtString(tag.Name);
         writer.WriteBigEndianShort(tag.Value);
     }
 
     private static void WriteIntTag(IntNbtTag tag, BinaryWriter writer)
     {
-        writer.Write((byte)TagType.Int);
+        writer.Write((byte) TagType.Int);
         writer.WriteNbtString(tag.Name);
         writer.WriteBigEndianInt(tag.Value);
     }
 
     private static void WriteLongTag(LongNbtTag tag, BinaryWriter writer)
     {
-        writer.Write((byte)TagType.Long);
+        writer.Write((byte) TagType.Long);
         writer.WriteNbtString(tag.Name);
         writer.WriteBigEndianLong(tag.Value);
     }
 
     private static void WriteFloatTag(FloatNbtTag tag, BinaryWriter writer)
     {
-        writer.Write((byte)TagType.Float);
+        writer.Write((byte) TagType.Float);
         writer.WriteNbtString(tag.Name);
         writer.WriteBigEndianFloat(tag.Value);
     }
 
     private static void WriteDoubleTag(DoubleNbtTag tag, BinaryWriter writer)
     {
-        writer.Write((byte)TagType.Double);
+        writer.Write((byte) TagType.Double);
         writer.WriteNbtString(tag.Name);
         writer.WriteBigEndianDouble(tag.Value);
     }
 
     private static void WriteByteArrayNbtTag(ByteArrayNbtTag tag, BinaryWriter writer)
     {
-        writer.Write((byte)TagType.ByteArray);
+        writer.Write((byte) TagType.ByteArray);
         writer.WriteNbtString(tag.Name);
         writer.WriteBigEndianInt(tag.Value.Length);
         writer.Write(tag.Value);
@@ -308,16 +314,16 @@ public class NbtSerializer
 
     private static void WriteStringTag(StringNbtTag tag, BinaryWriter writer)
     {
-        writer.Write((byte)TagType.String);
+        writer.Write((byte) TagType.String);
         writer.WriteNbtString(tag.Name);
         writer.WriteNbtString(tag.Value);
     }
 
     private static void WriteListTag(ListNbtTag tag, BinaryWriter writer)
     {
-        writer.Write((byte)TagType.List);
+        writer.Write((byte) TagType.List);
         writer.WriteNbtString(tag.Name);
-        writer.Write((byte)tag.TagType);
+        writer.Write((byte) tag.TagType);
         writer.WriteBigEndianInt(tag.Tags.Count);
         foreach (var innerTag in tag.Tags)
         {
@@ -356,7 +362,7 @@ public class NbtSerializer
                     WriteTag(compoundInnerTag, writer);
                 }
 
-                writer.Write((byte)TagType.End);
+                writer.Write((byte) TagType.End);
             }
             else
             {
@@ -367,7 +373,7 @@ public class NbtSerializer
 
     private static void WriteCompoundTag(CompoundNbtTag tag, BinaryWriter writer)
     {
-        writer.Write((byte)TagType.Compound);
+        writer.Write((byte) TagType.Compound);
         writer.WriteNbtString(tag.Name);
 
         foreach (var innerTag in tag)
@@ -375,6 +381,6 @@ public class NbtSerializer
             WriteTag(innerTag, writer);
         }
 
-        writer.Write((byte)TagType.End);
+        writer.Write((byte) TagType.End);
     }
 }

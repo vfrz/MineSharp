@@ -17,11 +17,11 @@ public class MinecraftWorld
     private WorldTimer Timer { get; }
     public long Time => Timer.CurrentTime;
 
-    private MinecraftServer Server { get; }
-    private readonly ILogger<MinecraftWorld> _logger;
-    private readonly ConcurrentDictionary<Vector2i, Region> _regions;
-    private IWorldGenerator WorldGenerator { get; }
-    private readonly AsyncKeyedLocker<Vector2i> _chunkLoadLocker = new();
+    public MinecraftServer Server { get; }
+    public IWorldGenerator WorldGenerator { get; }
+
+    private readonly ConcurrentDictionary<Vector2i, Region> _regions = new();
+    private readonly AsyncKeyedLocker<Vector2i> _regionLoadLocker = new();
 
     private MinecraftWorld(MinecraftServer server, int seed)
     {
@@ -31,9 +31,7 @@ public class MinecraftWorld
         //WorldGenerator = new DesertWorldGenerator(seed);
         //WorldGenerator = new FlatWorldGenerator();
         //WorldGenerator = new TestWorldGenerator(seed);
-        _logger = server.GetLogger<MinecraftWorld>();
         Timer = new WorldTimer();
-        _regions = new ConcurrentDictionary<Vector2i, Region>();
     }
 
     public static MinecraftWorld New(MinecraftServer server, int seed) => new(server, seed);
@@ -79,10 +77,21 @@ public class MinecraftWorld
 
     public async Task LoadInitialChunksAsync()
     {
-        var initialChunks = GetChunksAround(Vector2i.Zero, Server.Configuration.VisibleChunksDistance);
-        _logger.LogInformation("Generating world...");
-        await Parallel.ForEachAsync(initialChunks,
+        var initialChunks = Chunk.GetChunksAround(Vector2i.Zero, Server.Configuration.VisibleChunksDistance);
+        Server.GetLogger<MinecraftWorld>().LogInformation("Generating world...");
+        await Parallel.ForEachAsync(initialChunks, new ParallelOptions
+            {
+                MaxDegreeOfParallelism = 1
+            },
             async (chunkPosition, _) => await GetOrCreateChunkAsync(chunkPosition));
+    }
+
+    public async Task<Chunk> GetOrCreateChunkAsync(Vector2i chunkPosition)
+    {
+        var regionPosition = Region.GetRegionPositionForChunkPosition(chunkPosition);
+        var region = await GetRegionAsync(regionPosition);
+        var chunk = await region.GetOrCreateChunkAsync(chunkPosition);
+        return chunk;
     }
 
     public async Task<BlockId> GetBlockIdAsync(Vector3i worldPosition)
@@ -109,7 +118,6 @@ public class MinecraftWorld
     public async Task SetBlockAsync(Vector3i worldPosition, BlockId blockId, byte metadata = 0)
     {
         var chunkPosition = Chunk.GetChunkPositionForWorldPosition(worldPosition);
-
         var chunk = await GetOrCreateChunkAsync(chunkPosition);
 
         var localPosition = Chunk.WorldToLocal(worldPosition);
@@ -125,55 +133,6 @@ public class MinecraftWorld
         };
 
         await Server.BroadcastPacketAsync(blockUpdatePacket);
-    }
-
-    public async Task<Chunk> GetOrCreateChunkAsync(Vector2i chunkPosition)
-    {
-        using (await _chunkLoadLocker.LockAsync(chunkPosition))
-        {
-            var regionPosition = Region.GetRegionPositionForChunkPosition(chunkPosition);
-            Region region;
-            if (_regions.ContainsKey(regionPosition))
-            {
-                region = _regions[regionPosition];
-            }
-            else
-            {
-                region = new Region(regionPosition);
-                _regions[regionPosition] = region;
-            }
-
-            var chunk = region[chunkPosition];
-            if (chunk is null)
-            {
-                chunk = new Chunk(chunkPosition);
-
-                if (Server.SaveManager.IsChunkSaved(chunkPosition))
-                {
-                    var saveData = await Server.SaveManager.LoadChunkAsync(chunkPosition);
-                    chunk.LoadFromSaveData(saveData);
-                }
-                else
-                {
-                    WorldGenerator.GenerateChunkTerrain(chunkPosition, chunk);
-                    WorldGenerator.GenerateChunkDecorations(chunkPosition, chunk);
-
-                    //TODO Move ligth calculation somewhere else
-                    for (var x = 0; x < Chunk.ChunkWidth; x++)
-                    for (var y = 0; y < Chunk.ChunkHeight; y++)
-                    for (var z = 0; z < Chunk.ChunkWidth; z++)
-                    {
-                        chunk.SetLight(new Vector3i(x, y, z), 15, 15);
-                    }
-
-                    await SaveChunkAsync(chunk);
-                }
-
-                region[chunkPosition] = chunk;
-            }
-
-            return chunk;
-        }
     }
 
     public async Task StartRainAsync()
@@ -196,11 +155,11 @@ public class MinecraftWorld
 
     public async Task SaveAsync()
     {
-        Server.SaveManager.SaveWorld(GetSaveData());
+        SaveManager.SaveWorld(GetSaveData());
 
-        foreach (var chunk in _regions.Values.SelectMany(r => r.Chunks))
+        foreach (var region in _regions.Values)
         {
-            await SaveChunkAsync(chunk);
+            await region.SaveAsync();
         }
     }
 
@@ -222,88 +181,16 @@ public class MinecraftWorld
         };
     }
 
-    private async Task SaveChunkAsync(Chunk chunk)
+    private async Task<Region> GetRegionAsync(Vector2i regionPosition)
     {
-        var saveData = chunk.GetSaveData();
-        await Server.SaveManager.SaveChunkAsync(chunk.ChunkPosition, saveData);
-    }
-
-    private static double Distance(Vector2i a, Vector2i b)
-    {
-        var dx = b.X - a.X;
-        var dz = b.Z - a.Z;
-        return Math.Sqrt(dx * dx + dz * dz);
-    }
-
-    public static HashSet<Vector2i> GetChunksAround(Vector2i originChunk, int radius)
-    {
-        // Circle
-        var chunks = new HashSet<Vector2i>
+        using (await _regionLoadLocker.LockAsync(regionPosition))
         {
-            originChunk
-        };
+            if (_regions.TryGetValue(regionPosition, out var region))
+                return region;
 
-        for (var x = originChunk.X - radius; x <= originChunk.X + radius; x++)
-        {
-            for (var z = originChunk.Z - radius; z <= originChunk.Z + radius; z++)
-            {
-                var distance = Distance(originChunk, new Vector2i(x, z));
-                if (distance <= radius)
-                {
-                    chunks.Add(new Vector2i(x, z));
-                }
-            }
+            region = await Region.LoadOrCreateAsync(regionPosition, this);
+            _regions[regionPosition] = region;
+            return region;
         }
-
-        return chunks.OrderBy(c => Distance(originChunk, c)).ToHashSet();
-
-        // Diamond
-        /*
-        var chunks = new HashSet<Vector2i>
-        {
-            originChunk
-        };
-
-        // Front
-        for (var z = 1; z < radius; z++)
-        {
-            chunks.Add(new Vector2i(originChunk.X, originChunk.Z + z));
-            for (var x = 1; x < radius - z; x++)
-            {
-                chunks.Add(new Vector2i(originChunk.X - x, originChunk.Z + z));
-            }
-        }
-
-        // Right
-        for (var x = 1; x < radius; x++)
-        {
-            chunks.Add(new Vector2i(originChunk.X - x, originChunk.Z));
-            for (var z = 1; z < radius - x; z++)
-            {
-                chunks.Add(new Vector2i(originChunk.X - x, originChunk.Z - z));
-            }
-        }
-
-        // Back
-        for (var z = 1; z < radius; z++)
-        {
-            chunks.Add(new Vector2i(originChunk.X, originChunk.Z - z));
-            for (var x = 1; x < radius - z; x++)
-            {
-                chunks.Add(new Vector2i(originChunk.X + x, originChunk.Z - z));
-            }
-        }
-
-        // Left
-        for (var x = 1; x < radius; x++)
-        {
-            chunks.Add(new Vector2i(originChunk.X + x, originChunk.Z));
-            for (var z = 1; z < radius - x; z++)
-            {
-                chunks.Add(new Vector2i(originChunk.X + x, originChunk.Z + z));
-            }
-        }
-
-        return chunks;*/
     }
 }

@@ -2,6 +2,7 @@ using System.Net.Sockets;
 using Microsoft.Extensions.Logging;
 using MineSharp.Network;
 using MineSharp.Network.Packets;
+using MineSharp.Saves;
 using MineSharp.World;
 
 namespace MineSharp.Core;
@@ -37,7 +38,7 @@ public class RemoteClient : IDisposable
         if (Player is not null)
             throw new Exception($"Can't initialize player {username} because it has already been initialized");
 
-        if (Server.SaveManager.IsPlayerSaved(username))
+        if (SaveManager.IsPlayerSaved(username))
         {
             Player = await Player.LoadPlayerAsync(Server, this, username);
         }
@@ -131,7 +132,7 @@ public class RemoteClient : IDisposable
     public async Task UpdateLoadedChunksAsync()
     {
         var visibleChunks =
-            MinecraftWorld.GetChunksAround(GetCurrentChunk(), Server.Configuration.VisibleChunksDistance);
+            Chunk.GetChunksAround(GetCurrentChunk(), Server.Configuration.VisibleChunksDistance);
         var chunksToLoad = visibleChunks.Except(_loadedChunks);
         var chunksToUnload = _loadedChunks.Except(visibleChunks);
 
