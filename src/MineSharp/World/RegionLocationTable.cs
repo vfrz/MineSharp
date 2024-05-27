@@ -36,8 +36,8 @@ public class RegionLocationTable
     {
         if (!GetChunkLocation(chunkPosition).IsEmpty)
             throw new Exception();
-        //TODO Fix this fixed size of 32 sectors
-        var regionLocation = new RegionLocation(_allocatedChunks * 32 + 2, 32);
+        //TODO Fix this fixed size of 8 sectors
+        var regionLocation = new RegionLocation(_allocatedChunks * 8 + 2, 8);
         _allocatedChunks++;
         SetChunkLocation(chunkPosition, regionLocation);
         return regionLocation;

@@ -601,6 +601,7 @@ public class MinecraftServer : IDisposable
 
     public void Dispose()
     {
+        World.Dispose();
         _addClientSemaphore.Dispose();
     }
 }

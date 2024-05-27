@@ -24,8 +24,8 @@ public class NbtSerializer
 
         if (compression is NbtCompression.Zlib)
         {
-            using var gzipStream = new ZLibStream(stream, CompressionMode.Decompress, true);
-            using var reader = new BinaryReader(gzipStream, Encoding.UTF8, true);
+            using var zLibStream = new ZLibStream(stream, CompressionMode.Decompress, true);
+            using var reader = new BinaryReader(zLibStream, Encoding.UTF8, true);
             return ParseTag(reader);
         }
 
@@ -53,8 +53,8 @@ public class NbtSerializer
         }
         else if (compression is NbtCompression.Zlib)
         {
-            using var gzipStream = new ZLibStream(stream, CompressionMode.Compress, true);
-            using var writer = new BinaryWriter(gzipStream, Encoding.UTF8, true);
+            using var zLibStream = new ZLibStream(stream, CompressionMode.Compress, true);
+            using var writer = new BinaryWriter(zLibStream, Encoding.UTF8, true);
             WriteTag(tag, writer);
         }
         else

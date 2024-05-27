@@ -9,7 +9,7 @@ using MineSharp.World.Generation;
 
 namespace MineSharp.World;
 
-public class MinecraftWorld
+public class MinecraftWorld : IDisposable
 {
     public int Seed { get; }
     public bool Raining { get; private set; }
@@ -79,11 +79,7 @@ public class MinecraftWorld
     {
         var initialChunks = Chunk.GetChunksAround(Vector2i.Zero, Server.Configuration.VisibleChunksDistance);
         Server.GetLogger<MinecraftWorld>().LogInformation("Generating world...");
-        await Parallel.ForEachAsync(initialChunks, new ParallelOptions
-            {
-                MaxDegreeOfParallelism = 1
-            },
-            async (chunkPosition, _) => await GetOrCreateChunkAsync(chunkPosition));
+        await Parallel.ForEachAsync(initialChunks, async (chunkPosition, _) => await GetOrCreateChunkAsync(chunkPosition));
     }
 
     public async Task<Chunk> GetOrCreateChunkAsync(Vector2i chunkPosition)
@@ -191,6 +187,14 @@ public class MinecraftWorld
             region = await Region.LoadOrCreateAsync(regionPosition, this);
             _regions[regionPosition] = region;
             return region;
+        }
+    }
+
+    public void Dispose()
+    {
+        foreach (var region in _regions.Values)
+        {
+            region.Dispose();
         }
     }
 }
