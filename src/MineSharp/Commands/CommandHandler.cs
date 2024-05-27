@@ -26,7 +26,7 @@ public class CommandHandler
         if (!_commands.TryGetValue(parsedCommand.Command, out var handler))
         {
             if (remoteClient is not null)
-                await remoteClient.SendChatAsync("Command not found.");
+                await remoteClient.SendChatAsync($"{ChatColors.Red}Command not found: {parsedCommand.Command}");
             return false;
         }
 

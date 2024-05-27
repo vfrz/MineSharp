@@ -104,7 +104,7 @@ public class Player : LivingEntity
     private PlayerSaveData GetSaveData()
     {
         var inventory = Inventory.Slots
-            .Select((itemStack, index) => new InventorySlotSaveData((byte)index, itemStack))
+            .Select((itemStack, index) => new InventorySlotSaveData((byte) index, itemStack))
             .ToArray();
 
         return new PlayerSaveData
@@ -148,7 +148,7 @@ public class Player : LivingEntity
             }
             else
             {
-                Inventory.SetSlot(slotIndex, itemStack with { Count = (byte)(itemStack.Count - quantity) });
+                Inventory.SetSlot(slotIndex, itemStack with { Count = (byte) (itemStack.Count - quantity) });
             }
 
             return true;
@@ -189,7 +189,7 @@ public class Player : LivingEntity
 
     protected override async Task BroadcastEntityMetadataAsync()
     {
-        await Server!.BroadcastPacketAsync(new EntityMetadataPacket
+        await Server.BroadcastPacketAsync(new EntityMetadataPacket
         {
             EntityId = EntityId,
             Metadata = Metadata
@@ -208,19 +208,19 @@ public class Player : LivingEntity
         await Server.BroadcastPacketAsync(new EntityVelocityPacket
         {
             EntityId = targetEntity.EntityId,
-            VelocityX = (short)(-MinecraftMath.SinDegree(Yaw) * 3000 * multiplier.X),
-            VelocityY = (short)(targetEntity.OnGround ? 3000 * multiplier.Y : 0),
-            VelocityZ = (short)(MinecraftMath.CosDegree(Yaw) * 3000 * multiplier.Z)
+            VelocityX = (short) (-MinecraftMath.SinDegree(Yaw) * 3000 * multiplier.X),
+            VelocityY = (short) (targetEntity.OnGround ? 3000 * multiplier.Y : 0),
+            VelocityZ = (short) (MinecraftMath.CosDegree(Yaw) * 3000 * multiplier.Z)
         });
         //TODO Adapt damage depending on player's weapon/tool
         //var selectedItem = remotePlayer.
         var damage = HoldItemStack == ItemStack.Empty ? 1 : ItemInfoProvider.Get(HoldItemStack.ItemId).DamageOnEntity;
-        await targetEntity.SetHealthAsync((short)(targetEntity.Health - damage));
+        await targetEntity.SetHealthAsync((short) (targetEntity.Health - damage));
     }
 
     private async Task BroadcastHoldItemAsync()
     {
-        await Server!.BroadcastPacketAsync(new EntityEquipmentPacket
+        await Server.BroadcastPacketAsync(new EntityEquipmentPacket
         {
             EntityId = EntityId,
             Slot = 0,
@@ -228,9 +228,11 @@ public class Player : LivingEntity
         }, RemoteClient);
     }
 
+    public async Task AddHealthAsync(int amount) => await SetHealthAsync((short) (Health + amount));
+
     public override async Task SetHealthAsync(short health)
     {
-        Health = Math.Clamp(health, (short)0, MaxHealth);
+        Health = Math.Clamp(health, (short) 0, MaxHealth);
         await RemoteClient.SendPacketAsync(new UpdateHealthPacket
         {
             Health = health

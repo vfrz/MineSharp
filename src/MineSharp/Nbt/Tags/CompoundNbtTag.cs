@@ -2,7 +2,7 @@ using System.Collections;
 
 namespace MineSharp.Nbt.Tags;
 
-public class CompoundNbtTag(string? name) : INbtTag, IEnumerable<INbtTag>
+public readonly struct CompoundNbtTag(string? name) : INbtTag, IEnumerable<INbtTag>
 {
     private readonly Dictionary<string, INbtTag> _values = new();
 
@@ -21,7 +21,7 @@ public class CompoundNbtTag(string? name) : INbtTag, IEnumerable<INbtTag>
         this[tag.Name!] = tag;
         return this;
     }
-
+    
     public IEnumerator<INbtTag> GetEnumerator()
     {
         return _values.Values.GetEnumerator();

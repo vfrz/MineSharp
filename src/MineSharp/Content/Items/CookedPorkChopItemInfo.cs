@@ -1,6 +1,7 @@
 namespace MineSharp.Content.Items;
 
-public class CookedPorkChopItemInfo : ItemInfo
+public class CookedPorkChopItemInfo : FoodItemInfo
 {
     public override ItemId ItemId => ItemId.CookedPorkChop;
+    public override short HealthRestore => 8;
 }

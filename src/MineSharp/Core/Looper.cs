@@ -64,6 +64,16 @@ public class Looper : IDisposable
         _tasksToSchedule.Enqueue(new TaskToSchedule(func, longDelay));
     }
 
+    public void Schedule(TimeSpan delay, Action<CancellationToken> func)
+    {
+        Schedule(delay, token =>
+        {
+            func(token);
+            return Task.CompletedTask;
+        });
+    }
+
+
     public void RegisterLoop(TimeSpan interval, Func<CancellationToken, Task> func, bool executeOnStart = true)
     {
         if (Running)

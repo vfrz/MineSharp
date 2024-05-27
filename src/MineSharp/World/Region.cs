@@ -17,7 +17,6 @@ public class Region : IDisposable
     public IEnumerable<Chunk> Chunks => _chunks.Values;
 
     private readonly AsyncKeyedLocker<Vector2i> _chunkLoadLocker = new();
-    private readonly SemaphoreSlim _fileLocker = new(1, 1);
 
     public Vector2i RegionPosition { get; }
 
@@ -26,13 +25,13 @@ public class Region : IDisposable
     private readonly RegionLocationTable _regionLocationTable;
     private readonly RegionTimestampTable _regionTimestampTable;
 
-    private readonly FileStream _fileStream;
+    private readonly LockableFileStream _fileStream;
 
     private Region(Vector2i regionPosition,
         MinecraftWorld world,
         RegionLocationTable regionLocationTable,
         RegionTimestampTable regionTimestampTable,
-        FileStream fileStream)
+        LockableFileStream fileStream)
     {
         RegionPosition = regionPosition;
         World = world;
@@ -45,7 +44,7 @@ public class Region : IDisposable
     {
         if (SaveManager.IsRegionSaved(regionPosition))
         {
-            var regionFileStream = File.Open(SaveManager.GetRegionFilePath(regionPosition), FileMode.Open, FileAccess.ReadWrite);
+            var regionFileStream = new LockableFileStream(SaveManager.GetRegionFilePath(regionPosition), FileMode.Open, FileAccess.ReadWrite);
 
             var locationBytes = new byte[RegionLocationTable.Size];
             await regionFileStream.ReadExactlyAsync(locationBytes);
@@ -59,7 +58,7 @@ public class Region : IDisposable
         }
         else
         {
-            var regionFileStream = File.Open(SaveManager.GetRegionFilePath(regionPosition), FileMode.Create, FileAccess.ReadWrite);
+            var regionFileStream = new LockableFileStream(SaveManager.GetRegionFilePath(regionPosition), FileMode.Create, FileAccess.ReadWrite);
 
             var locationTable = new RegionLocationTable();
             var timestampTable = new RegionTimestampTable();
@@ -102,9 +101,8 @@ public class Region : IDisposable
                 }
                 else
                 {
-                    try
+                    using (await _fileStream.EnterLockAsync())
                     {
-                        await _fileLocker.WaitAsync();
                         _fileStream.Seek(location.Offset * 4096, SeekOrigin.Begin);
 
                         var lengthBytes = new byte[4];
@@ -130,10 +128,6 @@ public class Region : IDisposable
                         chunk = Chunk.CreateFromNbt(chunkNbt);
                         _chunks.TryAdd(chunkPosition, chunk);
                     }
-                    finally
-                    {
-                        _fileLocker.Release();
-                    }
                 }
             }
 
@@ -143,10 +137,8 @@ public class Region : IDisposable
 
     private async Task SaveChunkAsync(Chunk chunk)
     {
-        try
+        using (await _fileStream.EnterLockAsync())
         {
-            await _fileLocker.WaitAsync();
-
             var location = _regionLocationTable.GetChunkLocation(chunk.ChunkPosition);
             if (location.IsEmpty)
                 throw new Exception();
@@ -157,21 +149,15 @@ public class Region : IDisposable
             var lengthBytes = new byte[4];
             BinaryPrimitives.WriteInt32BigEndian(lengthBytes, nbtBytes.Length);
             await _fileStream.WriteAsync(lengthBytes);
-            //TODO Implement compression
             _fileStream.WriteByte(2);
             await _fileStream.WriteAsync(nbtBytes);
-        }
-        finally
-        {
-            _fileLocker.Release();
         }
     }
 
     public async Task SaveAsync()
     {
-        try
+        using (await _fileStream.EnterLockAsync())
         {
-            await _fileLocker.WaitAsync();
             _fileStream.Seek(0, SeekOrigin.Begin);
             await _fileStream.WriteAsync(_regionLocationTable.Data);
             await _fileStream.WriteAsync(_regionTimestampTable.Data);
@@ -188,28 +174,20 @@ public class Region : IDisposable
                 var lengthBytes = new byte[4];
                 BinaryPrimitives.WriteInt32BigEndian(lengthBytes, nbtBytes.Length);
                 await _fileStream.WriteAsync(lengthBytes);
-                //TODO Implement compression
                 _fileStream.WriteByte(2);
                 await _fileStream.WriteAsync(nbtBytes);
             }
         }
-        finally
-        {
-            _fileLocker.Release();
-        }
-    }
-
-    public static Vector2i GetRegionPositionForWorldPosition(Vector2i worldPosition)
-    {
-        var regionX = worldPosition.X / (RegionWidth * Chunk.ChunkWidth) - (worldPosition.X < 0 ? 1 : 0);
-        var regionZ = worldPosition.Z / (RegionWidth * Chunk.ChunkWidth) - (worldPosition.Z < 0 ? 1 : 0);
-        return new Vector2i(regionX, regionZ);
     }
 
     public static Vector2i GetRegionPositionForChunkPosition(Vector2i chunkPosition)
     {
-        var regionX = chunkPosition.X / RegionWidth - (chunkPosition.X < 0 ? 1 : 0);
-        var regionZ = chunkPosition.Z / RegionWidth - (chunkPosition.Z < 0 ? 1 : 0);
+        var regionX = chunkPosition.X / RegionWidth;
+        var regionZ = chunkPosition.Z / RegionWidth;
+        if (chunkPosition.X < 0 && chunkPosition.X % RegionWidth != 0)
+            regionX--;
+        if (chunkPosition.Z < 0 && chunkPosition.Z % RegionWidth != 0)
+            regionZ--;
         return new Vector2i(regionX, regionZ);
     }
 

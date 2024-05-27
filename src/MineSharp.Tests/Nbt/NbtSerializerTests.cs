@@ -16,10 +16,9 @@ public class NbtSerializerTests
 
         var serialized = NbtSerializer.Serialize(originalNbt);
 
-        var deserialized = NbtSerializer.Deserialize(serialized) as CompoundNbtTag;
+        var deserialized = (CompoundNbtTag) NbtSerializer.Deserialize(serialized);
 
-        deserialized.Should().NotBeNull();
-        deserialized!.Name.Should().Be("Test");
+        deserialized.Name.Should().Be("Test");
         deserialized.Should().HaveCount(2);
     }
 }

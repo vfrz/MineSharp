@@ -3,5 +3,5 @@ namespace MineSharp.Content.Items;
 public class GoldenAppleItemInfo : FoodItemInfo
 {
     public override ItemId ItemId => ItemId.GoldenApple;
-    public override short HealthRestore { get; } //TODO
+    public override short HealthRestore => 20;
 }

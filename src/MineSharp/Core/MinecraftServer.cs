@@ -3,6 +3,7 @@ using System.IO.Pipelines;
 using System.Net;
 using System.Net.Sockets;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MineSharp.Commands;
@@ -10,6 +11,7 @@ using MineSharp.Configuration;
 using MineSharp.Content;
 using MineSharp.Entities;
 using MineSharp.Entities.Mobs;
+using MineSharp.Extensions;
 using MineSharp.Network;
 using MineSharp.Network.Packets;
 using MineSharp.Saves;
@@ -34,7 +36,8 @@ public class MinecraftServer : IDisposable
     private readonly ILogger<MinecraftServer> _logger;
     private readonly IServiceProvider _serviceProvider;
     private readonly CommandHandler _commandHandler;
-
+    private readonly IHostApplicationLifetime _hostApplicationLifetime;
+    
     public MinecraftWorld World { get; private set; } = null!;
 
     public EntityManager EntityManager { get; }
@@ -46,13 +49,15 @@ public class MinecraftServer : IDisposable
         IOptions<ServerConfiguration> configuration,
         ILogger<MinecraftServer> logger,
         IServiceProvider serviceProvider,
-        CommandHandler commandHandler)
+        CommandHandler commandHandler,
+        IHostApplicationLifetime hostApplicationLifetime)
     {
         _packetDispatcher = packetDispatcher;
         Configuration = configuration.Value;
         _logger = logger;
         _serviceProvider = serviceProvider;
         _commandHandler = commandHandler;
+        _hostApplicationLifetime = hostApplicationLifetime;
         _remoteClients = new ConcurrentDictionary<string, RemoteClient>();
 
         EntityManager = new EntityManager(this);
@@ -130,7 +135,7 @@ public class MinecraftServer : IDisposable
         await BroadcastPacketAsync(new KeepAlivePacket(), readyOnly: true);
     }
 
-    public async Task StopAsync(CancellationToken cancellationToken)
+    public async Task ShutdownAsync(CancellationToken cancellationToken)
     {
         await DisconnectAllPlayersAsync("Server stopped.");
 
@@ -146,8 +151,21 @@ public class MinecraftServer : IDisposable
         await SaveAsync(cancellationToken);
     }
 
+    public void Stop()
+    {
+        _hostApplicationLifetime.StopApplication();
+    }
+
     private void RegisterDefaultCommands()
     {
+        _commandHandler.TryRegisterCommand("stop", async (server, _, _) =>
+        {
+            var delay = TimeSpan.FromSeconds(5);
+            server.Looper.Schedule(delay, _ => server.Stop());
+            await server.BroadcastChatAsync($"{ChatColors.Yellow}Server will stop in {(int) delay.TotalSeconds} seconds!");
+            return true;
+        });
+        
         _commandHandler.TryRegisterCommand("id", async (_, client, _) =>
         {
             if (client is null)
@@ -190,6 +208,13 @@ public class MinecraftServer : IDisposable
         _commandHandler.TryRegisterCommand("heal", async (_, client, _) =>
         {
             await client!.Player!.SetHealthAsync(20);
+            return true;
+        });
+
+        _commandHandler.TryRegisterCommand("dmg", async (_, client, args) =>
+        {
+            var value = args[0].ParseInt();
+            await client!.Player!.SetHealthAsync((short) (client.Player.Health - value));
             return true;
         });
 
@@ -243,6 +268,12 @@ public class MinecraftServer : IDisposable
             await server.SaveAsync(CancellationToken.None);
             await client!.SendChatAsync($"{ChatColors.Green}Saved successfully");
             return true;
+        });
+
+        _commandHandler.TryRegisterCommand("gc", (_, _, _) =>
+        {
+            GC.Collect();
+            return Task.FromResult(true);
         });
 
         _commandHandler.TryRegisterCommand("tp", async (server, client, args) =>

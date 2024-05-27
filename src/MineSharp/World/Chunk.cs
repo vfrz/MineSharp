@@ -121,24 +121,27 @@ public class Chunk : IBlockChunkData
         => new((position.X % ChunkWidth + ChunkWidth) % ChunkWidth, position.Y,
             (position.Z % ChunkWidth + ChunkWidth) % ChunkWidth);
 
-    public static Vector2i GetChunkPositionForWorldPosition(Vector3d position)
-    {
-        var chunkX = (int) position.X / ChunkWidth - (position.X < 0 ? 1 : 0);
-        var chunkZ = (int) position.Z / ChunkWidth - (position.Z < 0 ? 1 : 0);
-        return new Vector2i(chunkX, chunkZ);
-    }
+    public static Vector2i GetChunkPositionForWorldPosition(Vector3d position) => GetChunkPositionForWorldPosition(position.ToVector3i());
 
     public static Vector2i GetChunkPositionForWorldPosition(Vector3i position)
     {
-        var chunkX = position.X / ChunkWidth - (position.X < 0 ? 1 : 0);
-        var chunkZ = position.Z / ChunkWidth - (position.Z < 0 ? 1 : 0);
+        var chunkX = position.X / ChunkWidth;
+        var chunkZ = position.Z / ChunkWidth;
+        if (position.X < 0 && position.X % ChunkWidth != 0)
+            chunkX--;
+        if (position.Z < 0 && position.Z % ChunkWidth != 0)
+            chunkZ--;
         return new Vector2i(chunkX, chunkZ);
     }
 
     public static Vector2i GetChunkPositionForWorldPosition(Vector2i position)
     {
-        var chunkX = position.X / ChunkWidth - (position.X < 0 ? 1 : 0);
-        var chunkZ = position.Z / ChunkWidth - (position.Z < 0 ? 1 : 0);
+        var chunkX = position.X / ChunkWidth;
+        var chunkZ = position.Z / ChunkWidth;
+        if (position.X < 0 && position.X % ChunkWidth != 0)
+            chunkX--;
+        if (position.Z < 0 && position.Z % ChunkWidth != 0)
+            chunkZ--;
         return new Vector2i(chunkX, chunkZ);
     }
 

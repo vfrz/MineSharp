@@ -1,6 +1,6 @@
 namespace MineSharp.Nbt.Tags;
 
-public class EndNbtTag : INbtTag
+public readonly struct EndNbtTag : INbtTag
 {
     public static readonly EndNbtTag Instance = new();
 

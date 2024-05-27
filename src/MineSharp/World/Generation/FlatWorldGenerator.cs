@@ -8,7 +8,7 @@ public class FlatWorldGenerator : IWorldGenerator
     private readonly BlockId _blockId;
     private readonly byte _height;
 
-    public FlatWorldGenerator(BlockId blockId = BlockId.Stone, byte height = 42)
+    public FlatWorldGenerator(BlockId blockId = BlockId.Stone, byte height = 64)
     {
         _blockId = blockId;
         _height = height;

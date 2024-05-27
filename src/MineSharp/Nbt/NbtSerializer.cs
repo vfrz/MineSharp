@@ -182,7 +182,7 @@ public class NbtSerializer
                     var compoundTag = new CompoundNbtTag(null);
 
                     INbtTag currentTag;
-                    while ((currentTag = ParseTag(reader)) != EndNbtTag.Instance)
+                    while ((currentTag = ParseTag(reader)) is not EndNbtTag)
                     {
                         compoundTag[currentTag.Name!] = currentTag;
                     }
@@ -206,7 +206,7 @@ public class NbtSerializer
         var compoundTag = new CompoundNbtTag(name);
 
         INbtTag currentTag;
-        while ((currentTag = ParseTag(reader)) != EndNbtTag.Instance)
+        while ((currentTag = ParseTag(reader)) is not EndNbtTag)
         {
             compoundTag[currentTag.Name!] = currentTag;
         }
@@ -371,12 +371,12 @@ public class NbtSerializer
         }
     }
 
-    private static void WriteCompoundTag(CompoundNbtTag tag, BinaryWriter writer)
+    private static void WriteCompoundTag(CompoundNbtTag compoundTag, BinaryWriter writer)
     {
         writer.Write((byte) TagType.Compound);
-        writer.WriteNbtString(tag.Name);
+        writer.WriteNbtString(compoundTag.Name);
 
-        foreach (var innerTag in tag)
+        foreach (var innerTag in compoundTag)
         {
             WriteTag(innerTag, writer);
         }
