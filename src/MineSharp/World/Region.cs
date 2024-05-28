@@ -1,6 +1,5 @@
 using System.Buffers.Binary;
 using System.Collections.Concurrent;
-using System.IO.Compression;
 using AsyncKeyedLock;
 using MineSharp.Core;
 using MineSharp.Extensions;
@@ -12,6 +11,7 @@ namespace MineSharp.World;
 public class Region : IDisposable
 {
     public const int RegionWidth = 32;
+    public const int FileSectorSize = 4096;
 
     private readonly ConcurrentDictionary<Vector2i, Chunk> _chunks = new();
     public IEnumerable<Chunk> Chunks => _chunks.Values;
@@ -46,11 +46,11 @@ public class Region : IDisposable
         {
             var regionFileStream = new LockableFileStream(SaveManager.GetRegionFilePath(regionPosition), FileMode.Open, FileAccess.ReadWrite);
 
-            var locationBytes = new byte[RegionLocationTable.Size];
+            var locationBytes = new byte[FileSectorSize];
             await regionFileStream.ReadExactlyAsync(locationBytes);
             var locationTable = new RegionLocationTable(locationBytes);
 
-            var timestampBytes = new byte[RegionTimestampTable.Size];
+            var timestampBytes = new byte[FileSectorSize];
             await regionFileStream.ReadExactlyAsync(timestampBytes);
             var timestampTable = new RegionTimestampTable(timestampBytes);
 
@@ -103,7 +103,7 @@ public class Region : IDisposable
                 {
                     using (await _fileStream.EnterLockAsync())
                     {
-                        _fileStream.Seek(location.Offset * 4096, SeekOrigin.Begin);
+                        _fileStream.Seek(location.Offset * FileSectorSize, SeekOrigin.Begin);
 
                         var lengthBytes = new byte[4];
                         _fileStream.ReadExactly(lengthBytes);
@@ -144,7 +144,7 @@ public class Region : IDisposable
                 throw new Exception();
             var nbt = chunk.ToNbt();
             var nbtBytes = NbtSerializer.Serialize(nbt).ZLibCompress();
-            var seekOffset = location.Offset * 4096;
+            var seekOffset = location.Offset * FileSectorSize;
             _fileStream.Seek(seekOffset, SeekOrigin.Begin);
             var lengthBytes = new byte[4];
             BinaryPrimitives.WriteInt32BigEndian(lengthBytes, nbtBytes.Length);
@@ -169,7 +169,7 @@ public class Region : IDisposable
                     throw new Exception();
                 var nbt = chunk.ToNbt();
                 var nbtBytes = NbtSerializer.Serialize(nbt).ZLibCompress();
-                var seekOffset = location.Offset * 4096;
+                var seekOffset = location.Offset * FileSectorSize;
                 _fileStream.Seek(seekOffset, SeekOrigin.Begin);
                 var lengthBytes = new byte[4];
                 BinaryPrimitives.WriteInt32BigEndian(lengthBytes, nbtBytes.Length);

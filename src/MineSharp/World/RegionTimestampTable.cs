@@ -4,20 +4,18 @@ namespace MineSharp.World;
 
 public class RegionTimestampTable
 {
-    public const int Size = Region.RegionWidth * Region.RegionWidth * 4;
-
     private readonly byte[] _data;
 
     public ReadOnlyMemory<byte> Data => _data;
 
     public RegionTimestampTable(byte[] data)
     {
-        if (data.Length != Size)
+        if (data.Length != Region.FileSectorSize)
             throw new Exception();
         _data = data;
     }
 
-    public RegionTimestampTable() : this(new byte[Size])
+    public RegionTimestampTable() : this(new byte[Region.FileSectorSize])
     {
     }
 

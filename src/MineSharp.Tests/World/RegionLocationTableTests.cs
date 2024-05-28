@@ -10,7 +10,7 @@ public class RegionLocationTableTests
     [TestMethod]
     public void RegionLocationTable_SetAndGet()
     {
-        var data = new byte[4096];
+        var data = new byte[Region.FileSectorSize];
         var table = new RegionLocationTable(data);
 
         var chunkPosition = new Vector2i(6, 9);

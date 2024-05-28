@@ -16,17 +16,12 @@ public class CommandHandler
 
     public async Task<bool> TryExecuteCommandAsync(string completeCommand, MinecraftServer server, RemoteClient? remoteClient)
     {
-        if (!CommandParser.TryParse(completeCommand, out var parsedCommand))
-        {
-            if (remoteClient is not null)
-                await remoteClient.SendChatAsync("Failed to read the command, please be sure to use it correctly.");
-            return false;
-        }
+        var parsedCommand = CommandParser.Parse(completeCommand);
 
-        if (!_commands.TryGetValue(parsedCommand.Command, out var handler))
+        if (!_commands.TryGetValue(parsedCommand.CommandName, out var handler))
         {
             if (remoteClient is not null)
-                await remoteClient.SendChatAsync($"{ChatColors.Red}Command not found: {parsedCommand.Command}");
+                await remoteClient.SendChatAsync($"{ChatColors.Red}Command not found: {parsedCommand.CommandName}");
             return false;
         }
 

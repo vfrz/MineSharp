@@ -10,7 +10,7 @@ public class RegionTimestampTableTests
     [TestMethod]
     public void RegionTimestampTable_SetAndGet()
     {
-        var data = new byte[4096];
+        var data = new byte[Region.FileSectorSize];
         var table = new RegionTimestampTable(data);
 
         var chunkPosition = new Vector2i(6, 9);

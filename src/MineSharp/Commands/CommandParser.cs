@@ -1,32 +1,96 @@
-using System.Text.RegularExpressions;
+using MineSharp.Extensions;
 
 namespace MineSharp.Commands;
 
-public static partial class CommandParser
+public static class CommandParser
 {
-    [GeneratedRegex("\\/(?:[^\\s\"\"]+)|(?:[^\\s\"\"]+|\"\"(?:[^\"\"\\\\]|\\\\.)*\"\")+|(?:\"(?:[^\"\\\\]|\\\\.)*\\\\?\")|(?:\"(?:[^\"\\\\]|\\\\.)*\")")]
-    private static partial Regex GenerateCommandRegex();
+    public record ParsedCommand(string CommandName, string[] Args);
 
-    public record Result(string Command, string[] Args);
-
-    public static bool TryParse(string command, out Result result)
+    public static ParsedCommand Parse(string command)
     {
-        var matchResult = GenerateCommandRegex().Matches(command);
+        var commandCharArrayQueue = new Queue<char>(command.ToCharArray());
 
-        if (!matchResult.Any())
+        //Dequeue '/'
+        commandCharArrayQueue.Dequeue();
+
+        var commandName = ParseCommandName(commandCharArrayQueue);
+        var commandArguments = ParseCommandArguments(commandCharArrayQueue);
+
+        return new ParsedCommand(commandName, commandArguments);
+    }
+
+    private static string ParseCommandName(Queue<char> queue)
+    {
+        var command = "";
+        while (queue.IsNotEmpty() && queue.Peek() != ' ')
         {
-            result = new Result(string.Empty, []);
-            return false;
+            command += queue.Dequeue();
         }
 
-        var commandValue = matchResult.First().Value[1..];
-        var args = matchResult.Skip(1).Select(match =>
+        return command;
+    }
+
+    private static string[] ParseCommandArguments(Queue<char> queue)
+    {
+        var arguments = new List<string>();
+        while (queue.IsNotEmpty())
         {
-            if (match.Value.StartsWith('"') && match.Value.EndsWith('"'))
-                return match.Value.Substring(1, match.Value.Length - 2).Replace("\\\"", "\"");
-            return match.Value;
-        }).ToArray();
-        result = new Result(commandValue, args);
-        return true;
+            var argument = ParseCommandArgument(queue);
+            if (argument is null)
+                break;
+            arguments.Add(argument);
+        }
+
+        return arguments.ToArray();
+    }
+
+    private static string? ParseCommandArgument(Queue<char> queue)
+    {
+        while (queue.IsNotEmpty() && queue.Peek() == ' ')
+        {
+            queue.Dequeue();
+        }
+
+        if (queue.IsEmpty())
+            return null;
+        
+        var argument = "";
+
+        if (queue.Peek() == '"')
+        {
+            //Dequeue '"'
+            queue.Dequeue();
+
+            while (queue.IsNotEmpty())
+            {
+                var peek = queue.Peek();
+                if (peek == '\\')
+                {
+                    queue.Dequeue();
+                    if (queue.IsNotEmpty())
+                    {
+                        argument += queue.Dequeue();
+                    }
+                }
+                else if (peek == '"')
+                {
+                    queue.Dequeue();
+                    break;
+                }
+                else
+                {
+                    argument += queue.Dequeue();
+                }
+            }
+        }
+        else
+        {
+            while (queue.IsNotEmpty() && queue.Peek() != ' ')
+            {
+                argument += queue.Dequeue();
+            }
+        }
+
+        return argument;
     }
 }
