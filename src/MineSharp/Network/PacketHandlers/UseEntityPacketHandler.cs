@@ -1,7 +1,8 @@
 using MineSharp.Core;
 using MineSharp.Entities;
+using MineSharp.Network.Packets;
 
-namespace MineSharp.Network.Packets.Handlers;
+namespace MineSharp.Network.PacketHandlers;
 
 public class UseEntityPacketHandler : IClientPacketHandler<UseEntityPacket>
 {

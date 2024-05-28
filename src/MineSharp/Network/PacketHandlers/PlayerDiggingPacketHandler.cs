@@ -1,32 +1,16 @@
 using MineSharp.Content;
 using MineSharp.Core;
 using MineSharp.Entities;
+using MineSharp.Network.Packets;
 
-namespace MineSharp.Network.Packets.Handlers;
+namespace MineSharp.Network.PacketHandlers;
 
 public class PlayerDiggingPacketHandler : IClientPacketHandler<PlayerDiggingPacket>
 {
-    // Sometime client doesn't send a packet with Finished status for some blocks
-    private static readonly BlockId[] InstantDigBlocks =
-    [
-        BlockId.Sapling,
-        BlockId.TallGrass,
-        BlockId.DeadShrub,
-        BlockId.YellowFlower,
-        BlockId.RedFlower,
-        BlockId.BrownMushroom,
-        BlockId.RedMushroom,
-        BlockId.Torch,
-        BlockId.Wheat,
-        BlockId.RedstoneTorch,
-        BlockId.GlowingRedstoneTorch,
-        BlockId.SugarCane,
-        BlockId.Sapling
-    ];
-
     public async Task HandleAsync(PlayerDiggingPacket packet, ClientPacketHandlerContext context)
     {
         var block = await context.Server.World.GetBlockAsync(packet.PositionAsVector3i);
+        var blockInfo = BlockInfoProvider.Get(block.BlockId);
 
         if (packet.Status is PlayerDiggingStatus.Finished)
         {
@@ -35,8 +19,7 @@ public class PlayerDiggingPacketHandler : IClientPacketHandler<PlayerDiggingPack
         }
         else
         {
-            if (packet.Status is PlayerDiggingStatus.Started or PlayerDiggingStatus.Finished
-                && InstantDigBlocks.Contains(await context.Server.World.GetBlockIdAsync(packet.PositionAsVector3i)))
+            if (packet.Status is PlayerDiggingStatus.Started && blockInfo.InstantDig)
             {
                 await context.Server.World.SetBlockAsync(packet.PositionAsVector3i, 0);
                 await GeneratePickupItemAsync(block, packet.PositionAsVector3i, context);

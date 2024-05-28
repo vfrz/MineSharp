@@ -1,4 +1,6 @@
-namespace MineSharp.Network.Packets.Handlers;
+using MineSharp.Network.Packets;
+
+namespace MineSharp.Network.PacketHandlers;
 
 public class RespawnPacketHandler : IClientPacketHandler<RespawnPacket>
 {

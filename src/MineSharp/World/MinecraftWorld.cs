@@ -27,9 +27,9 @@ public class MinecraftWorld : IDisposable
     {
         Server = server;
         Seed = seed;
-        WorldGenerator = new DefaultWorldGenerator(seed);
+        //WorldGenerator = new DefaultWorldGenerator(seed);
         //WorldGenerator = new DesertWorldGenerator(seed);
-        //WorldGenerator = new FlatWorldGenerator();
+        WorldGenerator = new FlatWorldGenerator();
         //WorldGenerator = new TestWorldGenerator(seed);
         Timer = new WorldTimer();
     }

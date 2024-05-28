@@ -8,5 +8,7 @@ public abstract class BlockItemInfo : ItemInfo
 
     public virtual ItemStack[] GetDroppedItems(ItemId miningItem, byte blockMetadata) => [];
 
+    public virtual bool InstantDig => false;
+
     public override byte StackMax => 64;
 }

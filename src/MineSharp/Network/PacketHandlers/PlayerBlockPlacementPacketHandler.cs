@@ -1,8 +1,9 @@
 using MineSharp.Content;
 using MineSharp.Content.Items;
 using MineSharp.Core;
+using MineSharp.Network.Packets;
 
-namespace MineSharp.Network.Packets.Handlers;
+namespace MineSharp.Network.PacketHandlers;
 
 public class PlayerBlockPlacementPacketHandler : IClientPacketHandler<PlayerBlockPlacementPacket>
 {

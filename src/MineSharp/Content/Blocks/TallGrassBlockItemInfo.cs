@@ -5,8 +5,10 @@ namespace MineSharp.Content.Blocks;
 public class TallGrassBlockItemInfo : BlockItemInfo
 {
     public override ItemId ItemId => ItemId.TallGrassBlock;
-    
+
     private readonly ThreadSafeRandom _random = new();
+
+    public override bool InstantDig => true;
 
     public override ItemStack[] GetDroppedItems(ItemId miningItem, byte blockMetadata)
     {

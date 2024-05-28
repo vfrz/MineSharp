@@ -1,7 +1,8 @@
 using Microsoft.Extensions.Logging;
 using MineSharp.Extensions;
+using MineSharp.Network.Packets;
 
-namespace MineSharp.Network.Packets.Handlers;
+namespace MineSharp.Network.PacketHandlers;
 
 public class WindowClickPacketHandler : IClientPacketHandler<WindowClickPacket>
 {
