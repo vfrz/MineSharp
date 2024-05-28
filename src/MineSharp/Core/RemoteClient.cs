@@ -138,25 +138,7 @@ public class RemoteClient : IDisposable
 
         foreach (var chunkToLoad in chunksToLoad)
         {
-            var chunk = await Server.World.GetOrCreateChunkAsync(chunkToLoad);
-
-            await SendPacketAsync(new PreChunkPacket
-            {
-                X = chunkToLoad.X,
-                Z = chunkToLoad.Z,
-                Mode = PreChunkPacket.LoadingMode.Load
-            });
-
-            await SendPacketAsync(new ChunkPacket
-            {
-                X = chunkToLoad.X * Chunk.ChunkWidth,
-                Y = 0,
-                Z = chunkToLoad.Z * Chunk.ChunkWidth,
-                SizeX = Chunk.ChunkWidth - 1,
-                SizeY = Chunk.ChunkHeight - 1,
-                SizeZ = Chunk.ChunkWidth - 1,
-                CompressedData = await chunk.ToCompressedDataAsync()
-            });
+            await LoadChunkAsync(chunkToLoad);
         }
 
         foreach (var chunkToUnload in chunksToUnload)

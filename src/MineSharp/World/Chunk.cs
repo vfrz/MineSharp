@@ -147,21 +147,20 @@ public class Chunk : IBlockChunkData
 
     public INbtTag ToNbt()
     {
-        //TODO Check if we can avoid .ToArray() on ArraySegment
         //TODO Add missing tags
         var nbt = new CompoundNbtTag("Level")
-            .AddTag(new ByteArrayNbtTag("Blocks", _blocks.ToArray()))
-            .AddTag(new ByteArrayNbtTag("Data", _metadata.ToArray()))
-            .AddTag(new ByteArrayNbtTag("SkyLight", _skyLight.ToArray()))
-            .AddTag(new ByteArrayNbtTag("BlockLight", _light.ToArray()))
+            .AddTag(new ByteArrayNbtTag("Blocks", _blocks))
+            .AddTag(new ByteArrayNbtTag("Data", _metadata))
+            .AddTag(new ByteArrayNbtTag("SkyLight", _skyLight))
+            .AddTag(new ByteArrayNbtTag("BlockLight", _light))
             .AddTag(new IntNbtTag("xPos", ChunkPosition.X))
             .AddTag(new IntNbtTag("zPos", ChunkPosition.Z));
         return nbt;
     }
 
-    [Obsolete]
     public async Task<byte[]> ToCompressedDataAsync()
     {
+        //TODO Keep an updated compressed version to avoid compress it everytime
         await using var output = new MemoryStream();
         await using (var stream = new ZLibStream(output, CompressionMode.Compress))
         {

@@ -308,8 +308,8 @@ public class NbtSerializer
     {
         writer.Write((byte) TagType.ByteArray);
         writer.WriteNbtString(tag.Name);
-        writer.WriteBigEndianInt(tag.Value.Length);
-        writer.Write(tag.Value);
+        writer.WriteBigEndianInt(tag.Count);
+        writer.Write(tag.Value, tag.Offset, tag.Count);
     }
 
     private static void WriteStringTag(StringNbtTag tag, BinaryWriter writer)

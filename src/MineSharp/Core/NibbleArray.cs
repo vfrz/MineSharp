@@ -6,6 +6,8 @@ public class NibbleArray
 
     public int Count => _innerArraySegment.Count;
 
+    public byte[]? Array => _innerArraySegment.Array;
+
     private readonly ArraySegment<byte> _innerArraySegment;
 
     public NibbleArray(byte[] innerArray, int offset, int count)
