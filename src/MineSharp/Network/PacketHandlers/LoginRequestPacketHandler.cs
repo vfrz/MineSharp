@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
 using MineSharp.Core;
+using MineSharp.Extensions;
 using MineSharp.Network.Packets;
 
 namespace MineSharp.Network.PacketHandlers;
@@ -34,8 +35,7 @@ public class LoginRequestPacketHandler : IClientPacketHandler<LoginRequestPacket
             username = packet.Username + Guid.NewGuid().ToString()[..4];
         }
 
-        await Semaphore.WaitAsync();
-        try
+        using (await Semaphore.EnterLockAsync())
         {
             if (context.Server.RemoteClients.Any(c => c.Player?.Username == packet.Username))
             {
@@ -46,13 +46,11 @@ public class LoginRequestPacketHandler : IClientPacketHandler<LoginRequestPacket
                 });
                 return;
             }
-        }
-        finally
-        {
-            Semaphore.Release();
+            
+            await context.RemoteClient.InitializePlayerAsync(username);
         }
 
-        var currentPlayer = await context.RemoteClient.InitializePlayerAsync(username);
+        var currentPlayer = context.RemoteClient.Player!;
 
         await context.RemoteClient.SendPacketAsync(new LoginResponsePacket
         {
@@ -64,18 +62,14 @@ public class LoginRequestPacketHandler : IClientPacketHandler<LoginRequestPacket
         context.RemoteClient.SetReady();
         //TODO Everything below is for experimentation and need to be moved somewhere else 
 
-        await currentPlayer.SetHealthAsync(20);
-
+        await currentPlayer.SendHealthAsync();
         await currentPlayer.SendInventoryAsync();
 
         // World chunks and more
 
         await context.RemoteClient.UpdateLoadedChunksAsync();
 
-        await context.RemoteClient.SendPacketAsync(new TimeUpdatePacket
-        {
-            Time = context.Server.World.Time
-        });
+        await context.Server.World.SendTimeUpdateAsync(context.RemoteClient);
 
         if (context.Server.World.Raining)
         {
@@ -108,7 +102,7 @@ public class LoginRequestPacketHandler : IClientPacketHandler<LoginRequestPacket
         foreach (var remoteClient in context.Server.RemoteClients)
         {
             if (remoteClient.Player is null
-                || remoteClient.Player.Dead
+                || remoteClient.Player.IsDead
                 || remoteClient == context.RemoteClient)
                 continue;
             var player = remoteClient.Player!;

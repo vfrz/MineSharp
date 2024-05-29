@@ -64,15 +64,23 @@ public class MinecraftWorld : IDisposable
     public async Task SetTimeAsync(long time)
     {
         Timer.SetTime(time);
-        await SendTimeUpdateAsync();
+        await BroadcastTimeUpdateAsync();
     }
 
-    public async Task SendTimeUpdateAsync(CancellationToken cancellationToken = default)
+    public async Task BroadcastTimeUpdateAsync(CancellationToken cancellationToken = default)
     {
         await Server.BroadcastPacketAsync(new TimeUpdatePacket
         {
             Time = Time
-        }, readyOnly: true);
+        }, readyClientsOnly: true);
+    }
+
+    public async Task SendTimeUpdateAsync(RemoteClient remoteClient)
+    {
+        await remoteClient.SendPacketAsync(new TimeUpdatePacket
+        {
+            Time = Time
+        });
     }
 
     public async Task LoadInitialChunksAsync()
@@ -133,6 +141,9 @@ public class MinecraftWorld : IDisposable
 
     public async Task StartRainAsync()
     {
+        if (Raining)
+            return;
+
         Raining = true;
         await Server.BroadcastPacketAsync(new NewStatePacket
         {
@@ -142,6 +153,9 @@ public class MinecraftWorld : IDisposable
 
     public async Task StopRainAsync()
     {
+        if (!Raining)
+            return;
+
         Raining = false;
         await Server.BroadcastPacketAsync(new NewStatePacket
         {

@@ -33,14 +33,14 @@ public class RemoteClient : IDisposable
         NetworkId = socket.RemoteEndPoint?.ToString() ?? throw new Exception();
     }
 
-    public async Task<Player> InitializePlayerAsync(string username)
+    public async Task InitializePlayerAsync(string username)
     {
         if (Player is not null)
-            throw new Exception($"Can't initialize player {username} because it has already been initialized");
+            throw new InvalidOperationException($"Can't initialize player {username} because it has already been initialized");
 
         if (SaveManager.IsPlayerSaved(username))
         {
-            Player = await Player.LoadPlayerAsync(Server, this, username);
+            Player = Player.LoadPlayer(Server, this, username);
         }
         else
         {
@@ -48,7 +48,6 @@ public class RemoteClient : IDisposable
         }
 
         Server.EntityManager.RegisterEntity(Player);
-        return Player;
     }
 
     public void SetReady()

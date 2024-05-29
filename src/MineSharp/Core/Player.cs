@@ -65,7 +65,8 @@ public class Player : LivingEntity
             Stance = position.Y + Height,
             OnGround = true,
             Pitch = 0,
-            Yaw = 0
+            Yaw = 0,
+            Health = 20
         };
 
         player.Save();
@@ -73,7 +74,7 @@ public class Player : LivingEntity
         return player;
     }
 
-    public static async Task<Player> LoadPlayerAsync(MinecraftServer server, RemoteClient remoteClient, string username)
+    public static Player LoadPlayer(MinecraftServer server, RemoteClient remoteClient, string username)
     {
         var saveData = SaveManager.LoadPlayer(username);
 
@@ -84,7 +85,8 @@ public class Player : LivingEntity
             Stance = saveData.Position.Y + Height + YMinOffset,
             OnGround = true,
             Pitch = saveData.Pitch,
-            Yaw = saveData.Yaw
+            Yaw = saveData.Yaw,
+            Health = saveData.Health
         };
 
         foreach (var slot in saveData.Inventory)
@@ -112,7 +114,8 @@ public class Player : LivingEntity
             Position = Position,
             Yaw = Yaw,
             Pitch = Pitch,
-            Inventory = inventory
+            Inventory = inventory,
+            Health = Health
         };
     }
 
@@ -233,10 +236,7 @@ public class Player : LivingEntity
     public override async Task SetHealthAsync(short health)
     {
         Health = Math.Clamp(health, (short) 0, MaxHealth);
-        await RemoteClient.SendPacketAsync(new UpdateHealthPacket
-        {
-            Health = health
-        });
+        await SendHealthAsync();
 
         if (Health == 0)
         {
@@ -258,6 +258,14 @@ public class Player : LivingEntity
                 }
             });
         }
+    }
+
+    public async Task SendHealthAsync()
+    {
+        await RemoteClient.SendPacketAsync(new UpdateHealthPacket
+        {
+            Health = Health
+        });
     }
 
     public async Task RespawnAsync(MinecraftDimension dimension)

@@ -37,7 +37,7 @@ public class MinecraftServer : IDisposable
     private readonly IServiceProvider _serviceProvider;
     private readonly CommandHandler _commandHandler;
     private readonly IHostApplicationLifetime _hostApplicationLifetime;
-    
+
     public MinecraftWorld World { get; private set; } = null!;
 
     public EntityManager EntityManager { get; }
@@ -90,7 +90,7 @@ public class MinecraftServer : IDisposable
 
         Looper.RegisterLoop(TimeSpan.FromSeconds(1), EntityManager.ProcessPickupItemsAsync);
         Looper.RegisterLoop(TimeSpan.FromSeconds(5), SendKeepAlivePacketsAsync);
-        Looper.RegisterLoop(TimeSpan.FromSeconds(1), World.SendTimeUpdateAsync);
+        Looper.RegisterLoop(TimeSpan.FromSeconds(1), World.BroadcastTimeUpdateAsync);
         Looper.RegisterLoop(TimeSpan.FromSeconds(1), async token =>
         {
             await Parallel.ForEachAsync(RemoteClients, token, async (client, _) =>
@@ -132,7 +132,7 @@ public class MinecraftServer : IDisposable
 
     private async Task SendKeepAlivePacketsAsync(CancellationToken cancellationToken)
     {
-        await BroadcastPacketAsync(new KeepAlivePacket(), readyOnly: true);
+        await BroadcastPacketAsync(new KeepAlivePacket(), readyClientsOnly: true);
     }
 
     public async Task ShutdownAsync(CancellationToken cancellationToken)
@@ -165,7 +165,7 @@ public class MinecraftServer : IDisposable
             await server.BroadcastChatAsync($"{ChatColors.Yellow}Server will stop in {(int) delay.TotalSeconds} seconds!");
             return true;
         });
-        
+
         _commandHandler.TryRegisterCommand("id", async (_, client, _) =>
         {
             if (client is null)
@@ -338,7 +338,7 @@ public class MinecraftServer : IDisposable
         foreach (var remoteClient in RemoteClients)
         {
             var player = remoteClient.Player;
-            if (player is null || player.PositionDirty is false || player.Health == 0)
+            if (player is null || player.PositionDirty is false || player.IsDead)
                 continue;
 
             // Kill player if off map
@@ -355,7 +355,7 @@ public class MinecraftServer : IDisposable
                 Z = player.Position.Z.ToAbsolutePosition(),
                 Yaw = MinecraftMath.RotationFloatToSByte(player.Yaw),
                 Pitch = MinecraftMath.RotationFloatToSByte(player.Pitch)
-            }, remoteClient, readyOnly: true);
+            }, remoteClient, readyClientsOnly: true);
             player.PositionDirty = false;
         }
 
@@ -388,14 +388,14 @@ public class MinecraftServer : IDisposable
         return Task.CompletedTask;
     }
 
-    public async Task BroadcastPacketAsync(IServerPacket packet, RemoteClient? except = null, bool readyOnly = false)
+    public async Task BroadcastPacketAsync(IServerPacket packet, RemoteClient? except = null, bool readyClientsOnly = false)
     {
         await using var writer = new PacketWriter(packet.PacketId);
         packet.Write(writer);
         var data = writer.ToByteArray();
         await Parallel.ForEachAsync(RemoteClients, async (client, _) =>
         {
-            if (client == except || (readyOnly && client.State != RemoteClient.ClientState.Ready))
+            if (client == except || (readyClientsOnly && client.State != RemoteClient.ClientState.Ready))
                 return;
             await client.TrySendAsync(data);
         });
@@ -458,8 +458,7 @@ public class MinecraftServer : IDisposable
     {
         var remoteClient = new RemoteClient(socket, this);
 
-        await _addClientSemaphore.WaitAsync(cancellationToken);
-        try
+        using (await _addClientSemaphore.EnterLockAsync(cancellationToken))
         {
             if (PlayerCount >= Configuration.MaxPlayers)
             {
@@ -467,17 +466,12 @@ public class MinecraftServer : IDisposable
                 {
                     Reason = $"Server is full: {_remoteClients.Count}/{Configuration.MaxPlayers}"
                 });
-                _logger.LogInformation("Client {networkId} tried to connect but the server is full",
-                    remoteClient.NetworkId);
+                _logger.LogInformation("Client {networkId} tried to connect but the server is full", remoteClient.NetworkId);
                 await remoteClient.DisconnectSocketAsync();
                 return;
             }
 
             AddRemoteClient(remoteClient);
-        }
-        finally
-        {
-            _addClientSemaphore.Release();
         }
 
         _logger.LogInformation("Client {networkId} connected", remoteClient.NetworkId);

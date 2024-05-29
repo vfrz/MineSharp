@@ -11,6 +11,6 @@ public abstract class LivingEntity(MinecraftServer server) : Entity(server), ILi
     public bool OnGround { get; set; }
     public short Health { get; protected set; }
     public abstract short MaxHealth { get; }
-    public bool Dead => Health == 0;
+    public bool IsDead => Health == 0;
     public abstract Task SetHealthAsync(short health);
 }

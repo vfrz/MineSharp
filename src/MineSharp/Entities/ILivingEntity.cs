@@ -18,7 +18,7 @@ public interface ILivingEntity : IEntity
 
     public short MaxHealth { get; }
     
-    public bool Dead { get; }
+    public bool IsDead { get; }
 
     public Task SetHealthAsync(short health);
 }

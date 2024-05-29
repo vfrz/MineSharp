@@ -104,12 +104,15 @@ public static class SaveManager
                 return new InventorySlotSaveData(Inventory.DataSlotToNetworkSlot(slot), new ItemStack(itemId, count, metadata));
             }).ToArray();
 
+        var health = playerCompound.Get<ShortNbtTag>("Health").Value;
+
         var playerSaveData = new PlayerSaveData
         {
             Position = new Vector3d(positionX, positionY, positionZ),
             Yaw = yaw,
             Pitch = pitch,
-            Inventory = inventory
+            Inventory = inventory,
+            Health = health
         };
 
         return playerSaveData;
@@ -142,7 +145,8 @@ public static class SaveManager
         var playerCompound = new CompoundNbtTag(null)
             .AddTag(new ListNbtTag("Pos", TagType.Double, positionList))
             .AddTag(new ListNbtTag("Rotation", TagType.Float, rotationList))
-            .AddTag(new ListNbtTag("Inventory", TagType.Compound, inventoryCompounds));
+            .AddTag(new ListNbtTag("Inventory", TagType.Compound, inventoryCompounds))
+            .AddTag(new ShortNbtTag("Health", playerSaveData.Health));
 
         using var fileStream = File.OpenWrite(GetPlayerSaveFile(username));
         NbtSerializer.Serialize(playerCompound, fileStream, NbtCompression.Gzip);

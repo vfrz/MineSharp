@@ -1,3 +1,5 @@
+using MineSharp.Extensions;
+
 namespace MineSharp.Core;
 
 public class LockableFileStream(string path, FileMode mode, FileAccess access) : Stream
@@ -5,11 +7,7 @@ public class LockableFileStream(string path, FileMode mode, FileAccess access) :
     private readonly FileStream _fileStream = File.Open(path, mode, access);
     private readonly SemaphoreSlim _semaphoreSlim = new(1, 1);
 
-    public async Task<IDisposable> EnterLockAsync()
-    {
-        await _semaphoreSlim.WaitAsync();
-        return new ThreadSafeFileStreamLock(_semaphoreSlim);
-    }
+    public async Task<IDisposable> EnterLockAsync() => await _semaphoreSlim.EnterLockAsync();
 
     public override async ValueTask WriteAsync(ReadOnlyMemory<byte> bytes, CancellationToken cancellationToken = default)
     {
@@ -41,13 +39,5 @@ public class LockableFileStream(string path, FileMode mode, FileAccess access) :
     {
         base.Dispose(disposing);
         _semaphoreSlim.Dispose();
-    }
-
-    private record struct ThreadSafeFileStreamLock(SemaphoreSlim SemaphoreSlim) : IDisposable
-    {
-        public void Dispose()
-        {
-            SemaphoreSlim.Release();
-        }
     }
 }
