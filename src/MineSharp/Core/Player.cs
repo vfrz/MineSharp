@@ -215,8 +215,7 @@ public class Player : LivingEntity
             VelocityY = (short) (targetEntity.OnGround ? 3000 * multiplier.Y : 0),
             VelocityZ = (short) (MinecraftMath.CosDegree(Yaw) * 3000 * multiplier.Z)
         });
-        //TODO Adapt damage depending on player's weapon/tool
-        //var selectedItem = remotePlayer.
+
         var damage = HoldItemStack == ItemStack.Empty ? 1 : ItemInfoProvider.Get(HoldItemStack.ItemId).DamageOnEntity;
         await targetEntity.SetHealthAsync((short) (targetEntity.Health - damage));
     }
@@ -363,7 +362,7 @@ public class Player : LivingEntity
         Respawning = false;
     }
 
-    private async Task SendPositionAndLookAsync()
+    public async Task SendPositionAndLookAsync()
     {
         await RemoteClient.SendPacketAsync(new PlayerPositionAndLookServerPacket
         {

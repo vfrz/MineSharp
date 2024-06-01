@@ -1,4 +1,4 @@
-namespace MineSharp.Core;
+namespace MineSharp.Windows;
 
 public enum WindowId : byte
 {

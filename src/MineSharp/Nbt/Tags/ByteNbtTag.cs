@@ -1,5 +1,3 @@
-using MineSharp.Extensions;
-
 namespace MineSharp.Nbt.Tags;
 
 public readonly struct ByteNbtTag(string? name, byte value) : INbtTag

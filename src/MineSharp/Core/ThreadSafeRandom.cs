@@ -1,8 +1,8 @@
 namespace MineSharp.Core;
 
-public class ThreadSafeRandom
+public class ThreadSafeRandom(int? seed = null)
 {
-    private readonly Random _random = new();
+    private readonly Random _random = seed.HasValue ? new Random(seed.Value) : new Random();
     private readonly object _lock = new();
 
     public float Next()

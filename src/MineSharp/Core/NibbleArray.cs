@@ -25,6 +25,4 @@ public class NibbleArray
             _innerArraySegment[index / 2] |= (byte) (value << (index % 2 * 4));
         }
     }
-
-    public byte[] ToArray() => _innerArraySegment.ToArray();
 }

@@ -7,7 +7,7 @@ namespace MineSharp.Network.PacketHandlers;
 
 public class LoginRequestPacketHandler : IClientPacketHandler<LoginRequestPacket>
 {
-    private static readonly SemaphoreSlim Semaphore = new(1, 1);
+    private static readonly SemaphoreSlim PlayerInitSemaphore = new(1, 1);
 
     private readonly ILogger<MinecraftServer> _logger;
 
@@ -20,7 +20,7 @@ public class LoginRequestPacketHandler : IClientPacketHandler<LoginRequestPacket
     {
         if (packet.ProtocolVersion != ServerConstants.ProtocolVersion)
         {
-            var message = $"{ChatColors.Red}Incompatible Minecraft client, protocol version required: {ServerConstants.ProtocolVersion}";
+            var message = $"{ChatColors.Red}Incompatible Minecraft client, game version required: {ServerConstants.GameVersion}";
             await context.RemoteClient.SendPacketAsync(new PlayerDisconnectPacket
             {
                 Reason = message
@@ -35,7 +35,7 @@ public class LoginRequestPacketHandler : IClientPacketHandler<LoginRequestPacket
             username = packet.Username + Guid.NewGuid().ToString()[..4];
         }
 
-        using (await Semaphore.EnterLockAsync())
+        using (await PlayerInitSemaphore.EnterLockAsync())
         {
             if (context.Server.RemoteClients.Any(c => c.Player?.Username == packet.Username))
             {
@@ -46,7 +46,7 @@ public class LoginRequestPacketHandler : IClientPacketHandler<LoginRequestPacket
                 });
                 return;
             }
-            
+
             await context.RemoteClient.InitializePlayerAsync(username);
         }
 
@@ -88,23 +88,12 @@ public class LoginRequestPacketHandler : IClientPacketHandler<LoginRequestPacket
             Z = 0
         });
 
-        await context.RemoteClient.SendPacketAsync(new PlayerPositionAndLookServerPacket
-        {
-            X = currentPlayer.Position.X,
-            Y = currentPlayer.Position.Y,
-            Z = currentPlayer.Position.Z,
-            Stance = currentPlayer.Stance,
-            Yaw = currentPlayer.Yaw,
-            Pitch = currentPlayer.Pitch,
-            OnGround = currentPlayer.OnGround
-        });
+        await currentPlayer.SendPositionAndLookAsync();
 
-        foreach (var remoteClient in context.Server.RemoteClients)
+        foreach (var remoteClient in context.Server.RemoteClients.Where(client => client != context.RemoteClient
+                                                                                  && client.Player is not null
+                                                                                  && !client.Player.IsDead))
         {
-            if (remoteClient.Player is null
-                || remoteClient.Player.IsDead
-                || remoteClient == context.RemoteClient)
-                continue;
             var player = remoteClient.Player!;
             await context.RemoteClient.SendPacketAsync(new NamedEntitySpawnPacket
             {
