@@ -8,5 +8,5 @@ public class DiamondAxeItemInfo : AxeItemInfo
 
     public override short Durability => 1562;
 
-    protected override ToolMaterial Material => ToolMaterial.Diamond;
+    public override ToolMaterial Material => ToolMaterial.Diamond;
 }

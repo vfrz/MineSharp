@@ -8,5 +8,5 @@ public class DiamondSwordItemInfo : SwordItemInfo
 
     public override short Durability => 1561;
 
-    protected override ToolMaterial Material => ToolMaterial.Diamond;
+    public override ToolMaterial Material => ToolMaterial.Diamond;
 }

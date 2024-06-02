@@ -1,4 +1,5 @@
 using MineSharp.Content;
+using MineSharp.Content.Items;
 using MineSharp.Core;
 using MineSharp.Entities;
 using MineSharp.Network.Packets;
@@ -10,32 +11,39 @@ public class PlayerDiggingPacketHandler : IClientPacketHandler<PlayerDiggingPack
     public async Task HandleAsync(PlayerDiggingPacket packet, ClientPacketHandlerContext context)
     {
         var block = await context.Server.World.GetBlockAsync(packet.PositionAsVector3i);
+
+        if (block.BlockId is BlockId.Air)
+            return;
+
         var blockInfo = BlockInfoProvider.Get(block.BlockId);
+
+        var miningItem = context.RemoteClient.Player!.HoldItemStack.ItemId;
+        var miningItemInfo = miningItem != ItemId.Empty ? ItemInfoProvider.Get(miningItem) : null;
 
         if (packet.Status is PlayerDiggingStatus.Finished)
         {
             await context.Server.World.SetBlockAsync(packet.PositionAsVector3i, 0);
-            await GeneratePickupItemAsync(block, packet.PositionAsVector3i, context);
+            await GeneratePickupItemAsync(block, packet.PositionAsVector3i, miningItemInfo, context);
             if (blockInfo.HasTileEntity)
                 await context.Server.World.SetTileEntityAsync(packet.PositionAsVector3i, null);
         }
         else
         {
-            if (packet.Status is PlayerDiggingStatus.Started && blockInfo.InstantDig)
+            if (packet.Status is PlayerDiggingStatus.Started && blockInfo.IsInstantDig(miningItemInfo, block.Metadata))
             {
                 await context.Server.World.SetBlockAsync(packet.PositionAsVector3i, 0);
-                await GeneratePickupItemAsync(block, packet.PositionAsVector3i, context);
+                await GeneratePickupItemAsync(block, packet.PositionAsVector3i, miningItemInfo, context);
                 if (blockInfo.HasTileEntity)
                     await context.Server.World.SetTileEntityAsync(packet.PositionAsVector3i, null);
             }
         }
     }
 
-    private async Task GeneratePickupItemAsync(Block block, Vector3i blockPosition, ClientPacketHandlerContext context)
+    private async Task GeneratePickupItemAsync(Block block, Vector3i blockPosition, ItemInfo? miningItemInfo,
+        ClientPacketHandlerContext context)
     {
         var blockInfo = BlockInfoProvider.Get(block.BlockId);
-        var miningItem = context.RemoteClient.Player!.HoldItemStack.ItemId;
-        var droppedItems = blockInfo.GetDroppedItems(miningItem, block.Metadata);
+        var droppedItems = blockInfo.GetDroppedItems(miningItemInfo, block.Metadata);
         foreach (var droppedItem in droppedItems)
         {
             await GeneratePickupItemAsync(droppedItem, blockPosition, context);

@@ -16,6 +16,33 @@ public class CraftingSystemTests
     }
 
     [TestMethod]
+    public void CraftingSystem_Craft_Furnace()
+    {
+        var output = CraftingSystem.Craft(new[,]
+        {
+            { new(ItemId.CobblestoneBlock), new(ItemId.CobblestoneBlock), new(ItemId.CobblestoneBlock) },
+            { new(ItemId.CobblestoneBlock), ItemStack.Empty, new(ItemId.CobblestoneBlock) },
+            { new(ItemId.CobblestoneBlock), new(ItemId.CobblestoneBlock), new(ItemId.CobblestoneBlock) }
+        });
+
+        output.ItemId.Should().Be(ItemId.FurnaceBlock);
+        output.Count.Should().Be(1);
+    }
+
+    [TestMethod]
+    public void CraftingSystem_Craft_Workbench()
+    {
+        var output = CraftingSystem.Craft(new ItemStack[,]
+        {
+            { new(ItemId.PlanksBlock), new(ItemId.PlanksBlock) },
+            { new(ItemId.PlanksBlock), new(ItemId.PlanksBlock) }
+        });
+
+        output.ItemId.Should().Be(ItemId.WorkbenchBlock);
+        output.Count.Should().Be(1);
+    }
+
+    [TestMethod]
     public void CraftingSystem_Craft_FlintAndSteel()
     {
         var output = CraftingSystem.Craft(new[,]

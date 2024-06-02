@@ -1,10 +1,12 @@
+using MineSharp.Content.Items;
+
 namespace MineSharp.Content.Blocks;
 
 public class PlanksBlockItemInfo : BlockItemInfo, ICraftable
 {
     public override ItemId ItemId => ItemId.PlanksBlock;
 
-    public override ItemStack[] GetDroppedItems(ItemId miningItem, byte blockMetadata)
+    public override ItemStack[] GetDroppedItems(ItemInfo? miningItemInfo, byte blockMetadata)
         => [new ItemStack(ItemId.PlanksBlock)];
 
     public CraftingRecipe CraftingRecipe => new(new ItemStack[,]

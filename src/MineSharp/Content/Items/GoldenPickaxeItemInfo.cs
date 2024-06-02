@@ -8,5 +8,5 @@ public class GoldenPickaxeItemInfo : PickaxeItemInfo
 
     public override short Durability => 33;
 
-    protected override ToolMaterial Material => ToolMaterial.Gold;
+    public override ToolMaterial Material => ToolMaterial.Gold;
 }

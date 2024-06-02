@@ -8,5 +8,5 @@ public class GoldenSwordItemInfo : SwordItemInfo
 
     public override short Durability => 32;
 
-    protected override ToolMaterial Material => ToolMaterial.Gold;
+    public override ToolMaterial Material => ToolMaterial.Gold;
 }

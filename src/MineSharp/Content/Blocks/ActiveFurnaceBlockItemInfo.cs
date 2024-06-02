@@ -6,9 +6,8 @@ public class ActiveFurnaceBlockItemInfo : BlockItemInfo
 {
     public override ItemId ItemId => ItemId.ActiveFurnaceBlock;
 
-    public override ItemStack[] GetDroppedItems(ItemId miningItem, byte blockMetadata)
+    public override ItemStack[] GetDroppedItems(ItemInfo? miningItemInfo, byte blockMetadata)
     {
-        var miningItemInfo = ItemInfoProvider.Get(miningItem);
         if (miningItemInfo is PickaxeItemInfo)
             return [new ItemStack(ItemId.FurnaceBlock)];
         return [];

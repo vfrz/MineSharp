@@ -8,5 +8,5 @@ public class IronHoeItemInfo : HoeItemInfo
 
     public override short Durability => 251;
 
-    protected override ToolMaterial Material => ToolMaterial.Iron;
+    public override ToolMaterial Material => ToolMaterial.Iron;
 }

@@ -19,7 +19,7 @@ public class PlayerBlockPlacementPacketHandler : IClientPacketHandler<PlayerBloc
             {
                 await PlaceSignAsync(packet, context);
             }
-            else if (packet.ItemId is ItemId.Door)
+            else if (packet.ItemId is ItemId.WoodenDoor)
             {
                 await PlaceDoorAsync(packet, context);
             }

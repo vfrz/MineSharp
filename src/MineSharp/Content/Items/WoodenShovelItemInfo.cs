@@ -8,5 +8,5 @@ public class WoodenShovelItemInfo : ShovelItemInfo
 
     public override short Durability => 60;
 
-    protected override ToolMaterial Material => ToolMaterial.Wood;
+    public override ToolMaterial Material => ToolMaterial.Wood;
 }
