@@ -309,7 +309,7 @@ public class MinecraftServer : IDisposable
             await client.SendPacketAsync(new PlayerPositionAndLookServerPacket
             {
                 X = player.Position.X,
-                Y = player.Position.Y,
+                Y = player.Position.Y + Player.YMinOffset,
                 Z = player.Position.Z,
                 Pitch = player.Pitch,
                 Yaw = player.Yaw,

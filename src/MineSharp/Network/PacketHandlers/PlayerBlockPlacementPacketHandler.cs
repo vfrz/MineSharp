@@ -2,6 +2,8 @@ using MineSharp.Content;
 using MineSharp.Content.Items;
 using MineSharp.Core;
 using MineSharp.Network.Packets;
+using MineSharp.TileEntities;
+using MineSharp.World;
 
 namespace MineSharp.Network.PacketHandlers;
 
@@ -140,6 +142,9 @@ public class PlayerBlockPlacementPacketHandler : IClientPacketHandler<PlayerBloc
         var blockId = onFloor ? BlockId.FloorSign : BlockId.WallSign;
 
         await context.Server.World.SetBlockAsync(directedPosition, blockId, orientationMetadata);
+
+        var signTileEntity = new SignTileEntity(Chunk.WorldToLocal(directedPosition));
+        await context.Server.World.SetTileEntityAsync(directedPosition, signTileEntity);
     }
 
     private async Task PlaceDoorAsync(PlayerBlockPlacementPacket packet, ClientPacketHandlerContext context)

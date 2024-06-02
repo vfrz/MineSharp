@@ -16,6 +16,8 @@ public class PlayerDiggingPacketHandler : IClientPacketHandler<PlayerDiggingPack
         {
             await context.Server.World.SetBlockAsync(packet.PositionAsVector3i, 0);
             await GeneratePickupItemAsync(block, packet.PositionAsVector3i, context);
+            if (blockInfo.HasTileEntity)
+                await context.Server.World.SetTileEntityAsync(packet.PositionAsVector3i, null);
         }
         else
         {
@@ -23,6 +25,8 @@ public class PlayerDiggingPacketHandler : IClientPacketHandler<PlayerDiggingPack
             {
                 await context.Server.World.SetBlockAsync(packet.PositionAsVector3i, 0);
                 await GeneratePickupItemAsync(block, packet.PositionAsVector3i, context);
+                if (blockInfo.HasTileEntity)
+                    await context.Server.World.SetTileEntityAsync(packet.PositionAsVector3i, null);
             }
         }
     }

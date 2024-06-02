@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using MineSharp.Network;
 using MineSharp.Network.Packets;
 using MineSharp.Saves;
+using MineSharp.TileEntities;
 using MineSharp.World;
 
 namespace MineSharp.Core;
@@ -126,6 +127,27 @@ public class RemoteClient : IDisposable
             SizeZ = Chunk.ChunkWidth - 1,
             CompressedData = await chunk.ToCompressedDataAsync()
         });
+
+        foreach (var tileEntity in chunk.TileEntities)
+        {
+            if (tileEntity is SignTileEntity signTileEntity)
+            {
+                await SendPacketAsync(new UpdateSignPacket
+                {
+                    X = signTileEntity.LocalPosition.X,
+                    Y = (short) signTileEntity.LocalPosition.Y,
+                    Z = signTileEntity.LocalPosition.Z,
+                    Text1 = signTileEntity.Text1 ?? string.Empty,
+                    Text2 = signTileEntity.Text2 ?? string.Empty,
+                    Text3 = signTileEntity.Text3 ?? string.Empty,
+                    Text4 = signTileEntity.Text4 ?? string.Empty
+                });
+            }
+            else
+            {
+                //TODO Handle other TileEntity types
+            }
+        }
     }
 
     public async Task UpdateLoadedChunksAsync()

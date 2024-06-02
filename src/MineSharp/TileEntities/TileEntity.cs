@@ -1,10 +1,39 @@
 using MineSharp.Core;
+using MineSharp.Nbt.Tags;
 
 namespace MineSharp.TileEntities;
 
 public abstract class TileEntity
 {
-    public required string EntityId { get; init; }
+    public abstract string EntityId { get; }
 
-    public required Vector3i LocalPosition { get; init; }
+    public Vector3i LocalPosition { get; private set; }
+
+    public abstract INbtTag ToNbt();
+
+    protected TileEntity()
+    {
+    }
+
+    protected TileEntity(Vector3i localPosition)
+    {
+        LocalPosition = localPosition;
+    }
+
+    public virtual void LoadFromNbt(CompoundNbtTag nbtTag)
+    {
+        var x = nbtTag.Get<IntNbtTag>("x").Value;
+        var y = nbtTag.Get<IntNbtTag>("y").Value;
+        var z = nbtTag.Get<IntNbtTag>("z").Value;
+        LocalPosition = new Vector3i(x, y, z);
+    }
+
+    protected CompoundNbtTag CreateBaseNbt()
+    {
+        return new CompoundNbtTag(null)
+            .AddTag(new StringNbtTag("id", EntityId))
+            .AddTag(new IntNbtTag("x", LocalPosition.X))
+            .AddTag(new IntNbtTag("y", LocalPosition.Y))
+            .AddTag(new IntNbtTag("z", LocalPosition.Z));
+    }
 }

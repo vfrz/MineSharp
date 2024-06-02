@@ -3,6 +3,7 @@ using System.IO.Compression;
 using System.Runtime.CompilerServices;
 using MineSharp.Content;
 using MineSharp.Core;
+using MineSharp.Nbt;
 using MineSharp.Nbt.Tags;
 using MineSharp.TileEntities;
 
@@ -27,6 +28,7 @@ public class Chunk : IBlockChunkData
     public Vector2i ChunkLocalPosition => new(ChunkPosition.X % Region.RegionWidth, ChunkPosition.Z % Region.RegionWidth);
 
     private readonly ConcurrentDictionary<Vector3i, TileEntity> _tileEntities;
+    public ICollection<TileEntity> TileEntities => _tileEntities.Values;
 
     public Chunk(Vector2i chunkPosition)
     {
@@ -59,6 +61,22 @@ public class Chunk : IBlockChunkData
         Array.Copy(light, 0, chunk._data, chunk._light.Offset, light.Length);
         Array.Copy(skyLight, 0, chunk._data, chunk._skyLight.Offset, skyLight.Length);
 
+        var tileEntityTags = level.Get<ListNbtTag>("TileEntities").Tags;
+        foreach (var tileEntityTag in tileEntityTags.Cast<CompoundNbtTag>())
+        {
+            var tileEntityId = tileEntityTag.Get<StringNbtTag>("id").Value;
+
+            //TODO Handle other TileEntity types
+            var tileEntity = tileEntityId switch
+            {
+                SignTileEntity.Id => new SignTileEntity(),
+                _ => throw new Exception($"Unknown TileEntityId: {tileEntityId}")
+            };
+
+            tileEntity.LoadFromNbt(tileEntityTag);
+            chunk._tileEntities[tileEntity.LocalPosition] = tileEntity;
+        }
+
         return chunk;
     }
 
@@ -84,6 +102,28 @@ public class Chunk : IBlockChunkData
     {
         var index = LocalToIndex(localPosition);
         return new Block((BlockId) _blocks[index], _metadata[index], _light[index], _skyLight[index]);
+    }
+
+    public void SetTileEntity(Vector3i localPosition, TileEntity? tileEntity)
+    {
+        if (tileEntity is null)
+        {
+            _tileEntities.Remove(localPosition, out _);
+        }
+        else
+        {
+            _tileEntities[localPosition] = tileEntity;
+        }
+    }
+
+    public TileEntity? GetTileEntity(Vector3i localPosition)
+    {
+        return _tileEntities.GetValueOrDefault(localPosition);
+    }
+
+    public T? GetTileEntity<T>(Vector3i localPosition) where T : TileEntity
+    {
+        return (T?) GetTileEntity(localPosition);
     }
 
     public void SetLight(Vector3i localPosition, byte light, byte skyLight)
@@ -147,12 +187,17 @@ public class Chunk : IBlockChunkData
 
     public INbtTag ToNbt()
     {
+        var tileEntities = _tileEntities.Values
+            .Select(tileEntity => tileEntity.ToNbt())
+            .ToList();
+
         //TODO Add missing tags
         var nbt = new CompoundNbtTag("Level")
             .AddTag(new ByteArrayNbtTag("Blocks", _blocks))
             .AddTag(new ByteArrayNbtTag("Data", _metadata))
             .AddTag(new ByteArrayNbtTag("SkyLight", _skyLight))
             .AddTag(new ByteArrayNbtTag("BlockLight", _light))
+            .AddTag(new ListNbtTag("TileEntities", TagType.Compound, tileEntities))
             .AddTag(new IntNbtTag("xPos", ChunkPosition.X))
             .AddTag(new IntNbtTag("zPos", ChunkPosition.Z));
         return nbt;

@@ -5,6 +5,7 @@ using MineSharp.Content;
 using MineSharp.Core;
 using MineSharp.Network.Packets;
 using MineSharp.Saves;
+using MineSharp.TileEntities;
 using MineSharp.World.Generation;
 
 namespace MineSharp.World;
@@ -137,6 +138,24 @@ public class MinecraftWorld : IDisposable
         };
 
         await Server.BroadcastPacketAsync(blockUpdatePacket);
+    }
+
+    public async Task SetTileEntityAsync(Vector3i worldPosition, TileEntity? tileEntity)
+    {
+        var chunkPosition = Chunk.GetChunkPositionForWorldPosition(worldPosition);
+        var chunk = await GetOrCreateChunkAsync(chunkPosition);
+
+        var localPosition = Chunk.WorldToLocal(worldPosition);
+        chunk.SetTileEntity(localPosition, tileEntity);
+    }
+
+    public async Task<T?> GetTileEntityAsync<T>(Vector3i worldPosition) where T : TileEntity
+    {
+        var chunkPosition = Chunk.GetChunkPositionForWorldPosition(worldPosition);
+        var chunk = await GetOrCreateChunkAsync(chunkPosition);
+
+        var localPosition = Chunk.WorldToLocal(worldPosition);
+        return chunk.GetTileEntity<T>(localPosition);
     }
 
     public async Task StartRainAsync()

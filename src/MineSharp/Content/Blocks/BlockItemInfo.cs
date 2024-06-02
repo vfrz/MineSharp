@@ -10,5 +10,7 @@ public abstract class BlockItemInfo : ItemInfo
 
     public virtual bool InstantDig => false;
 
+    public virtual bool HasTileEntity => false;
+
     public override byte StackMax => 64;
 }

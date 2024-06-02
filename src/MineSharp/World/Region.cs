@@ -109,17 +109,17 @@ public class Region : IDisposable
                         _fileStream.ReadExactly(lengthBytes);
                         var length = BinaryPrimitives.ReadInt32BigEndian(lengthBytes);
 
-                        var compressionTypeByte = (byte) _fileStream.ReadByte();
+                        var nbtCompression = (NbtCompression) _fileStream.ReadByte();
 
                         var nbtBytes = new byte[length];
 
                         await _fileStream.ReadExactlyAsync(nbtBytes);
 
-                        if (compressionTypeByte == 1)
+                        if (nbtCompression is NbtCompression.Gzip)
                         {
                             nbtBytes = nbtBytes.GZipDecompress();
                         }
-                        else if (compressionTypeByte == 2)
+                        else if (nbtCompression is NbtCompression.Zlib)
                         {
                             nbtBytes = nbtBytes.ZLibDecompress();
                         }
@@ -149,7 +149,7 @@ public class Region : IDisposable
             var lengthBytes = new byte[4];
             BinaryPrimitives.WriteInt32BigEndian(lengthBytes, nbtBytes.Length);
             await _fileStream.WriteAsync(lengthBytes);
-            _fileStream.WriteByte(2);
+            _fileStream.WriteByte((byte) NbtCompression.Zlib);
             await _fileStream.WriteAsync(nbtBytes);
         }
     }
@@ -174,7 +174,7 @@ public class Region : IDisposable
                 var lengthBytes = new byte[4];
                 BinaryPrimitives.WriteInt32BigEndian(lengthBytes, nbtBytes.Length);
                 await _fileStream.WriteAsync(lengthBytes);
-                _fileStream.WriteByte(2);
+                _fileStream.WriteByte((byte) NbtCompression.Zlib);
                 await _fileStream.WriteAsync(nbtBytes);
             }
         }
