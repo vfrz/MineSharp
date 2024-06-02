@@ -24,9 +24,9 @@ public class RemoteClient : IDisposable
     private Socket Socket { get; }
     private MinecraftServer Server { get; }
 
-    private HashSet<Vector2i> _loadedChunks = new();
+    private HashSet<Vector2<int>> _loadedChunks = new();
 
-    public IReadOnlySet<Vector2i> LoadedChunks => _loadedChunks;
+    public IReadOnlySet<Vector2<int>> LoadedChunks => _loadedChunks;
 
     public RemoteClient(Socket socket, MinecraftServer server)
     {
@@ -105,7 +105,7 @@ public class RemoteClient : IDisposable
         _loadedChunks.Clear();
     }
 
-    public async Task LoadChunkAsync(Vector2i chunkToLoad)
+    public async Task LoadChunkAsync(Vector2<int> chunkToLoad)
     {
         if (_loadedChunks.Contains(chunkToLoad))
             return;
@@ -179,7 +179,7 @@ public class RemoteClient : IDisposable
         _loadedChunks = visibleChunks;
     }
 
-    public Vector2i GetCurrentChunk() => Chunk.GetChunkPositionForWorldPosition(Player!.Position);
+    public Vector2<int> GetCurrentChunk() => Chunk.GetChunkPositionForWorldPosition(Player!.Position);
 
     public async Task KickAsync(string reason)
     {

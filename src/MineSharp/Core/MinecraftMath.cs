@@ -10,7 +10,7 @@ public static class MinecraftMath
 
     public static int ToAbsolutePosition(this int value) => value * 32;
 
-    public static Vector3i ToAbsolutePosition(this Vector3i position)
+    public static Vector3<int> ToAbsolutePosition(this Vector3<int> position)
         => new(position.X.ToAbsolutePosition(), position.Y.ToAbsolutePosition(), position.Z.ToAbsolutePosition());
 
     public static double SinDegree(double degree) => Math.Sin(degree * (Math.PI / 180));

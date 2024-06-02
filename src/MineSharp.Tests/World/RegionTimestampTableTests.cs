@@ -13,7 +13,7 @@ public class RegionTimestampTableTests
         var data = new byte[Region.FileSectorSize];
         var table = new RegionTimestampTable(data);
 
-        var chunkPosition = new Vector2i(6, 9);
+        var chunkPosition = new Vector2<int>(6, 9);
         table.SetChunkTimestamp(chunkPosition, 42694269);
 
         var chunkTimestamp = table.GetChunkTimestamp(chunkPosition);

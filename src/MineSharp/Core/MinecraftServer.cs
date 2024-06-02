@@ -232,7 +232,7 @@ public class MinecraftServer : IDisposable
 
         _commandHandler.TryRegisterCommand("mob", async (server, client, args) =>
         {
-            await server.SpawnMobAsync((MobType) byte.Parse(args[0]), client!.Player!.Position.ToVector3i());
+            await server.SpawnMobAsync((MobType) byte.Parse(args[0]), client!.Player!.Position.ToVector3<int>());
             return true;
         });
 
@@ -278,7 +278,7 @@ public class MinecraftServer : IDisposable
 
         _commandHandler.TryRegisterCommand("tp", async (server, client, args) =>
         {
-            Vector3d target;
+            Vector3<double> target;
 
             if (args.Length == 1)
             {
@@ -295,8 +295,8 @@ public class MinecraftServer : IDisposable
             {
                 var targetX = int.Parse(args[0]);
                 var targetZ = int.Parse(args[1]);
-                var height = await server.World.GetHighestBlockHeightAsync(new Vector2i(targetX, targetZ));
-                target = new Vector3d(targetX + 0.5, height + 1.1, targetZ + 0.5);
+                var height = await server.World.GetHighestBlockHeightAsync(new Vector2<int>(targetX, targetZ));
+                target = new Vector3<double>(targetX + 0.5, height + 1.1, targetZ + 0.5);
             }
             else
             {
@@ -401,7 +401,7 @@ public class MinecraftServer : IDisposable
         });
     }
 
-    public async Task BroadcastPacketForChunkAsync(IServerPacket packet, Vector2i chunkPosition,
+    public async Task BroadcastPacketForChunkAsync(IServerPacket packet, Vector2<int> chunkPosition,
         RemoteClient? except = null, bool readyClientsOnly = false)
     {
         await using var writer = new PacketWriter(packet.PacketId);
@@ -423,7 +423,7 @@ public class MinecraftServer : IDisposable
         }, except);
     }
 
-    public async Task<IMobEntity> SpawnMobAsync(MobType type, Vector3i position)
+    public async Task<IMobEntity> SpawnMobAsync(MobType type, Vector3<int> position)
     {
         IMobEntity mob = type switch
         {
@@ -446,9 +446,9 @@ public class MinecraftServer : IDisposable
         return await SpawnMobAsync(mob, position);
     }
 
-    public async Task<IMobEntity> SpawnMobAsync(IMobEntity mob, Vector3i position)
+    public async Task<IMobEntity> SpawnMobAsync(IMobEntity mob, Vector3<int> position)
     {
-        mob.Position = position.ToVector3();
+        mob.Position = position.ToVector3<double>();
         mob.Pitch = 0;
         mob.Yaw = 0;
         mob.OnGround = true;

@@ -21,8 +21,8 @@ public class MinecraftWorld : IDisposable
     public MinecraftServer Server { get; }
     public IWorldGenerator WorldGenerator { get; }
 
-    private readonly ConcurrentDictionary<Vector2i, Region> _regions = new();
-    private readonly AsyncKeyedLocker<Vector2i> _regionLoadLocker = new();
+    private readonly ConcurrentDictionary<Vector2<int>, Region> _regions = new();
+    private readonly AsyncKeyedLocker<Vector2<int>> _regionLoadLocker = new();
 
     private MinecraftWorld(MinecraftServer server, int seed)
     {
@@ -86,12 +86,12 @@ public class MinecraftWorld : IDisposable
 
     public async Task LoadInitialChunksAsync()
     {
-        var initialChunks = Chunk.GetChunksAround(Vector2i.Zero, Server.Configuration.VisibleChunksDistance);
+        var initialChunks = Chunk.GetChunksAround(Vector2<int>.Zero, Server.Configuration.VisibleChunksDistance);
         Server.GetLogger<MinecraftWorld>().LogInformation("Generating world...");
         await Parallel.ForEachAsync(initialChunks, async (chunkPosition, _) => await GetOrCreateChunkAsync(chunkPosition));
     }
 
-    public async Task<Chunk> GetOrCreateChunkAsync(Vector2i chunkPosition)
+    public async Task<Chunk> GetOrCreateChunkAsync(Vector2<int> chunkPosition)
     {
         var regionPosition = Region.GetRegionPositionForChunkPosition(chunkPosition);
         var region = await GetRegionAsync(regionPosition);
@@ -99,28 +99,28 @@ public class MinecraftWorld : IDisposable
         return chunk;
     }
 
-    public async Task<BlockId> GetBlockIdAsync(Vector3i worldPosition)
+    public async Task<BlockId> GetBlockIdAsync(Vector3<int> worldPosition)
     {
         var chunkPosition = Chunk.GetChunkPositionForWorldPosition(worldPosition);
         var chunk = await GetOrCreateChunkAsync(chunkPosition);
         return chunk.GetBlockId(Chunk.WorldToLocal(worldPosition));
     }
 
-    public async Task<Block> GetBlockAsync(Vector3i worldPosition)
+    public async Task<Block> GetBlockAsync(Vector3<int> worldPosition)
     {
         var chunkPosition = Chunk.GetChunkPositionForWorldPosition(worldPosition);
         var chunk = await GetOrCreateChunkAsync(chunkPosition);
         return chunk.GetBlock(Chunk.WorldToLocal(worldPosition));
     }
 
-    public async Task<int> GetHighestBlockHeightAsync(Vector2i worldPosition)
+    public async Task<int> GetHighestBlockHeightAsync(Vector2<int> worldPosition)
     {
         var chunkPosition = Chunk.GetChunkPositionForWorldPosition(worldPosition);
         var chunk = await GetOrCreateChunkAsync(chunkPosition);
         return chunk.GetHighestBlockHeight(Chunk.WorldToLocal(worldPosition));
     }
 
-    public async Task SetBlockAsync(Vector3i worldPosition, BlockId blockId, byte metadata = 0)
+    public async Task SetBlockAsync(Vector3<int> worldPosition, BlockId blockId, byte metadata = 0)
     {
         var chunkPosition = Chunk.GetChunkPositionForWorldPosition(worldPosition);
         var chunk = await GetOrCreateChunkAsync(chunkPosition);
@@ -140,7 +140,7 @@ public class MinecraftWorld : IDisposable
         await Server.BroadcastPacketAsync(blockUpdatePacket);
     }
 
-    public async Task SetTileEntityAsync(Vector3i worldPosition, TileEntity? tileEntity)
+    public async Task SetTileEntityAsync(Vector3<int> worldPosition, TileEntity? tileEntity)
     {
         var chunkPosition = Chunk.GetChunkPositionForWorldPosition(worldPosition);
         var chunk = await GetOrCreateChunkAsync(chunkPosition);
@@ -149,7 +149,7 @@ public class MinecraftWorld : IDisposable
         chunk.SetTileEntity(localPosition, tileEntity);
     }
 
-    public async Task<T> GetTileEntityAsync<T>(Vector3i worldPosition) where T : TileEntity
+    public async Task<T> GetTileEntityAsync<T>(Vector3<int> worldPosition) where T : TileEntity
     {
         var chunkPosition = Chunk.GetChunkPositionForWorldPosition(worldPosition);
         var chunk = await GetOrCreateChunkAsync(chunkPosition);
@@ -198,7 +198,7 @@ public class MinecraftWorld : IDisposable
         {
             Seed = Seed,
             Time = Time,
-            SpawnLocation = new Vector3i(0, 70, 0),
+            SpawnLocation = new Vector3<int>(0, 70, 0),
             Raining = Raining,
             RainTime = 0,
             Thundering = false,
@@ -210,7 +210,7 @@ public class MinecraftWorld : IDisposable
         };
     }
 
-    private async Task<Region> GetRegionAsync(Vector2i regionPosition)
+    private async Task<Region> GetRegionAsync(Vector2<int> regionPosition)
     {
         using (await _regionLoadLocker.LockAsync(regionPosition))
         {

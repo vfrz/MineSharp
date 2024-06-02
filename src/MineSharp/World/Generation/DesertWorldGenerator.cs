@@ -29,56 +29,56 @@ public class DesertWorldGenerator : IWorldGenerator
         PoissonDiskSampler = new UniformPoissonDiskSampler(seed);
     }
 
-    public void GenerateChunkTerrain(Vector2i chunkPosition, IBlockChunkData chunkData)
+    public void GenerateChunkTerrain(Vector2<int> chunkPosition, IBlockChunkData chunkData)
     {
         for (var localX = 0; localX < Chunk.ChunkWidth; localX++)
         {
             for (var localZ = 0; localZ < Chunk.ChunkWidth; localZ++)
             {
                 // Bedrock
-                chunkData.SetBlock(new Vector3i(localX, 0, localZ), BlockId.Bedrock);
+                chunkData.SetBlock(new Vector3<int>(localX, 0, localZ), BlockId.Bedrock);
 
-                var height = GetHeight(new Vector2i(localX, localZ), chunkPosition);
+                var height = GetHeight(new Vector2<int>(localX, localZ), chunkPosition);
                 for (var y = 1; y <= height; y++)
                 {
                     if (y == height)
                     {
-                        chunkData.SetBlock(new Vector3i(localX, y, localZ), BlockId.Sand);
+                        chunkData.SetBlock(new Vector3<int>(localX, y, localZ), BlockId.Sand);
 
                         var otherNoiseValue = (OtherNoise.GetNoise(chunkPosition.X * Chunk.ChunkWidth + localX,
                             chunkPosition.Z * Chunk.ChunkWidth + localZ) + 1) / 2f;
                         if (otherNoiseValue < 0.2f)
                         {
-                            chunkData.SetBlock(new Vector3i(localX, y + 1, localZ), BlockId.TallGrass);
+                            chunkData.SetBlock(new Vector3<int>(localX, y + 1, localZ), BlockId.TallGrass);
                         }
                     }
                     else
                     {
-                        chunkData.SetBlock(new Vector3i(localX, y, localZ), BlockId.Sand);
+                        chunkData.SetBlock(new Vector3<int>(localX, y, localZ), BlockId.Sand);
                     }
                 }
             }
         }
     }
 
-    public void GenerateChunkDecorations(Vector2i chunkPosition, IBlockChunkData chunkData)
+    public void GenerateChunkDecorations(Vector2<int> chunkPosition, IBlockChunkData chunkData)
     {
-        var trees = PoissonDiskSampler.SampleRectangle(chunkPosition.X * Chunk.ChunkWidth,
+        var cactuses = PoissonDiskSampler.SampleRectangle(chunkPosition.X * Chunk.ChunkWidth,
             chunkPosition.Z * Chunk.ChunkWidth, Chunk.ChunkWidth, Chunk.ChunkWidth, 6);
 
-        foreach (var treePosition in trees)
+        foreach (var cactusPosition in cactuses)
         {
-            var localPosition = Chunk.WorldToLocal(new Vector2i(treePosition));
+            var localPosition = Chunk.WorldToLocal(Vector2<int>.CreateChecked(cactusPosition));
             var height = GetHeight(localPosition, chunkPosition);
 
             for (var h = 1; h < 4; h++)
             {
-                chunkData.SetBlock(new Vector3i(localPosition.X, height + h, localPosition.Z), BlockId.Cactus);
+                chunkData.SetBlock(new Vector3<int>(localPosition.X, height + h, localPosition.Z), BlockId.Cactus);
             }
         }
     }
 
-    private int GetHeight(Vector2i local, Vector2i chunkPosition)
+    private int GetHeight(Vector2<int> local, Vector2<int> chunkPosition)
     {
         var noiseValue = (Noise.GetNoise(chunkPosition.X * Chunk.ChunkWidth + local.X,
             chunkPosition.Z * Chunk.ChunkWidth + local.Z) + 1) / 2f;

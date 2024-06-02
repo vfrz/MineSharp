@@ -11,7 +11,7 @@ public class PickupItem(MinecraftServer server, TimeSpan expiration) : Entity(se
 
     public ItemStack Item { get; set; }
 
-    public Vector3i AbsolutePosition { get; set; }
+    public Vector3<int> AbsolutePosition { get; set; }
 
     public byte Rotation { get; set; }
 

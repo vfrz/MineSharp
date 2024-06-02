@@ -4,8 +4,8 @@ namespace MineSharp.Entities;
 
 public abstract class LivingEntity(MinecraftServer server) : Entity(server), ILivingEntity
 {
-    public virtual Vector3d KnockBackMultiplier => Vector3d.One;
-    public Vector3d Position { get; set; }
+    public virtual Vector3<double> KnockBackMultiplier => Vector3<double>.One;
+    public Vector3<double> Position { get; set; }
     public float Yaw { get; set; }
     public float Pitch { get; set; }
     public bool OnGround { get; set; }

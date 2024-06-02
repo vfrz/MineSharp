@@ -5,8 +5,8 @@ namespace MineSharp.World;
 
 public interface IBlockChunkData
 {
-    public void SetBlock(Vector3i localPosition, BlockId blockId, byte metadata = 0);
-    public BlockId GetBlockId(Vector3i localPosition);
-    public Block GetBlock(Vector3i localPosition);
-    public int GetHighestBlockHeight(Vector2i localPosition);
+    public void SetBlock(Vector3<int> localPosition, BlockId blockId, byte metadata = 0);
+    public BlockId GetBlockId(Vector3<int> localPosition);
+    public Block GetBlock(Vector3<int> localPosition);
+    public int GetHighestBlockHeight(Vector2<int> localPosition);
 }

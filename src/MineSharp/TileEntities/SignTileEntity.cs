@@ -18,7 +18,7 @@ public class SignTileEntity : TileEntity
     {
     }
 
-    public SignTileEntity(Vector3i localPosition) : base(localPosition)
+    public SignTileEntity(Vector3<int> localPosition) : base(localPosition)
     {
     }
 

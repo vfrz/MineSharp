@@ -10,7 +10,7 @@ public class PlayerDiggingPacketHandler : IClientPacketHandler<PlayerDiggingPack
 {
     public async Task HandleAsync(PlayerDiggingPacket packet, ClientPacketHandlerContext context)
     {
-        var block = await context.Server.World.GetBlockAsync(packet.PositionAsVector3i);
+        var block = await context.Server.World.GetBlockAsync(packet.PositionAsVector3);
 
         if (block.BlockId is BlockId.Air)
             return;
@@ -22,24 +22,24 @@ public class PlayerDiggingPacketHandler : IClientPacketHandler<PlayerDiggingPack
 
         if (packet.Status is PlayerDiggingStatus.Finished)
         {
-            await context.Server.World.SetBlockAsync(packet.PositionAsVector3i, 0);
-            await GeneratePickupItemAsync(block, packet.PositionAsVector3i, miningItemInfo, context);
+            await context.Server.World.SetBlockAsync(packet.PositionAsVector3, 0);
+            await GeneratePickupItemAsync(block, packet.PositionAsVector3, miningItemInfo, context);
             if (blockInfo.HasTileEntity)
-                await context.Server.World.SetTileEntityAsync(packet.PositionAsVector3i, null);
+                await context.Server.World.SetTileEntityAsync(packet.PositionAsVector3, null);
         }
         else
         {
             if (packet.Status is PlayerDiggingStatus.Started && blockInfo.IsInstantDig(miningItemInfo, block.Metadata))
             {
-                await context.Server.World.SetBlockAsync(packet.PositionAsVector3i, 0);
-                await GeneratePickupItemAsync(block, packet.PositionAsVector3i, miningItemInfo, context);
+                await context.Server.World.SetBlockAsync(packet.PositionAsVector3, 0);
+                await GeneratePickupItemAsync(block, packet.PositionAsVector3, miningItemInfo, context);
                 if (blockInfo.HasTileEntity)
-                    await context.Server.World.SetTileEntityAsync(packet.PositionAsVector3i, null);
+                    await context.Server.World.SetTileEntityAsync(packet.PositionAsVector3, null);
             }
         }
     }
 
-    private async Task GeneratePickupItemAsync(Block block, Vector3i blockPosition, ItemInfo? miningItemInfo,
+    private async Task GeneratePickupItemAsync(Block block, Vector3<int> blockPosition, ItemInfo? miningItemInfo,
         ClientPacketHandlerContext context)
     {
         var blockInfo = BlockInfoProvider.Get(block.BlockId);
@@ -50,7 +50,7 @@ public class PlayerDiggingPacketHandler : IClientPacketHandler<PlayerDiggingPack
         }
     }
 
-    private async Task GeneratePickupItemAsync(ItemStack itemStack, Vector3i blockPosition, ClientPacketHandlerContext context)
+    private async Task GeneratePickupItemAsync(ItemStack itemStack, Vector3<int> blockPosition, ClientPacketHandlerContext context)
     {
         var pickupItem = new PickupItem(context.Server, TimeSpan.FromSeconds(10))
         {
@@ -58,7 +58,7 @@ public class PlayerDiggingPacketHandler : IClientPacketHandler<PlayerDiggingPack
             Pitch = 0,
             Roll = 0,
             Rotation = 0,
-            AbsolutePosition = blockPosition.ToAbsolutePosition() + new Vector3i(16)
+            AbsolutePosition = blockPosition.ToAbsolutePosition() + new Vector3<int>(16)
         };
         context.Server.EntityManager.RegisterEntity(pickupItem);
         await context.Server.BroadcastPacketAsync(new PickupSpawnPacket(pickupItem));

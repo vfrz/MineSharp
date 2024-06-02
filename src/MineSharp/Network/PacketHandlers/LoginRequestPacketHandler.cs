@@ -80,7 +80,7 @@ public class LoginRequestPacketHandler : IClientPacketHandler<LoginRequestPacket
         }
 
         //TODO Handle spawn point correctly
-        var spawnHeight = await context.Server.World.GetHighestBlockHeightAsync(new Vector2i(0, 0)) + 1;
+        var spawnHeight = await context.Server.World.GetHighestBlockHeightAsync(new Vector2<int>(0, 0)) + 1;
         await context.RemoteClient.SendPacketAsync(new SpawnPositionPacket
         {
             X = 0,

@@ -13,7 +13,7 @@ public class RegionLocationTableTests
         var data = new byte[Region.FileSectorSize];
         var table = new RegionLocationTable(data);
 
-        var chunkPosition = new Vector2i(6, 9);
+        var chunkPosition = new Vector2<int>(6, 9);
         table.SetChunkLocation(chunkPosition, new RegionLocation(4269, 1));
 
         var regionLocation = table.GetChunkLocation(chunkPosition);

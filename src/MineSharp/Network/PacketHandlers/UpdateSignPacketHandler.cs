@@ -8,13 +8,13 @@ public class UpdateSignPacketHandler : IClientPacketHandler<UpdateSignPacket>
 {
     public async Task HandleAsync(UpdateSignPacket packet, ClientPacketHandlerContext context)
     {
-        var signTileEntity = await context.Server.World.GetTileEntityAsync<SignTileEntity>(packet.PositionAsVector3i);
+        var signTileEntity = await context.Server.World.GetTileEntityAsync<SignTileEntity>(packet.PositionAsVector3);
         signTileEntity.Text1 = packet.Text1;
         signTileEntity.Text2 = packet.Text2;
         signTileEntity.Text3 = packet.Text3;
         signTileEntity.Text4 = packet.Text4;
 
-        var chunkPosition = Chunk.GetChunkPositionForWorldPosition(packet.PositionAsVector3i);
+        var chunkPosition = Chunk.GetChunkPositionForWorldPosition(packet.PositionAsVector3);
 
         await context.Server.BroadcastPacketForChunkAsync(new UpdateSignPacket
         {

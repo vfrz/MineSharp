@@ -6,7 +6,7 @@ public struct WorldSaveData
 {
     public required int Seed { get; init; }
     public required long Time { get; init; }
-    public required Vector3i SpawnLocation { get; init; }
+    public required Vector3<int> SpawnLocation { get; init; }
     public required bool Raining { get; init; }
     public required int RainTime { get; init; }
     public required bool Thundering { get; init; }

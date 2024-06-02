@@ -4,9 +4,9 @@ namespace MineSharp.Entities;
 
 public interface ILivingEntity : IEntity
 {
-    public Vector3d KnockBackMultiplier { get; }
+    public Vector3<double> KnockBackMultiplier { get; }
 
-    public Vector3d Position { get; set; }
+    public Vector3<double> Position { get; set; }
 
     public float Yaw { get; set; }
 

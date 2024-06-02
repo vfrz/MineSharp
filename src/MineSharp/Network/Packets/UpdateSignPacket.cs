@@ -17,7 +17,7 @@ public class UpdateSignPacket : IClientPacket, IServerPacket
     public string Text3 { get; set; } = string.Empty;
     public string Text4 { get; set; } = string.Empty;
 
-    public Vector3i PositionAsVector3i => new(X, Y, Z);
+    public Vector3<int> PositionAsVector3 => new(X, Y, Z);
 
     public void Read(ref SequenceReader<byte> reader)
     {

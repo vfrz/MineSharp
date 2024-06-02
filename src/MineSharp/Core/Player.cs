@@ -55,8 +55,8 @@ public class Player : LivingEntity
 
     public static async Task<Player> NewPlayerAsync(MinecraftServer server, RemoteClient remoteClient, string username)
     {
-        var spawnHeight = await server.World.GetHighestBlockHeightAsync(new Vector2i(0, 0)) + 1;
-        var position = new Vector3d(0.5, spawnHeight + YMinOffset, 0.5);
+        var spawnHeight = await server.World.GetHighestBlockHeightAsync(new Vector2<int>(0, 0)) + 1;
+        var position = new Vector3<double>(0.5, spawnHeight + YMinOffset, 0.5);
 
         var player = new Player(server, remoteClient)
         {
@@ -280,8 +280,8 @@ public class Player : LivingEntity
 
         Respawning = true;
 
-        var spawnHeight = await Server.World.GetHighestBlockHeightAsync(new Vector2i(0, 0)) + 1.6200000047683716;
-        Position = new Vector3d(0.5, spawnHeight, 0.5);
+        var spawnHeight = await Server.World.GetHighestBlockHeightAsync(new Vector2<int>(0, 0)) + 1.6200000047683716;
+        Position = new Vector3<double>(0.5, spawnHeight, 0.5);
         Stance = Position.Y + Height;
         OnGround = true;
         Yaw = 0;

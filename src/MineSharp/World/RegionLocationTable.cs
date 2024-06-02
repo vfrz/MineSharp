@@ -19,7 +19,7 @@ public class RegionLocationTable
         {
             for (var z = 0; z < Region.RegionWidth; z++)
             {
-                var chunkLocation = GetChunkLocation(new Vector2i(x, z));
+                var chunkLocation = GetChunkLocation(new Vector2<int>(x, z));
                 if (!chunkLocation.IsEmpty)
                     _allocatedChunks++;
             }
@@ -30,7 +30,7 @@ public class RegionLocationTable
     {
     }
 
-    public RegionLocation AllocateNewChunk(Vector2i chunkPosition)
+    public RegionLocation AllocateNewChunk(Vector2<int> chunkPosition)
     {
         if (!GetChunkLocation(chunkPosition).IsEmpty)
             throw new Exception();
@@ -41,7 +41,7 @@ public class RegionLocationTable
         return regionLocation;
     }
 
-    public RegionLocation GetChunkLocation(Vector2i chunkPosition)
+    public RegionLocation GetChunkLocation(Vector2<int> chunkPosition)
     {
         var index = GetTableIndexForChunkPosition(chunkPosition);
         var offset = (_data[index] << 16) | (_data[index + 1] << 8) | _data[index + 2];
@@ -49,7 +49,7 @@ public class RegionLocationTable
         return new RegionLocation(offset, size);
     }
 
-    public void SetChunkLocation(Vector2i chunkPosition, RegionLocation regionLocation)
+    public void SetChunkLocation(Vector2<int> chunkPosition, RegionLocation regionLocation)
     {
         var index = GetTableIndexForChunkPosition(chunkPosition);
         _data[index] = (byte) ((regionLocation.Offset >> 16) & 0xFF);
@@ -58,6 +58,6 @@ public class RegionLocationTable
         _data[index + 3] = regionLocation.Size;
     }
 
-    private static int GetTableIndexForChunkPosition(Vector2i chunkPosition)
+    private static int GetTableIndexForChunkPosition(Vector2<int> chunkPosition)
         => (Math.Abs(chunkPosition.X % 32) + Math.Abs(chunkPosition.Z % 32) * 32) * 4;
 }

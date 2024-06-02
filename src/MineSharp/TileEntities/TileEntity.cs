@@ -7,7 +7,7 @@ public abstract class TileEntity
 {
     public abstract string EntityId { get; }
 
-    public Vector3i LocalPosition { get; private set; }
+    public Vector3<int> LocalPosition { get; private set; }
 
     public abstract INbtTag ToNbt();
 
@@ -15,7 +15,7 @@ public abstract class TileEntity
     {
     }
 
-    protected TileEntity(Vector3i localPosition)
+    protected TileEntity(Vector3<int> localPosition)
     {
         LocalPosition = localPosition;
     }
@@ -25,7 +25,7 @@ public abstract class TileEntity
         var x = nbtTag.Get<IntNbtTag>("x").Value;
         var y = nbtTag.Get<IntNbtTag>("y").Value;
         var z = nbtTag.Get<IntNbtTag>("z").Value;
-        LocalPosition = new Vector3i(x, y, z);
+        LocalPosition = new Vector3<int>(x, y, z);
     }
 
     protected CompoundNbtTag CreateBaseNbt()

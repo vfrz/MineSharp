@@ -18,24 +18,24 @@ public class TestWorldGenerator : IWorldGenerator
         Noise.SetFractalGain(1f); // Adjust the gain for smoothness
     }
 
-    public void GenerateChunkTerrain(Vector2i chunkPosition, IBlockChunkData chunkData)
+    public void GenerateChunkTerrain(Vector2<int> chunkPosition, IBlockChunkData chunkData)
     {
         for (var localX = 0; localX < Chunk.ChunkWidth; localX++)
         {
             for (var localZ = 0; localZ < Chunk.ChunkWidth; localZ++)
             {
                 // Bedrock
-                chunkData.SetBlock(new Vector3i(localX, 0, localZ), BlockId.Bedrock);
+                chunkData.SetBlock(new Vector3<int>(localX, 0, localZ), BlockId.Bedrock);
 
                 for (var y = 1; y <= 50; y++)
                 {
-                    chunkData.SetBlock(new Vector3i(localX, y, localZ), BlockId.Stone);
+                    chunkData.SetBlock(new Vector3<int>(localX, y, localZ), BlockId.Stone);
                 }
             }
         }
     }
 
-    public void GenerateChunkDecorations(Vector2i chunkPosition, IBlockChunkData chunkData)
+    public void GenerateChunkDecorations(Vector2<int> chunkPosition, IBlockChunkData chunkData)
     {
         for (var localX = 0; localX < Chunk.ChunkWidth; localX++)
         {
@@ -45,7 +45,7 @@ public class TestWorldGenerator : IWorldGenerator
                     chunkPosition.Z * Chunk.ChunkWidth + localZ) + 1) / 2f * 50;
 
                 if (height > 49)
-                    chunkData.SetBlock(new Vector3i(localX, 51, localZ), BlockId.Wool, 14);
+                    chunkData.SetBlock(new Vector3<int>(localX, 51, localZ), BlockId.Wool, 14);
             }
         }
     }

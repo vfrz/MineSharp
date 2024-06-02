@@ -15,7 +15,7 @@ public record PlayerDiggingPacket : IClientPacket
     public int Z { get; set; }
     public sbyte Face { get; set; }
 
-    public Vector3i PositionAsVector3i => new(X, Y, Z);
+    public Vector3<int> PositionAsVector3 => new(X, Y, Z);
 
     public void Read(ref SequenceReader<byte> reader)
     {

@@ -23,14 +23,14 @@ public class Chunk : IBlockChunkData
     private readonly NibbleArray _light;
     private readonly NibbleArray _skyLight;
 
-    public Vector2i ChunkPosition { get; }
+    public Vector2<int> ChunkPosition { get; }
 
-    public Vector2i ChunkLocalPosition => new(ChunkPosition.X % Region.RegionWidth, ChunkPosition.Z % Region.RegionWidth);
+    public Vector2<int> ChunkLocalPosition => new(ChunkPosition.X % Region.RegionWidth, ChunkPosition.Z % Region.RegionWidth);
 
-    private readonly ConcurrentDictionary<Vector3i, TileEntity> _tileEntities;
+    private readonly ConcurrentDictionary<Vector3<int>, TileEntity> _tileEntities;
     public ICollection<TileEntity> TileEntities => _tileEntities.Values;
 
-    public Chunk(Vector2i chunkPosition)
+    public Chunk(Vector2<int> chunkPosition)
     {
         ChunkPosition = chunkPosition;
         _data = new byte[ArraySize + 3 * (ArraySize / 2)];
@@ -39,7 +39,7 @@ public class Chunk : IBlockChunkData
         _light = new NibbleArray(_data, ArraySize + ArraySize / 2, ArraySize / 2);
         _skyLight = new NibbleArray(_data, ArraySize * 2, ArraySize / 2);
 
-        _tileEntities = new ConcurrentDictionary<Vector3i, TileEntity>();
+        _tileEntities = new ConcurrentDictionary<Vector3<int>, TileEntity>();
     }
 
     public static Chunk CreateFromNbt(INbtTag tag)
@@ -49,7 +49,7 @@ public class Chunk : IBlockChunkData
         var chunkX = level.Get<IntNbtTag>("xPos").Value;
         var chunkZ = level.Get<IntNbtTag>("zPos").Value;
 
-        var chunk = new Chunk(new Vector2i(chunkX, chunkZ));
+        var chunk = new Chunk(new Vector2<int>(chunkX, chunkZ));
 
         var blocks = level.Get<ByteArrayNbtTag>("Blocks").Value;
         var metadata = level.Get<ByteArrayNbtTag>("Data").Value;
@@ -80,7 +80,7 @@ public class Chunk : IBlockChunkData
         return chunk;
     }
 
-    public void SetBlock(Vector3i localPosition, BlockId blockId, byte metadata = 0)
+    public void SetBlock(Vector3<int> localPosition, BlockId blockId, byte metadata = 0)
     {
         //TODO Maybe should throw exception when world generation is reworked with multiple phases
         if (localPosition.X is < 0 or >= ChunkWidth
@@ -92,19 +92,19 @@ public class Chunk : IBlockChunkData
         _metadata[index] = metadata;
     }
 
-    public BlockId GetBlockId(Vector3i localPosition)
+    public BlockId GetBlockId(Vector3<int> localPosition)
     {
         var index = LocalToIndex(localPosition);
         return (BlockId) _blocks[index];
     }
 
-    public Block GetBlock(Vector3i localPosition)
+    public Block GetBlock(Vector3<int> localPosition)
     {
         var index = LocalToIndex(localPosition);
         return new Block((BlockId) _blocks[index], _metadata[index], _light[index], _skyLight[index]);
     }
 
-    public void SetTileEntity(Vector3i localPosition, TileEntity? tileEntity)
+    public void SetTileEntity(Vector3<int> localPosition, TileEntity? tileEntity)
     {
         if (tileEntity is null)
         {
@@ -116,30 +116,30 @@ public class Chunk : IBlockChunkData
         }
     }
 
-    public TileEntity? GetTileEntity(Vector3i localPosition)
+    public TileEntity? GetTileEntity(Vector3<int> localPosition)
     {
         return _tileEntities.GetValueOrDefault(localPosition);
     }
 
-    public T GetTileEntity<T>(Vector3i localPosition) where T : TileEntity
+    public T GetTileEntity<T>(Vector3<int> localPosition) where T : TileEntity
     {
         if (_tileEntities.TryGetValue(localPosition, out var tileEntity))
             return (T) tileEntity;
         throw new KeyNotFoundException();
     }
 
-    public void SetLight(Vector3i localPosition, byte light, byte skyLight)
+    public void SetLight(Vector3<int> localPosition, byte light, byte skyLight)
     {
         var index = LocalToIndex(localPosition);
         _light[index] = light;
         _skyLight[index] = skyLight;
     }
 
-    public int GetHighestBlockHeight(Vector2i localPosition)
+    public int GetHighestBlockHeight(Vector2<int> localPosition)
     {
         for (var y = ChunkHeight - 1; y >= 0; y--)
         {
-            if (GetBlock(new Vector3i(localPosition.X, y, localPosition.Z)).BlockId != BlockId.Air)
+            if (GetBlock(new Vector3<int>(localPosition.X, y, localPosition.Z)).BlockId != BlockId.Air)
                 return y;
         }
 
@@ -147,25 +147,25 @@ public class Chunk : IBlockChunkData
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static int LocalToIndex(Vector3i localPosition)
+    private static int LocalToIndex(Vector3<int> localPosition)
     {
         return localPosition.Y + localPosition.Z * ChunkHeight + localPosition.X * ChunkHeight * ChunkWidth;
     }
 
-    public Vector3i LocalToWorld(Vector3i position)
+    public Vector3<int> LocalToWorld(Vector3<int> position)
         => new(ChunkPosition.X * ChunkWidth + position.X, position.Y, ChunkPosition.Z * ChunkWidth + position.Z);
 
-    public static Vector2i WorldToLocal(Vector2i position)
+    public static Vector2<int> WorldToLocal(Vector2<int> position)
         => new((position.X % ChunkWidth + ChunkWidth) % ChunkWidth,
             (position.Z % ChunkWidth + ChunkWidth) % ChunkWidth);
 
-    public static Vector3i WorldToLocal(Vector3i position)
+    public static Vector3<int> WorldToLocal(Vector3<int> position)
         => new((position.X % ChunkWidth + ChunkWidth) % ChunkWidth, position.Y,
             (position.Z % ChunkWidth + ChunkWidth) % ChunkWidth);
 
-    public static Vector2i GetChunkPositionForWorldPosition(Vector3d position) => GetChunkPositionForWorldPosition(position.ToVector3i());
+    public static Vector2<int> GetChunkPositionForWorldPosition(Vector3<double> position) => GetChunkPositionForWorldPosition(position.ToVector3<int>());
 
-    public static Vector2i GetChunkPositionForWorldPosition(Vector3i position)
+    public static Vector2<int> GetChunkPositionForWorldPosition(Vector3<int> position)
     {
         var chunkX = position.X / ChunkWidth;
         var chunkZ = position.Z / ChunkWidth;
@@ -173,10 +173,10 @@ public class Chunk : IBlockChunkData
             chunkX--;
         if (position.Z < 0 && position.Z % ChunkWidth != 0)
             chunkZ--;
-        return new Vector2i(chunkX, chunkZ);
+        return new Vector2<int>(chunkX, chunkZ);
     }
 
-    public static Vector2i GetChunkPositionForWorldPosition(Vector2i position)
+    public static Vector2<int> GetChunkPositionForWorldPosition(Vector2<int> position)
     {
         var chunkX = position.X / ChunkWidth;
         var chunkZ = position.Z / ChunkWidth;
@@ -184,7 +184,7 @@ public class Chunk : IBlockChunkData
             chunkX--;
         if (position.Z < 0 && position.Z % ChunkWidth != 0)
             chunkZ--;
-        return new Vector2i(chunkX, chunkZ);
+        return new Vector2<int>(chunkX, chunkZ);
     }
 
     public INbtTag ToNbt()
@@ -217,10 +217,10 @@ public class Chunk : IBlockChunkData
         return output.ToArray();
     }
 
-    public static HashSet<Vector2i> GetChunksAround(Vector2i originChunk, int radius)
+    public static HashSet<Vector2<int>> GetChunksAround(Vector2<int> originChunk, int radius)
     {
         // Circle
-        var chunks = new HashSet<Vector2i>
+        var chunks = new HashSet<Vector2<int>>
         {
             originChunk
         };
@@ -229,19 +229,19 @@ public class Chunk : IBlockChunkData
         {
             for (var z = originChunk.Z - radius; z <= originChunk.Z + radius; z++)
             {
-                var distance = originChunk.DistanceTo(new Vector2i(x, z));
+                var distance = originChunk.DistanceSquared(new Vector2<int>(x, z));
                 if (distance <= radius)
                 {
-                    chunks.Add(new Vector2i(x, z));
+                    chunks.Add(new Vector2<int>(x, z));
                 }
             }
         }
 
-        return chunks.OrderBy(originChunk.DistanceTo).ToHashSet();
+        return chunks.OrderBy(originChunk.DistanceSquared).ToHashSet();
 
         // Diamond
         /*
-        var chunks = new HashSet<Vector2i>
+        var chunks = new HashSet<Vector2<int>>
         {
             originChunk
         };
@@ -249,40 +249,40 @@ public class Chunk : IBlockChunkData
         // Front
         for (var z = 1; z < radius; z++)
         {
-            chunks.Add(new Vector2i(originChunk.X, originChunk.Z + z));
+            chunks.Add(new Vector2<int>(originChunk.X, originChunk.Z + z));
             for (var x = 1; x < radius - z; x++)
             {
-                chunks.Add(new Vector2i(originChunk.X - x, originChunk.Z + z));
+                chunks.Add(new Vector2<int>(originChunk.X - x, originChunk.Z + z));
             }
         }
 
         // Right
         for (var x = 1; x < radius; x++)
         {
-            chunks.Add(new Vector2i(originChunk.X - x, originChunk.Z));
+            chunks.Add(new Vector2<int>(originChunk.X - x, originChunk.Z));
             for (var z = 1; z < radius - x; z++)
             {
-                chunks.Add(new Vector2i(originChunk.X - x, originChunk.Z - z));
+                chunks.Add(new Vector2<int>(originChunk.X - x, originChunk.Z - z));
             }
         }
 
         // Back
         for (var z = 1; z < radius; z++)
         {
-            chunks.Add(new Vector2i(originChunk.X, originChunk.Z - z));
+            chunks.Add(new Vector2<int>(originChunk.X, originChunk.Z - z));
             for (var x = 1; x < radius - z; x++)
             {
-                chunks.Add(new Vector2i(originChunk.X + x, originChunk.Z - z));
+                chunks.Add(new Vector2<int>(originChunk.X + x, originChunk.Z - z));
             }
         }
 
         // Left
         for (var x = 1; x < radius; x++)
         {
-            chunks.Add(new Vector2i(originChunk.X + x, originChunk.Z));
+            chunks.Add(new Vector2<int>(originChunk.X + x, originChunk.Z));
             for (var z = 1; z < radius - x; z++)
             {
-                chunks.Add(new Vector2i(originChunk.X + x, originChunk.Z + z));
+                chunks.Add(new Vector2<int>(originChunk.X + x, originChunk.Z + z));
             }
         }
 

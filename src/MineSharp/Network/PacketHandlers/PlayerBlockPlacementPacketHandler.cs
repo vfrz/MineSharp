@@ -36,18 +36,6 @@ public class PlayerBlockPlacementPacketHandler : IClientPacketHandler<PlayerBloc
             if (packet.Direction == -1)
                 return;
 
-            var itemId = packet.ItemId;
-
-            if (itemId is ItemId.Empty)
-            {
-                if (context.Server.Configuration.Debug)
-                {
-                    await context.RemoteClient.SendChatAsync($"Position: {packet.X} {packet.Y} {packet.Z}");
-                }
-
-                return;
-            }
-
             //TODO Check distance from player
             var player = context.RemoteClient.Player!;
             var holdItemStack = player.HoldItemStack;
@@ -61,19 +49,18 @@ public class PlayerBlockPlacementPacketHandler : IClientPacketHandler<PlayerBloc
                 return;
             }
 
-            var coordinates = new Vector3i(packet.X, packet.Y, packet.Z);
-            var directedCoordinates = ApplyDirectionToPosition(coordinates, packet.Direction);
+            var position = packet.PositionAsVector3.ApplyByteDirectionToPosition(packet.Direction);
 
             var popItemSuccess = await player.PopSelectedItemStackAsync();
 
             if (!popItemSuccess)
             {
-                var actualBlock = await context.Server.World.GetBlockAsync(directedCoordinates);
+                var actualBlock = await context.Server.World.GetBlockAsync(position);
                 await context.RemoteClient.SendPacketAsync(new BlockUpdatePacket
                 {
-                    X = directedCoordinates.X,
-                    Y = (sbyte) directedCoordinates.Y,
-                    Z = directedCoordinates.Z,
+                    X = position.X,
+                    Y = (sbyte) position.Y,
+                    Z = position.Z,
                     BlockId = actualBlock.BlockId,
                     Metadata = actualBlock.Metadata
                 });
@@ -88,44 +75,49 @@ public class PlayerBlockPlacementPacketHandler : IClientPacketHandler<PlayerBloc
             {
                 if (popItemSuccess)
                 {
-                    await context.Server.World.SetBlockAsync(directedCoordinates, (BlockId) packet.ItemId, (byte) packet.Metadata!);
+                    await context.Server.World.SetBlockAsync(position, (BlockId) packet.ItemId, (byte) packet.Metadata!);
                 }
                 else
                 {
-                    await context.Server.World.SetBlockAsync(directedCoordinates, 0);
+                    await context.Server.World.SetBlockAsync(position, 0);
                 }
+            }
+        }
+        else
+        {
+            if (context.Server.Configuration.Debug)
+            {
+                await context.RemoteClient.SendChatAsync($"Position: {packet.X} {packet.Y} {packet.Z}");
             }
         }
     }
 
     private async Task PlaceTorchAsync(PlayerBlockPlacementPacket packet, ClientPacketHandlerContext context)
     {
-        var position = new Vector3i(packet.X, packet.Y, packet.Z);
-        var directedPosition = ApplyDirectionToPosition(position, packet.Direction);
+        var position = packet.PositionAsVector3.ApplyByteDirectionToPosition(packet.Direction);
 
         // Torches can't be placed at the bottom of a block
         // TODO Actually they can if there is no block at Y-1 and a block at Y-1 and (X-1 or X+1 or Z-1 or Z+1)
         if (packet.Direction == 0)
         {
             //TODO Give back the item to the player
-            await CancelPlacementAsync(directedPosition, context);
+            await CancelPlacementAsync(position, context);
             return;
         }
 
         var orientationMetadata = (byte) packet.Direction;
-        await context.Server.World.SetBlockAsync(directedPosition, BlockId.Torch, orientationMetadata);
+        await context.Server.World.SetBlockAsync(position, BlockId.Torch, orientationMetadata);
     }
 
     private async Task PlaceSignAsync(PlayerBlockPlacementPacket packet, ClientPacketHandlerContext context)
     {
-        var position = new Vector3i(packet.X, packet.Y, packet.Z);
-        var directedPosition = ApplyDirectionToPosition(position, packet.Direction);
+        var position = packet.PositionAsVector3.ApplyByteDirectionToPosition(packet.Direction);
 
         // Signs can't be placed at the bottom of a block
         if (packet.Direction == 0)
         {
             //TODO Give back the item to the player
-            await CancelPlacementAsync(directedPosition, context);
+            await CancelPlacementAsync(position, context);
             return;
         }
 
@@ -141,10 +133,10 @@ public class PlayerBlockPlacementPacketHandler : IClientPacketHandler<PlayerBloc
 
         var blockId = onFloor ? BlockId.FloorSign : BlockId.WallSign;
 
-        await context.Server.World.SetBlockAsync(directedPosition, blockId, orientationMetadata);
+        await context.Server.World.SetBlockAsync(position, blockId, orientationMetadata);
 
-        var signTileEntity = new SignTileEntity(Chunk.WorldToLocal(directedPosition));
-        await context.Server.World.SetTileEntityAsync(directedPosition, signTileEntity);
+        var signTileEntity = new SignTileEntity(Chunk.WorldToLocal(position));
+        await context.Server.World.SetTileEntityAsync(position, signTileEntity);
     }
 
     private async Task PlaceDoorAsync(PlayerBlockPlacementPacket packet, ClientPacketHandlerContext context)
@@ -153,12 +145,12 @@ public class PlayerBlockPlacementPacketHandler : IClientPacketHandler<PlayerBloc
         if (!onFloor)
             return;
         //TODO
-        await CancelPlacementAsync(new Vector3i(packet.X, packet.Y + 1, packet.Z), context);
-        await CancelPlacementAsync(new Vector3i(packet.X, packet.Y + 2, packet.Z), context);
-        await context.RemoteClient.SendChatAsync("Doors are not supported yet :\\");
+        await CancelPlacementAsync(new Vector3<int>(packet.X, packet.Y + 1, packet.Z), context);
+        await CancelPlacementAsync(new Vector3<int>(packet.X, packet.Y + 2, packet.Z), context);
+        await context.RemoteClient.SendChatAsync("Doors are not supported yet!");
     }
 
-    private async Task CancelPlacementAsync(Vector3i position, ClientPacketHandlerContext context)
+    private async Task CancelPlacementAsync(Vector3<int> position, ClientPacketHandlerContext context)
     {
         await context.RemoteClient.SendPacketAsync(new BlockUpdatePacket
         {
@@ -168,23 +160,5 @@ public class PlayerBlockPlacementPacketHandler : IClientPacketHandler<PlayerBloc
             BlockId = 0,
             Metadata = 0
         });
-    }
-
-    //TODO Move this method somewhere else
-    private static Vector3i ApplyDirectionToPosition(Vector3i coordinates, sbyte direction)
-    {
-        if (direction == 0)
-            return coordinates + new Vector3i(0, -1, 0);
-        if (direction == 1)
-            return coordinates + new Vector3i(0, 1, 0);
-        if (direction == 2)
-            return coordinates + new Vector3i(0, 0, -1);
-        if (direction == 3)
-            return coordinates + new Vector3i(0, 0, 1);
-        if (direction == 4)
-            return coordinates + new Vector3i(-1, 0, 0);
-        if (direction == 5)
-            return coordinates + new Vector3i(1, 0, 0);
-        throw new Exception($"Unknown direction: {direction}");
     }
 }

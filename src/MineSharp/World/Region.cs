@@ -13,12 +13,12 @@ public class Region : IDisposable
     public const int RegionWidth = 32;
     public const int FileSectorSize = 4096;
 
-    private readonly ConcurrentDictionary<Vector2i, Chunk> _chunks = new();
+    private readonly ConcurrentDictionary<Vector2<int>, Chunk> _chunks = new();
     public IEnumerable<Chunk> Chunks => _chunks.Values;
 
-    private readonly AsyncKeyedLocker<Vector2i> _chunkLoadLocker = new();
+    private readonly AsyncKeyedLocker<Vector2<int>> _chunkLoadLocker = new();
 
-    public Vector2i RegionPosition { get; }
+    public Vector2<int> RegionPosition { get; }
 
     private MinecraftWorld World { get; }
 
@@ -27,7 +27,7 @@ public class Region : IDisposable
 
     private readonly LockableFileStream _fileStream;
 
-    private Region(Vector2i regionPosition,
+    private Region(Vector2<int> regionPosition,
         MinecraftWorld world,
         RegionLocationTable regionLocationTable,
         RegionTimestampTable regionTimestampTable,
@@ -40,7 +40,7 @@ public class Region : IDisposable
         _fileStream = fileStream;
     }
 
-    public static async Task<Region> LoadOrCreateAsync(Vector2i regionPosition, MinecraftWorld world)
+    public static async Task<Region> LoadOrCreateAsync(Vector2<int> regionPosition, MinecraftWorld world)
     {
         if (SaveManager.IsRegionSaved(regionPosition))
         {
@@ -68,7 +68,7 @@ public class Region : IDisposable
         }
     }
 
-    public async Task<Chunk> GetOrCreateChunkAsync(Vector2i chunkPosition)
+    public async Task<Chunk> GetOrCreateChunkAsync(Vector2<int> chunkPosition)
     {
         using (await _chunkLoadLocker.LockAsync(chunkPosition))
         {
@@ -90,7 +90,7 @@ public class Region : IDisposable
                     for (var y = 0; y < Chunk.ChunkHeight; y++)
                     for (var z = 0; z < Chunk.ChunkWidth; z++)
                     {
-                        chunk.SetLight(new Vector3i(x, y, z), 15, 15);
+                        chunk.SetLight(new Vector3<int>(x, y, z), 15, 15);
                     }
 
                     _regionLocationTable.AllocateNewChunk(chunkPosition);
@@ -180,7 +180,7 @@ public class Region : IDisposable
         }
     }
 
-    public static Vector2i GetRegionPositionForChunkPosition(Vector2i chunkPosition)
+    public static Vector2<int> GetRegionPositionForChunkPosition(Vector2<int> chunkPosition)
     {
         var regionX = chunkPosition.X / RegionWidth;
         var regionZ = chunkPosition.Z / RegionWidth;
@@ -188,7 +188,7 @@ public class Region : IDisposable
             regionX--;
         if (chunkPosition.Z < 0 && chunkPosition.Z % RegionWidth != 0)
             regionZ--;
-        return new Vector2i(regionX, regionZ);
+        return new Vector2<int>(regionX, regionZ);
     }
 
     public void Dispose()

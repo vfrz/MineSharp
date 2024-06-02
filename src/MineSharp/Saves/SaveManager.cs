@@ -13,7 +13,7 @@ public static class SaveManager
     private const string RegionDirectory = $"{WorldDirectory}/region";
     private const string LevelFile = $"{WorldDirectory}/level.dat";
     private static string GetPlayerSaveFile(string username) => $"{PlayersDirectory}/{username}.dat";
-    public static string GetRegionFilePath(Vector2i regionPosition) => $"{RegionDirectory}/r.{regionPosition.X}.{regionPosition.Z}.mcr";
+    public static string GetRegionFilePath(Vector2<int> regionPosition) => $"{RegionDirectory}/r.{regionPosition.X}.{regionPosition.Z}.mcr";
 
     public static void Initialize()
     {
@@ -22,7 +22,7 @@ public static class SaveManager
         CreateDirectoryIfNotExists(RegionDirectory);
     }
 
-    public static bool IsRegionSaved(Vector2i regionPosition) => File.Exists(GetRegionFilePath(regionPosition));
+    public static bool IsRegionSaved(Vector2<int> regionPosition) => File.Exists(GetRegionFilePath(regionPosition));
 
     public static bool IsWorldSaved() => File.Exists(LevelFile);
 
@@ -39,7 +39,7 @@ public static class SaveManager
         var saveData = new WorldSaveData
         {
             Seed = (int) data.Get<LongNbtTag>("RandomSeed").Value,
-            SpawnLocation = new Vector3i(spawnX, spawnY, spawnZ),
+            SpawnLocation = new Vector3<int>(spawnX, spawnY, spawnZ),
             Raining = data.Get<ByteNbtTag>("raining").ValueAsBool,
             RainTime = data.Get<IntNbtTag>("rainTime").Value,
             Thundering = data.Get<ByteNbtTag>("thundering").ValueAsBool,
@@ -108,7 +108,7 @@ public static class SaveManager
 
         var playerSaveData = new PlayerSaveData
         {
-            Position = new Vector3d(positionX, positionY, positionZ),
+            Position = new Vector3<double>(positionX, positionY, positionZ),
             Yaw = yaw,
             Pitch = pitch,
             Inventory = inventory,

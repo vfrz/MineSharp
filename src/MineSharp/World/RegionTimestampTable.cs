@@ -19,14 +19,14 @@ public class RegionTimestampTable
     {
     }
 
-    public int GetChunkTimestamp(Vector2i chunkPosition)
+    public int GetChunkTimestamp(Vector2<int> chunkPosition)
     {
         var index = GetTableIndexForChunkPosition(chunkPosition);
         var timestamp = (_data[index] << 24) | (_data[index + 1] << 16) | (_data[index + 2] << 8) | _data[index + 3];
         return timestamp;
     }
 
-    public void SetChunkTimestamp(Vector2i chunkPosition, int timestamp)
+    public void SetChunkTimestamp(Vector2<int> chunkPosition, int timestamp)
     {
         var index = GetTableIndexForChunkPosition(chunkPosition);
         _data[index] = (byte) ((timestamp >> 24) & 0xFF);
@@ -35,6 +35,6 @@ public class RegionTimestampTable
         _data[index + 3] = (byte) (timestamp & 0xFF);
     }
 
-    private static int GetTableIndexForChunkPosition(Vector2i chunkPosition)
+    private static int GetTableIndexForChunkPosition(Vector2<int> chunkPosition)
         => (chunkPosition.X % 32 + chunkPosition.Z % 32 * 32) * 4;
 }

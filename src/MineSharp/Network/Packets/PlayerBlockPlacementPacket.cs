@@ -1,5 +1,6 @@
 using System.Buffers;
 using MineSharp.Content;
+using MineSharp.Core;
 using MineSharp.Extensions;
 
 namespace MineSharp.Network.Packets;
@@ -16,6 +17,8 @@ public class PlayerBlockPlacementPacket : IClientPacket
     public ItemId ItemId { get; set; }
     public byte? Amount { get; set; }
     public short? Metadata { get; set; }
+
+    public Vector3<int> PositionAsVector3 => new(X, Y, Z);
 
     public void Read(ref SequenceReader<byte> reader)
     {
