@@ -1,4 +1,5 @@
 using System.Buffers;
+using MineSharp.Core;
 using MineSharp.Extensions;
 
 namespace MineSharp.Network.Packets;
@@ -15,6 +16,8 @@ public class UpdateSignPacket : IClientPacket, IServerPacket
     public string Text2 { get; set; } = string.Empty;
     public string Text3 { get; set; } = string.Empty;
     public string Text4 { get; set; } = string.Empty;
+
+    public Vector3i PositionAsVector3i => new(X, Y, Z);
 
     public void Read(ref SequenceReader<byte> reader)
     {

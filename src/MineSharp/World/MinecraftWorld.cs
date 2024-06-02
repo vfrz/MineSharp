@@ -149,7 +149,7 @@ public class MinecraftWorld : IDisposable
         chunk.SetTileEntity(localPosition, tileEntity);
     }
 
-    public async Task<T?> GetTileEntityAsync<T>(Vector3i worldPosition) where T : TileEntity
+    public async Task<T> GetTileEntityAsync<T>(Vector3i worldPosition) where T : TileEntity
     {
         var chunkPosition = Chunk.GetChunkPositionForWorldPosition(worldPosition);
         var chunk = await GetOrCreateChunkAsync(chunkPosition);

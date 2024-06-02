@@ -121,9 +121,11 @@ public class Chunk : IBlockChunkData
         return _tileEntities.GetValueOrDefault(localPosition);
     }
 
-    public T? GetTileEntity<T>(Vector3i localPosition) where T : TileEntity
+    public T GetTileEntity<T>(Vector3i localPosition) where T : TileEntity
     {
-        return (T?) GetTileEntity(localPosition);
+        if (_tileEntities.TryGetValue(localPosition, out var tileEntity))
+            return (T) tileEntity;
+        throw new KeyNotFoundException();
     }
 
     public void SetLight(Vector3i localPosition, byte light, byte skyLight)

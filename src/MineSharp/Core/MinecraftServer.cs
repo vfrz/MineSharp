@@ -401,6 +401,20 @@ public class MinecraftServer : IDisposable
         });
     }
 
+    public async Task BroadcastPacketForChunkAsync(IServerPacket packet, Vector2i chunkPosition,
+        RemoteClient? except = null, bool readyClientsOnly = false)
+    {
+        await using var writer = new PacketWriter(packet.PacketId);
+        packet.Write(writer);
+        var data = writer.ToByteArray();
+        await Parallel.ForEachAsync(RemoteClients.Where(c => c.LoadedChunks.Contains(chunkPosition)), async (client, _) =>
+        {
+            if (client == except || (readyClientsOnly && client.State != RemoteClient.ClientState.Ready))
+                return;
+            await client.TrySendAsync(data);
+        });
+    }
+
     public async Task BroadcastChatAsync(string message, RemoteClient? except = null)
     {
         await BroadcastPacketAsync(new ChatMessagePacket

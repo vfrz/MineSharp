@@ -26,6 +26,8 @@ public class RemoteClient : IDisposable
 
     private HashSet<Vector2i> _loadedChunks = new();
 
+    public IReadOnlySet<Vector2i> LoadedChunks => _loadedChunks;
+
     public RemoteClient(Socket socket, MinecraftServer server)
     {
         Socket = socket;
@@ -130,13 +132,15 @@ public class RemoteClient : IDisposable
 
         foreach (var tileEntity in chunk.TileEntities)
         {
+            var worldPosition = chunk.LocalToWorld(tileEntity.LocalPosition);
+
             if (tileEntity is SignTileEntity signTileEntity)
             {
                 await SendPacketAsync(new UpdateSignPacket
                 {
-                    X = signTileEntity.LocalPosition.X,
-                    Y = (short) signTileEntity.LocalPosition.Y,
-                    Z = signTileEntity.LocalPosition.Z,
+                    X = worldPosition.X,
+                    Y = (short) worldPosition.Y,
+                    Z = worldPosition.Z,
                     Text1 = signTileEntity.Text1 ?? string.Empty,
                     Text2 = signTileEntity.Text2 ?? string.Empty,
                     Text3 = signTileEntity.Text3 ?? string.Empty,
