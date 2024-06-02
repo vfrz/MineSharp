@@ -1,8 +1,12 @@
 namespace MineSharp.Content.Items;
 
-public class GoldenPickaxeItemInfo : ToolItemInfo
+public class GoldenPickaxeItemInfo : PickaxeItemInfo
 {
     public override ItemId ItemId => ItemId.GoldenPickaxe;
-    public override short DamageOnEntity { get; } //TODO
-    public override short Durability { get; }
+
+    public override short DamageOnEntity => 3;
+
+    public override short Durability => 33;
+
+    protected override ToolMaterial Material => ToolMaterial.Gold;
 }

@@ -22,19 +22,53 @@ public static class CraftingSystem
 
     private static bool IsMatchingRecipe(ItemStack[,] inputGrid, CraftingRecipe recipe)
     {
-        if (inputGrid.GetLength(0) != recipe.Pattern.GetLength(0) || inputGrid.GetLength(1) != recipe.Pattern.GetLength(1))
+        var inputXLength = inputGrid.GetLength(1);
+        var inputYLength = inputGrid.GetLength(0);
+
+        var recipeXLength = recipe.Pattern.GetLength(1);
+        var recipeYLength = recipe.Pattern.GetLength(0);
+
+        if (inputXLength != recipeXLength || inputYLength != recipeYLength)
             return false;
 
-        for (var i = 0; i < inputGrid.GetLength(0); i++)
+        var matching = true;
+
+        for (var x = 0; x < inputXLength; x++)
         {
-            for (var j = 0; j < inputGrid.GetLength(1); j++)
+            for (var y = 0; y < inputYLength; y++)
             {
-                if (!inputGrid[i, j].Match(recipe.Pattern[i, j], matchMetadata: recipe.MatchMetadata))
-                    return false;
+                if (!inputGrid[y, x].Match(recipe.Pattern[y, x], matchMetadata: recipe.MatchMetadata))
+                {
+                    matching = false;
+                    break;
+                }
+            }
+
+            if (!matching)
+                break;
+        }
+
+        if (!matching && recipe.Mirrored)
+        {
+            matching = true;
+
+            for (var x = 0; x < inputXLength; x++)
+            {
+                for (var y = 0; y < inputYLength; y++)
+                {
+                    if (!inputGrid[y, x].Match(recipe.Pattern[y, recipeXLength - 1 - x], matchMetadata: recipe.MatchMetadata))
+                    {
+                        matching = false;
+                        break;
+                    }
+                }
+
+                if (!matching)
+                    break;
             }
         }
 
-        return true;
+        return matching;
     }
 
     private static ItemStack[,] NormalizeGrid(ItemStack[,] grid)

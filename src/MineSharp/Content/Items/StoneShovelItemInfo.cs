@@ -1,8 +1,12 @@
 namespace MineSharp.Content.Items;
 
-public class StoneShovelItemInfo : ToolItemInfo
+public class StoneShovelItemInfo : ShovelItemInfo
 {
     public override ItemId ItemId => ItemId.StoneShovel;
-    public override short DamageOnEntity { get; } //TODO
-    public override short Durability { get; }
+
+    public override short DamageOnEntity => 3;
+
+    public override short Durability => 132;
+
+    protected override ToolMaterial Material => ToolMaterial.Stone;
 }

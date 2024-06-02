@@ -1,8 +1,12 @@
 namespace MineSharp.Content.Items;
 
-public class GoldenSwordItemInfo : ToolItemInfo
+public class GoldenSwordItemInfo : SwordItemInfo
 {
     public override ItemId ItemId => ItemId.GoldenSword;
-    public override short DamageOnEntity { get; } //TODO
-    public override short Durability { get; }
+
+    public override short DamageOnEntity => 5;
+
+    public override short Durability => 32;
+
+    protected override ToolMaterial Material => ToolMaterial.Gold;
 }
