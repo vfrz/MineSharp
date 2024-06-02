@@ -2,6 +2,8 @@ using System.Buffers;
 using System.Runtime.CompilerServices;
 using System.Threading.Channels;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using MineSharp.Core;
 using MineSharp.Extensions;
 using MineSharp.Network.Packets;
 
@@ -14,10 +16,12 @@ public class PacketDispatcher
 
     private readonly IServiceProvider _serviceProvider;
     private readonly Channel<WrappedPacket> _packetsChannel;
+    private readonly ILogger<PacketDispatcher> _logger;
 
     public PacketDispatcher(IServiceProvider serviceProvider)
     {
         _serviceProvider = serviceProvider;
+        _logger = _serviceProvider.GetRequiredService<ILogger<PacketDispatcher>>();
         _packetsChannel = Channel.CreateUnbounded<WrappedPacket>(new UnboundedChannelOptions
         {
             SingleReader = true,
@@ -70,7 +74,17 @@ public class PacketDispatcher
     public async Task HandlePacketsAsync()
     {
         while (_packetsChannel.Reader.TryRead(out var wrappedPacket))
-            await HandlePacketAsync(wrappedPacket);
+        {
+            try
+            {
+                await HandlePacketAsync(wrappedPacket);
+            }
+            catch (Exception ex)
+            {
+                //TODO Should we kick the player?
+                _logger.LogError(ex, ex.Message);
+            }
+        }
     }
 
     private Task HandlePacketAsync(WrappedPacket wrappedPacket)

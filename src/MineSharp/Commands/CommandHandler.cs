@@ -25,6 +25,13 @@ public class CommandHandler
             return false;
         }
 
-        return await handler(server, remoteClient, parsedCommand.Args);
+        try
+        {
+            return await handler(server, remoteClient, parsedCommand.Args);
+        }
+        catch (Exception ex)
+        {
+            throw new Exception($"Failed to execute command: '{completeCommand}'", ex);
+        }
     }
 }

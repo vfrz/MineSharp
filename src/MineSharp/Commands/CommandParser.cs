@@ -8,15 +8,22 @@ public static class CommandParser
 
     public static ParsedCommand Parse(string command)
     {
-        var commandCharArrayQueue = new Queue<char>(command.ToCharArray());
+        try
+        {
+            var commandCharArrayQueue = new Queue<char>(command.ToCharArray());
 
-        //Dequeue '/'
-        commandCharArrayQueue.Dequeue();
+            //Dequeue '/'
+            commandCharArrayQueue.Dequeue();
 
-        var commandName = ParseCommandName(commandCharArrayQueue);
-        var commandArguments = ParseCommandArguments(commandCharArrayQueue);
+            var commandName = ParseCommandName(commandCharArrayQueue);
+            var commandArguments = ParseCommandArguments(commandCharArrayQueue);
 
-        return new ParsedCommand(commandName, commandArguments);
+            return new ParsedCommand(commandName, commandArguments);
+        }
+        catch (Exception ex)
+        {
+            throw new FormatException($"Failed to parse command: '{command}'", ex);
+        }
     }
 
     private static string ParseCommandName(Queue<char> queue)

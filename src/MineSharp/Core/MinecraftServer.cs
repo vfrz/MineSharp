@@ -218,8 +218,32 @@ public class MinecraftServer : IDisposable
             return true;
         });
 
-        _commandHandler.TryRegisterCommand("kill", async (_, client, _) =>
+        _commandHandler.TryRegisterCommand("kick", async (server, _, args) =>
         {
+            var target = server.GetRemoteClientByUsername(args[0]);
+            if (target?.State is RemoteClient.ClientState.Ready)
+            {
+                await target.KickAsync("You have been kicked.");
+                return true;
+            }
+
+            return false;
+        });
+
+        _commandHandler.TryRegisterCommand("kill", async (server, client, args) =>
+        {
+            if (args.Length > 0)
+            {
+                var target = server.GetRemoteClientByUsername(args[0]);
+                if (target?.State is RemoteClient.ClientState.Ready)
+                {
+                    await target.Player!.SetHealthAsync(0);
+                    return true;
+                }
+
+                return false;
+            }
+
             await client!.Player!.SetHealthAsync(0);
             return true;
         });
@@ -248,13 +272,17 @@ public class MinecraftServer : IDisposable
             return true;
         });
 
-        _commandHandler.TryRegisterCommand("give", async (_, client, args) =>
+        _commandHandler.TryRegisterCommand("give", async (server, _, args) =>
         {
-            var itemId = (ItemId) short.Parse(args[0]);
-            var count = args.Length > 1 ? byte.Parse(args[1]) : ItemInfoProvider.Get(itemId).StackMax;
-            var metadata = args.Length > 2 ? short.Parse(args[2]) : (byte) 0;
+            var username = args[0];
+            var itemId = (ItemId) short.Parse(args[1]);
+            var count = args.Length > 2 ? byte.Parse(args[2]) : ItemInfoProvider.Get(itemId).StackMax;
+            var metadata = args.Length > 3 ? short.Parse(args[3]) : (byte) 0;
 
-            return await client!.Player!.TryGiveItemAsync(new ItemStack(itemId, count, metadata));
+            var receiverRemoteClient = server.GetRemoteClientByUsername(username);
+            if (receiverRemoteClient?.State is RemoteClient.ClientState.Ready)
+                return await receiverRemoteClient.Player!.TryGiveItemAsync(new ItemStack(itemId, count, metadata));
+            return false;
         });
 
         _commandHandler.TryRegisterCommand("clear", async (_, client, _) =>
@@ -373,7 +401,7 @@ public class MinecraftServer : IDisposable
     {
         foreach (var remoteClient in RemoteClients)
         {
-            await SavePlayerAsync(remoteClient);
+            SavePlayer(remoteClient);
         }
 
         await BroadcastPacketAsync(new PlayerDisconnectPacket
@@ -382,10 +410,9 @@ public class MinecraftServer : IDisposable
         });
     }
 
-    private Task SavePlayerAsync(RemoteClient client)
+    private void SavePlayer(RemoteClient client)
     {
         client.Player?.Save();
-        return Task.CompletedTask;
     }
 
     public async Task BroadcastPacketAsync(IServerPacket packet, RemoteClient? except = null, bool readyClientsOnly = false)
@@ -544,11 +571,11 @@ public class MinecraftServer : IDisposable
     {
         _logger.LogInformation("Saving everything...");
 
-        await World.SaveAsync();
+        await World.SaveAsync(cancellationToken);
 
         foreach (var remoteClient in RemoteClients)
         {
-            await SavePlayerAsync(remoteClient);
+            SavePlayer(remoteClient);
         }
 
         _logger.LogInformation("Saved successfully");

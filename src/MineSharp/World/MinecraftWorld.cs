@@ -182,13 +182,13 @@ public class MinecraftWorld : IDisposable
         });
     }
 
-    public async Task SaveAsync()
+    public async Task SaveAsync(CancellationToken cancellationToken = default)
     {
         SaveManager.SaveWorld(GetSaveData());
 
         foreach (var region in _regions.Values)
         {
-            await region.SaveAsync();
+            await region.SaveAsync(cancellationToken);
         }
     }
 

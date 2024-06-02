@@ -154,13 +154,13 @@ public class Region : IDisposable
         }
     }
 
-    public async Task SaveAsync()
+    public async Task SaveAsync(CancellationToken cancellationToken = default)
     {
         using (await _fileStream.EnterLockAsync())
         {
             _fileStream.Seek(0, SeekOrigin.Begin);
-            await _fileStream.WriteAsync(_regionLocationTable.Data);
-            await _fileStream.WriteAsync(_regionTimestampTable.Data);
+            await _fileStream.WriteAsync(_regionLocationTable.Data, cancellationToken);
+            await _fileStream.WriteAsync(_regionTimestampTable.Data, cancellationToken);
 
             foreach (var chunk in Chunks)
             {
@@ -173,9 +173,9 @@ public class Region : IDisposable
                 _fileStream.Seek(seekOffset, SeekOrigin.Begin);
                 var lengthBytes = new byte[4];
                 BinaryPrimitives.WriteInt32BigEndian(lengthBytes, nbtBytes.Length);
-                await _fileStream.WriteAsync(lengthBytes);
+                await _fileStream.WriteAsync(lengthBytes, cancellationToken);
                 _fileStream.WriteByte((byte) NbtCompression.Zlib);
-                await _fileStream.WriteAsync(nbtBytes);
+                await _fileStream.WriteAsync(nbtBytes, cancellationToken);
             }
         }
     }
