@@ -96,7 +96,7 @@ public class MinecraftServer : IDisposable
             await Parallel.ForEachAsync(RemoteClients, token, async (client, _) =>
             {
                 if (client.Player is not null && !client.Player.Respawning)
-                    await client.UpdateLoadedChunksAsync();
+                    await client.Player.UpdateLoadedChunksAsync();
             });
         });
         Looper.RegisterLoop(TimeSpan.FromMinutes(Configuration.AutomaticSaveIntervalInMinutes),
@@ -201,7 +201,8 @@ public class MinecraftServer : IDisposable
 
         _commandHandler.TryRegisterCommand("chunk", async (_, client, _) =>
         {
-            await client!.SendChatAsync(client.GetCurrentChunk().ToString());
+            if (client?.Player is not null)
+                await client.SendChatAsync(client.Player.GetCurrentChunk().ToString());
             return true;
         });
 
@@ -333,7 +334,7 @@ public class MinecraftServer : IDisposable
 
             var player = client!.Player!;
             player.Position = target;
-            await client.LoadChunkAsync(Chunk.GetChunkPositionForWorldPosition(player.Position));
+            await player.LoadChunkAsync(Chunk.GetChunkPositionForWorldPosition(player.Position));
             await client.SendPacketAsync(new PlayerPositionAndLookServerPacket
             {
                 X = player.Position.X,
@@ -434,13 +435,18 @@ public class MinecraftServer : IDisposable
         await using var writer = new PacketWriter(packet.PacketId);
         packet.Write(writer);
         var data = writer.ToByteArray();
-        await Parallel.ForEachAsync(RemoteClients.Where(c => c.LoadedChunks.Contains(chunkPosition)), async (client, _) =>
-        {
-            if (client == except || (readyClientsOnly && client.State != RemoteClient.ClientState.Ready))
-                return;
-            await client.TrySendAsync(data);
-        });
+
+        var players = GetPlayersInChunk(chunkPosition)
+            .Where(player => player.RemoteClient != except)
+            .Where(player => !readyClientsOnly || player.RemoteClient.State is RemoteClient.ClientState.Ready);
+
+        await Parallel.ForEachAsync(players, async (player, _) => await player.RemoteClient.TrySendAsync(data));
     }
+
+    private IEnumerable<Player> GetPlayersInChunk(Vector2<int> chunkPosition)
+        => RemoteClients
+            .Where(c => c.Player is not null && c.Player.LoadedChunks.Contains(chunkPosition))
+            .Select(c => c.Player!);
 
     public async Task BroadcastChatAsync(string message, RemoteClient? except = null)
     {

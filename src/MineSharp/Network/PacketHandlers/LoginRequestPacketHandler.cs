@@ -30,11 +30,6 @@ public class LoginRequestPacketHandler : IClientPacketHandler<LoginRequestPacket
 
         var username = packet.Username;
 
-        if (context.Server.Configuration.Debug)
-        {
-            username = packet.Username + Guid.NewGuid().ToString()[..4];
-        }
-
         using (await PlayerInitSemaphore.EnterLockAsync())
         {
             if (context.Server.RemoteClients.Any(c => c.Player?.Username == packet.Username))
@@ -67,7 +62,7 @@ public class LoginRequestPacketHandler : IClientPacketHandler<LoginRequestPacket
 
         // World chunks and more
 
-        await context.RemoteClient.UpdateLoadedChunksAsync();
+        await currentPlayer.UpdateLoadedChunksAsync();
 
         await context.Server.World.SendTimeUpdateAsync(context.RemoteClient);
 

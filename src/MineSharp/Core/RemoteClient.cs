@@ -24,10 +24,6 @@ public class RemoteClient : IDisposable
     private Socket Socket { get; }
     private MinecraftServer Server { get; }
 
-    private HashSet<Vector2<int>> _loadedChunks = new();
-
-    public IReadOnlySet<Vector2<int>> LoadedChunks => _loadedChunks;
-
     public RemoteClient(Socket socket, MinecraftServer server)
     {
         Socket = socket;
@@ -89,97 +85,6 @@ public class RemoteClient : IDisposable
             Message = message
         });
     }
-
-    public async Task UnloadChunksAsync()
-    {
-        foreach (var chunkToUnload in _loadedChunks)
-        {
-            await SendPacketAsync(new PreChunkPacket
-            {
-                X = chunkToUnload.X,
-                Z = chunkToUnload.Z,
-                Mode = PreChunkPacket.LoadingMode.Unload
-            });
-        }
-
-        _loadedChunks.Clear();
-    }
-
-    public async Task LoadChunkAsync(Vector2<int> chunkToLoad)
-    {
-        if (_loadedChunks.Contains(chunkToLoad))
-            return;
-
-        var chunk = await Server.World.GetOrCreateChunkAsync(chunkToLoad);
-
-        await SendPacketAsync(new PreChunkPacket
-        {
-            X = chunkToLoad.X,
-            Z = chunkToLoad.Z,
-            Mode = PreChunkPacket.LoadingMode.Load
-        });
-
-        await SendPacketAsync(new ChunkPacket
-        {
-            X = chunkToLoad.X * Chunk.ChunkWidth,
-            Y = 0,
-            Z = chunkToLoad.Z * Chunk.ChunkWidth,
-            SizeX = Chunk.ChunkWidth - 1,
-            SizeY = Chunk.ChunkHeight - 1,
-            SizeZ = Chunk.ChunkWidth - 1,
-            CompressedData = await chunk.ToCompressedDataAsync()
-        });
-
-        foreach (var tileEntity in chunk.TileEntities)
-        {
-            var worldPosition = chunk.LocalToWorld(tileEntity.LocalPosition);
-
-            if (tileEntity is SignTileEntity signTileEntity)
-            {
-                await SendPacketAsync(new UpdateSignPacket
-                {
-                    X = worldPosition.X,
-                    Y = (short) worldPosition.Y,
-                    Z = worldPosition.Z,
-                    Text1 = signTileEntity.Text1 ?? string.Empty,
-                    Text2 = signTileEntity.Text2 ?? string.Empty,
-                    Text3 = signTileEntity.Text3 ?? string.Empty,
-                    Text4 = signTileEntity.Text4 ?? string.Empty
-                });
-            }
-            else
-            {
-                //TODO Handle other TileEntity types
-            }
-        }
-    }
-
-    public async Task UpdateLoadedChunksAsync()
-    {
-        var visibleChunks =
-            Chunk.GetChunksAround(GetCurrentChunk(), Server.Configuration.VisibleChunksDistance);
-        var chunksToLoad = visibleChunks.Except(_loadedChunks);
-        var chunksToUnload = _loadedChunks.Except(visibleChunks);
-
-        foreach (var chunkToLoad in chunksToLoad)
-        {
-            await LoadChunkAsync(chunkToLoad);
-        }
-
-        foreach (var chunkToUnload in chunksToUnload)
-        {
-            await SendPacketAsync(new PreChunkPacket
-            {
-                X = chunkToUnload.X,
-                Z = chunkToUnload.Z,
-                Mode = PreChunkPacket.LoadingMode.Unload
-            });
-        }
-
-        _loadedChunks = visibleChunks;
-    }
-
-    public Vector2<int> GetCurrentChunk() => Chunk.GetChunkPositionForWorldPosition(Player!.Position);
 
     public async Task KickAsync(string reason)
     {
