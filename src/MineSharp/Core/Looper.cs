@@ -1,10 +1,11 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
+using MineSharp.Sdk;
 
 namespace MineSharp.Core;
 
 //TODO Measure and optimize if required
-public class Looper : IDisposable
+public class Looper : ILooper, IDisposable
 {
     private record struct TaskToSchedule(Func<CancellationToken, Task> Func, long Delay);
 

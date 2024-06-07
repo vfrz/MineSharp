@@ -5,12 +5,13 @@ using MineSharp.Content;
 using MineSharp.Core;
 using MineSharp.Network.Packets;
 using MineSharp.Saves;
+using MineSharp.Sdk;
 using MineSharp.TileEntities;
 using MineSharp.World.Generation;
 
 namespace MineSharp.World;
 
-public class MinecraftWorld : IDisposable
+public class MinecraftWorld : IWorld, IDisposable
 {
     public int Seed { get; }
     public bool Raining { get; private set; }

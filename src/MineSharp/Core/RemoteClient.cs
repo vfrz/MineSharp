@@ -3,12 +3,11 @@ using Microsoft.Extensions.Logging;
 using MineSharp.Network;
 using MineSharp.Network.Packets;
 using MineSharp.Saves;
-using MineSharp.TileEntities;
-using MineSharp.World;
+using MineSharp.Sdk;
 
 namespace MineSharp.Core;
 
-public class RemoteClient : IDisposable
+public class RemoteClient : IRemoteClient, IDisposable
 {
     public enum ClientState
     {
@@ -16,7 +15,9 @@ public class RemoteClient : IDisposable
         Ready
     }
 
+    IPlayer? IRemoteClient.Player => Player;
     public Player? Player { get; private set; }
+    
     public string NetworkId { get; }
 
     public ClientState State { get; private set; }

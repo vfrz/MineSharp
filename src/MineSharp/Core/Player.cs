@@ -3,13 +3,14 @@ using MineSharp.Entities;
 using MineSharp.Entities.Metadata;
 using MineSharp.Network.Packets;
 using MineSharp.Saves;
+using MineSharp.Sdk;
 using MineSharp.TileEntities;
 using MineSharp.Windows;
 using MineSharp.World;
 
 namespace MineSharp.Core;
 
-public class Player : LivingEntity
+public class Player : LivingEntity, IPlayer
 {
     public const double Height = 1.62;
     public const double YMinOffset = 0.000000005;

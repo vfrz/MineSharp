@@ -8,18 +8,19 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MineSharp.Commands;
 using MineSharp.Configuration;
-using MineSharp.Content;
 using MineSharp.Entities;
 using MineSharp.Entities.Mobs;
 using MineSharp.Extensions;
 using MineSharp.Network;
 using MineSharp.Network.Packets;
+using MineSharp.Plugins;
 using MineSharp.Saves;
+using MineSharp.Sdk;
 using MineSharp.World;
 
 namespace MineSharp.Core;
 
-public class MinecraftServer : IDisposable
+public class MinecraftServer : IServer, IDisposable
 {
     private const int ClientTimeoutInSeconds = 10;
 
@@ -35,13 +36,21 @@ public class MinecraftServer : IDisposable
     public ServerConfiguration Configuration { get; }
     private readonly ILogger<MinecraftServer> _logger;
     private readonly IServiceProvider _serviceProvider;
-    private readonly CommandHandler _commandHandler;
+
+    ICommands IServer.Commands => CommandManager;
+    public CommandManager CommandManager { get; }
+
     private readonly IHostApplicationLifetime _hostApplicationLifetime;
 
+    IWorld IServer.World => World;
     public MinecraftWorld World { get; private set; } = null!;
 
     public EntityManager EntityManager { get; }
+
+    ILooper IServer.Looper => Looper;
     public Looper Looper { get; }
+
+    public PluginManager PluginManager { get; }
 
     private bool _saveOnNextLoop;
 
@@ -49,20 +58,21 @@ public class MinecraftServer : IDisposable
         IOptions<ServerConfiguration> configuration,
         ILogger<MinecraftServer> logger,
         IServiceProvider serviceProvider,
-        CommandHandler commandHandler,
         IHostApplicationLifetime hostApplicationLifetime)
     {
         _packetDispatcher = packetDispatcher;
         Configuration = configuration.Value;
         _logger = logger;
         _serviceProvider = serviceProvider;
-        _commandHandler = commandHandler;
+        CommandManager = new CommandManager();
         _hostApplicationLifetime = hostApplicationLifetime;
         _remoteClients = new ConcurrentDictionary<string, RemoteClient>();
 
         EntityManager = new EntityManager(this);
 
         Looper = new Looper(TimeSpan.FromMilliseconds(50), ProcessAsync);
+
+        PluginManager = new PluginManager(this);
 
         var ip = new IPEndPoint(IPAddress.Any, configuration.Value.Port);
         _socket = new Socket(ip.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
@@ -72,6 +82,8 @@ public class MinecraftServer : IDisposable
     public async Task InitializeAsync(CancellationToken cancellationToken)
     {
         _logger.LogInformation("Server initializing...");
+
+        PluginManager.ReloadPlugins();
 
         SaveManager.Initialize();
 
@@ -158,7 +170,7 @@ public class MinecraftServer : IDisposable
 
     private void RegisterDefaultCommands()
     {
-        _commandHandler.TryRegisterCommand("stop", async (server, _, _) =>
+        CommandManager.TryRegisterCommand("stop", async (server, _, _) =>
         {
             var delay = TimeSpan.FromSeconds(5);
             server.Looper.Schedule(delay, _ => server.Stop());
@@ -166,7 +178,8 @@ public class MinecraftServer : IDisposable
             return true;
         });
 
-        _commandHandler.TryRegisterCommand("id", async (_, client, _) =>
+        //TODO Uncomment when ready
+        /*_commandManager.TryRegisterCommand("id", async (_, client, _) =>
         {
             if (client is null)
                 return true;
@@ -177,7 +190,7 @@ public class MinecraftServer : IDisposable
             return true;
         });
 
-        _commandHandler.TryRegisterCommand("rain", async (server, _, _) =>
+        _commandManager.TryRegisterCommand("rain", async (server, _, _) =>
         {
             if (server.World.Raining)
                 await server.World.StopRainAsync();
@@ -186,40 +199,40 @@ public class MinecraftServer : IDisposable
             return true;
         });
 
-        _commandHandler.TryRegisterCommand("time", async (server, _, args) =>
+        _commandManager.TryRegisterCommand("time", async (server, _, args) =>
         {
             var time = long.Parse(args[0]);
             await server.World.SetTimeAsync(time);
             return true;
         });
 
-        _commandHandler.TryRegisterCommand("pos", async (_, client, _) =>
+        _commandManager.TryRegisterCommand("pos", async (_, client, _) =>
         {
             await client!.SendChatAsync(client.Player!.Position.ToString());
             return true;
         });
 
-        _commandHandler.TryRegisterCommand("chunk", async (_, client, _) =>
+        _commandManager.TryRegisterCommand("chunk", async (_, client, _) =>
         {
             if (client?.Player is not null)
                 await client.SendChatAsync(client.Player.GetCurrentChunk().ToString());
             return true;
         });
 
-        _commandHandler.TryRegisterCommand("heal", async (_, client, _) =>
+        _commandManager.TryRegisterCommand("heal", async (_, client, _) =>
         {
             await client!.Player!.SetHealthAsync(20);
             return true;
         });
 
-        _commandHandler.TryRegisterCommand("dmg", async (_, client, args) =>
+        _commandManager.TryRegisterCommand("dmg", async (_, client, args) =>
         {
             var value = args[0].ParseInt();
             await client!.Player!.SetHealthAsync((short) (client.Player.Health - value));
             return true;
         });
 
-        _commandHandler.TryRegisterCommand("kick", async (server, _, args) =>
+        _commandManager.TryRegisterCommand("kick", async (server, _, args) =>
         {
             var target = server.GetRemoteClientByUsername(args[0]);
             if (target?.State is RemoteClient.ClientState.Ready)
@@ -231,7 +244,7 @@ public class MinecraftServer : IDisposable
             return false;
         });
 
-        _commandHandler.TryRegisterCommand("kill", async (server, client, args) =>
+        _commandManager.TryRegisterCommand("kill", async (server, client, args) =>
         {
             if (args.Length > 0)
             {
@@ -249,19 +262,19 @@ public class MinecraftServer : IDisposable
             return true;
         });
 
-        _commandHandler.TryRegisterCommand("yaw", async (server, client, _) =>
+        _commandManager.TryRegisterCommand("yaw", async (server, client, _) =>
         {
             await server.BroadcastChatAsync($"Yaw: {client!.Player!.Yaw}");
             return true;
         });
 
-        _commandHandler.TryRegisterCommand("mob", async (server, client, args) =>
+        _commandManager.TryRegisterCommand("mob", async (server, client, args) =>
         {
             await server.SpawnMobAsync((MobType) byte.Parse(args[0]), client!.Player!.Position.ToVector3<int>());
             return true;
         });
 
-        _commandHandler.TryRegisterCommand("chest", async (_, client, _) =>
+        _commandManager.TryRegisterCommand("chest", async (_, client, _) =>
         {
             await client!.SendPacketAsync(new OpenWindowPacket
             {
@@ -273,7 +286,7 @@ public class MinecraftServer : IDisposable
             return true;
         });
 
-        _commandHandler.TryRegisterCommand("give", async (server, _, args) =>
+        _commandManager.TryRegisterCommand("give", async (server, _, args) =>
         {
             var username = args[0];
             var itemId = (ItemId) short.Parse(args[1]);
@@ -286,26 +299,26 @@ public class MinecraftServer : IDisposable
             return false;
         });
 
-        _commandHandler.TryRegisterCommand("clear", async (_, client, _) =>
+        _commandManager.TryRegisterCommand("clear", async (_, client, _) =>
         {
             await client!.Player!.ClearInventoryAsync();
             return true;
         });
 
-        _commandHandler.TryRegisterCommand("save", async (server, client, _) =>
+        _commandManager.TryRegisterCommand("save", async (server, client, _) =>
         {
             await server.SaveAsync(CancellationToken.None);
             await client!.SendChatAsync($"{ChatColors.Green}Saved successfully");
             return true;
         });
 
-        _commandHandler.TryRegisterCommand("gc", (_, _, _) =>
+        _commandManager.TryRegisterCommand("gc", (_, _, _) =>
         {
             GC.Collect();
             return Task.FromResult(true);
         });
 
-        _commandHandler.TryRegisterCommand("tp", async (server, client, args) =>
+        _commandManager.TryRegisterCommand("tp", async (server, client, args) =>
         {
             Vector3<double> target;
 
@@ -346,7 +359,7 @@ public class MinecraftServer : IDisposable
                 Stance = player.Position.Y + Player.Height
             });
             return true;
-        });
+        });*/
     }
 
     public RemoteClient? GetRemoteClientByUsername(string username)
@@ -396,6 +409,8 @@ public class MinecraftServer : IDisposable
             await SaveAsync(cancellationToken);
             _saveOnNextLoop = false;
         }
+
+        await PluginManager.CallOnTickAsync(elapsed);
     }
 
     public async Task DisconnectAllPlayersAsync(string message)
@@ -416,7 +431,7 @@ public class MinecraftServer : IDisposable
         client.Player?.Save();
     }
 
-    public async Task BroadcastPacketAsync(IServerPacket packet, RemoteClient? except = null, bool readyClientsOnly = false)
+    public async Task BroadcastPacketAsync(IServerPacket packet, IRemoteClient? except = null, bool readyClientsOnly = false)
     {
         await using var writer = new PacketWriter(packet.PacketId);
         packet.Write(writer);
@@ -448,7 +463,7 @@ public class MinecraftServer : IDisposable
             .Where(c => c.Player is not null && c.Player.LoadedChunks.Contains(chunkPosition))
             .Select(c => c.Player!);
 
-    public async Task BroadcastChatAsync(string message, RemoteClient? except = null)
+    public async Task BroadcastChatAsync(string message, IRemoteClient? except = null)
     {
         await BroadcastPacketAsync(new ChatMessagePacket
         {

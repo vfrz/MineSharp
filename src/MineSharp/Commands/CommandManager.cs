@@ -1,20 +1,19 @@
 using System.Collections.Concurrent;
 using MineSharp.Core;
+using MineSharp.Sdk;
 
 namespace MineSharp.Commands;
 
-public class CommandHandler
+public class CommandManager : ICommands
 {
-    public delegate Task<bool> CommandCallback(MinecraftServer server, RemoteClient? remoteClient, params string[] args);
+    private readonly ConcurrentDictionary<string, ICommands.CommandCallback> _commands = new();
 
-    private readonly ConcurrentDictionary<string, CommandCallback> _commands = new();
-
-    public bool TryRegisterCommand(string command, CommandCallback callback)
+    public bool TryRegisterCommand(string command, ICommands.CommandCallback callback)
     {
         return _commands.TryAdd(command, callback);
     }
 
-    public async Task<bool> TryExecuteCommandAsync(string completeCommand, MinecraftServer server, RemoteClient? remoteClient)
+    public async Task<bool> TryExecuteCommandAsync(string completeCommand, IServer server, IRemoteClient? remoteClient)
     {
         var parsedCommand = CommandParser.Parse(completeCommand);
 

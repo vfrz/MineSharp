@@ -29,7 +29,6 @@ var host = Host.CreateDefaultBuilder(args)
             .ValidateDataAnnotations();
 
         services.AddSingleton<PacketDispatcher>();
-        services.AddSingleton<CommandHandler>();
         services.AddSingleton<MinecraftServer>();
         services.AddHostedService<MinecraftServerHostedService>();
 
