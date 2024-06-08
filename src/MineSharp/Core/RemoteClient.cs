@@ -9,18 +9,12 @@ namespace MineSharp.Core;
 
 public class RemoteClient : IRemoteClient, IDisposable
 {
-    public enum ClientState
-    {
-        Initial,
-        Ready
-    }
-
     IPlayer? IRemoteClient.Player => Player;
     public Player? Player { get; private set; }
     
     public string NetworkId { get; }
 
-    public ClientState State { get; private set; }
+    public bool Ready { get; set; }
 
     private Socket Socket { get; }
     private MinecraftServer Server { get; }
@@ -29,7 +23,7 @@ public class RemoteClient : IRemoteClient, IDisposable
     {
         Socket = socket;
         Server = server;
-        State = ClientState.Initial;
+        Ready = false;
         NetworkId = socket.RemoteEndPoint?.ToString() ?? throw new Exception();
     }
 
@@ -48,11 +42,6 @@ public class RemoteClient : IRemoteClient, IDisposable
         }
 
         Server.EntityManager.RegisterEntity(Player);
-    }
-
-    public void SetReady()
-    {
-        State = ClientState.Ready;
     }
 
     public async Task SendPacketAsync(IServerPacket packet)

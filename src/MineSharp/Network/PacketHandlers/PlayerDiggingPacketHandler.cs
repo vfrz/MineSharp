@@ -3,6 +3,7 @@ using MineSharp.Content.Items;
 using MineSharp.Core;
 using MineSharp.Entities;
 using MineSharp.Network.Packets;
+using MineSharp.Sdk.Core;
 
 namespace MineSharp.Network.PacketHandlers;
 

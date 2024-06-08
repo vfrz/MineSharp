@@ -1,4 +1,5 @@
 using MineSharp.Content;
+using MineSharp.Sdk.Core;
 using MineSharp.Windows;
 
 namespace MineSharp.Network.Packets;

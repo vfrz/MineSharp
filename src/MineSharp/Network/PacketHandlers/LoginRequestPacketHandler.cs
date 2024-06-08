@@ -2,6 +2,7 @@ using Microsoft.Extensions.Logging;
 using MineSharp.Core;
 using MineSharp.Extensions;
 using MineSharp.Network.Packets;
+using MineSharp.Sdk.Core;
 
 namespace MineSharp.Network.PacketHandlers;
 
@@ -49,12 +50,12 @@ public class LoginRequestPacketHandler : IClientPacketHandler<LoginRequestPacket
 
         await context.RemoteClient.SendPacketAsync(new LoginResponsePacket
         {
-            EntityId = context.RemoteClient.Player!.EntityId,
+            EntityId = currentPlayer.EntityId,
             Dimension = 0,
             MapSeed = context.Server.World.Seed
         });
 
-        context.RemoteClient.SetReady();
+        context.RemoteClient.Ready = true;
         //TODO Everything below is for experimentation and need to be moved somewhere else 
 
         await currentPlayer.SendHealthAsync();

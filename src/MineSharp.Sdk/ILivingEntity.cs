@@ -1,18 +1,18 @@
-using MineSharp.Core;
+using MineSharp.Sdk.Core;
 
-namespace MineSharp.Entities;
+namespace MineSharp.Sdk;
 
 public interface ILivingEntity : IEntity
 {
     public Vector3<double> KnockBackMultiplier { get; }
 
-    public Vector3<double> Position { get; set; }
+    public Vector3<double> Position { get; }
 
-    public float Yaw { get; set; }
+    public float Yaw { get; }
 
-    public float Pitch { get; set; }
+    public float Pitch { get; }
 
-    public bool OnGround { get; set; }
+    public bool OnGround { get; }
 
     public short Health { get; }
 
@@ -21,4 +21,6 @@ public interface ILivingEntity : IEntity
     public bool IsDead { get; }
 
     public Task SetHealthAsync(short health);
+
+    public Vector2<int> GetCurrentChunk();
 }

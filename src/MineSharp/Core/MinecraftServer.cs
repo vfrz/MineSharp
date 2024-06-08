@@ -8,6 +8,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MineSharp.Commands;
 using MineSharp.Configuration;
+using MineSharp.Content;
 using MineSharp.Entities;
 using MineSharp.Entities.Mobs;
 using MineSharp.Extensions;
@@ -16,6 +17,7 @@ using MineSharp.Network.Packets;
 using MineSharp.Plugins;
 using MineSharp.Saves;
 using MineSharp.Sdk;
+using MineSharp.Sdk.Core;
 using MineSharp.World;
 
 namespace MineSharp.Core;
@@ -178,19 +180,15 @@ public class MinecraftServer : IServer, IDisposable
             return true;
         });
 
-        //TODO Uncomment when ready
-        /*_commandManager.TryRegisterCommand("id", async (_, client, _) =>
+        CommandManager.TryRegisterCommand("id", async (_, client, _) =>
         {
             if (client is null)
                 return true;
-            await client.SendPacketAsync(new ChatMessagePacket
-            {
-                Message = $"Your entity id: {client.Player!.EntityId}"
-            });
+            await client.SendChatAsync($"Your entity id: {client.Player!.EntityId}");
             return true;
         });
 
-        _commandManager.TryRegisterCommand("rain", async (server, _, _) =>
+        CommandManager.TryRegisterCommand("rain", async (server, _, _) =>
         {
             if (server.World.Raining)
                 await server.World.StopRainAsync();
@@ -199,43 +197,43 @@ public class MinecraftServer : IServer, IDisposable
             return true;
         });
 
-        _commandManager.TryRegisterCommand("time", async (server, _, args) =>
+        CommandManager.TryRegisterCommand("time", async (server, _, args) =>
         {
             var time = long.Parse(args[0]);
             await server.World.SetTimeAsync(time);
             return true;
         });
 
-        _commandManager.TryRegisterCommand("pos", async (_, client, _) =>
+        CommandManager.TryRegisterCommand("pos", async (_, client, _) =>
         {
             await client!.SendChatAsync(client.Player!.Position.ToString());
             return true;
         });
 
-        _commandManager.TryRegisterCommand("chunk", async (_, client, _) =>
+        CommandManager.TryRegisterCommand("chunk", async (_, client, _) =>
         {
             if (client?.Player is not null)
                 await client.SendChatAsync(client.Player.GetCurrentChunk().ToString());
             return true;
         });
 
-        _commandManager.TryRegisterCommand("heal", async (_, client, _) =>
+        CommandManager.TryRegisterCommand("heal", async (_, client, _) =>
         {
-            await client!.Player!.SetHealthAsync(20);
+            await client!.Player!.SetHealthAsync(client.Player.MaxHealth);
             return true;
         });
 
-        _commandManager.TryRegisterCommand("dmg", async (_, client, args) =>
+        CommandManager.TryRegisterCommand("dmg", async (_, client, args) =>
         {
             var value = args[0].ParseInt();
             await client!.Player!.SetHealthAsync((short) (client.Player.Health - value));
             return true;
         });
 
-        _commandManager.TryRegisterCommand("kick", async (server, _, args) =>
+        CommandManager.TryRegisterCommand("kick", async (server, _, args) =>
         {
             var target = server.GetRemoteClientByUsername(args[0]);
-            if (target?.State is RemoteClient.ClientState.Ready)
+            if (target?.Ready is true)
             {
                 await target.KickAsync("You have been kicked.");
                 return true;
@@ -244,12 +242,12 @@ public class MinecraftServer : IServer, IDisposable
             return false;
         });
 
-        _commandManager.TryRegisterCommand("kill", async (server, client, args) =>
+        CommandManager.TryRegisterCommand("kill", async (server, client, args) =>
         {
             if (args.Length > 0)
             {
                 var target = server.GetRemoteClientByUsername(args[0]);
-                if (target?.State is RemoteClient.ClientState.Ready)
+                if (target?.Ready is true)
                 {
                     await target.Player!.SetHealthAsync(0);
                     return true;
@@ -262,31 +260,13 @@ public class MinecraftServer : IServer, IDisposable
             return true;
         });
 
-        _commandManager.TryRegisterCommand("yaw", async (server, client, _) =>
+        CommandManager.TryRegisterCommand("yaw", async (server, client, _) =>
         {
             await server.BroadcastChatAsync($"Yaw: {client!.Player!.Yaw}");
             return true;
         });
 
-        _commandManager.TryRegisterCommand("mob", async (server, client, args) =>
-        {
-            await server.SpawnMobAsync((MobType) byte.Parse(args[0]), client!.Player!.Position.ToVector3<int>());
-            return true;
-        });
-
-        _commandManager.TryRegisterCommand("chest", async (_, client, _) =>
-        {
-            await client!.SendPacketAsync(new OpenWindowPacket
-            {
-                WindowId = 42,
-                InventoryType = 0,
-                Slots = 27 * 2,
-                WindowTitle = "Ahahah"
-            });
-            return true;
-        });
-
-        _commandManager.TryRegisterCommand("give", async (server, _, args) =>
+        CommandManager.TryRegisterCommand("give", async (server, _, args) =>
         {
             var username = args[0];
             var itemId = (ItemId) short.Parse(args[1]);
@@ -294,31 +274,25 @@ public class MinecraftServer : IServer, IDisposable
             var metadata = args.Length > 3 ? short.Parse(args[3]) : (byte) 0;
 
             var receiverRemoteClient = server.GetRemoteClientByUsername(username);
-            if (receiverRemoteClient?.State is RemoteClient.ClientState.Ready)
+            if (receiverRemoteClient?.Ready is true)
                 return await receiverRemoteClient.Player!.TryGiveItemAsync(new ItemStack(itemId, count, metadata));
             return false;
         });
 
-        _commandManager.TryRegisterCommand("clear", async (_, client, _) =>
+        CommandManager.TryRegisterCommand("clear", async (_, client, _) =>
         {
             await client!.Player!.ClearInventoryAsync();
             return true;
         });
 
-        _commandManager.TryRegisterCommand("save", async (server, client, _) =>
+        CommandManager.TryRegisterCommand("save", async (server, client, _) =>
         {
             await server.SaveAsync(CancellationToken.None);
             await client!.SendChatAsync($"{ChatColors.Green}Saved successfully");
             return true;
         });
 
-        _commandManager.TryRegisterCommand("gc", (_, _, _) =>
-        {
-            GC.Collect();
-            return Task.FromResult(true);
-        });
-
-        _commandManager.TryRegisterCommand("tp", async (server, client, args) =>
+        CommandManager.TryRegisterCommand("tp", async (server, client, args) =>
         {
             Vector3<double> target;
 
@@ -337,8 +311,8 @@ public class MinecraftServer : IServer, IDisposable
             {
                 var targetX = int.Parse(args[0]);
                 var targetZ = int.Parse(args[1]);
-                var height = await server.World.GetHighestBlockHeightAsync(new Vector2<int>(targetX, targetZ));
-                target = new Vector3<double>(targetX + 0.5, height + 1.1, targetZ + 0.5);
+                var height = await server.World.GetHighestBlockHeightAsync(new Vector2<int>(targetX, targetZ)) + 1;
+                target = new Vector3<double>(targetX + 0.5, height, targetZ + 0.5);
             }
             else
             {
@@ -346,21 +320,13 @@ public class MinecraftServer : IServer, IDisposable
             }
 
             var player = client!.Player!;
-            player.Position = target;
-            await player.LoadChunkAsync(Chunk.GetChunkPositionForWorldPosition(player.Position));
-            await client.SendPacketAsync(new PlayerPositionAndLookServerPacket
-            {
-                X = player.Position.X,
-                Y = player.Position.Y + Player.YMinOffset,
-                Z = player.Position.Z,
-                Pitch = player.Pitch,
-                Yaw = player.Yaw,
-                OnGround = player.OnGround,
-                Stance = player.Position.Y + Player.Height
-            });
+            await player.TeleportAsync(target);
             return true;
-        });*/
+        });
     }
+
+
+    IRemoteClient? IServer.GetRemoteClientByUsername(string username) => GetRemoteClientByUsername(username);
 
     public RemoteClient? GetRemoteClientByUsername(string username)
     {
@@ -438,7 +404,7 @@ public class MinecraftServer : IServer, IDisposable
         var data = writer.ToByteArray();
         await Parallel.ForEachAsync(RemoteClients, async (client, _) =>
         {
-            if (client == except || (readyClientsOnly && client.State != RemoteClient.ClientState.Ready))
+            if (client == except || (readyClientsOnly && client.Ready is false))
                 return;
             await client.TrySendAsync(data);
         });
@@ -453,7 +419,7 @@ public class MinecraftServer : IServer, IDisposable
 
         var players = GetPlayersInChunk(chunkPosition)
             .Where(player => player.RemoteClient != except)
-            .Where(player => !readyClientsOnly || player.RemoteClient.State is RemoteClient.ClientState.Ready);
+            .Where(player => !readyClientsOnly || player.RemoteClient.Ready);
 
         await Parallel.ForEachAsync(players, async (player, _) => await player.RemoteClient.TrySendAsync(data));
     }
@@ -471,9 +437,9 @@ public class MinecraftServer : IServer, IDisposable
         }, except);
     }
 
-    public async Task<IMobEntity> SpawnMobAsync(MobType type, Vector3<int> position)
+    public async Task<MobEntity> SpawnMobAsync(MobType type, Vector3<int> position)
     {
-        IMobEntity mob = type switch
+        MobEntity mob = type switch
         {
             MobType.Creeper => new Creeper(this),
             MobType.Skeleton => new Skeleton(this),
@@ -494,7 +460,7 @@ public class MinecraftServer : IServer, IDisposable
         return await SpawnMobAsync(mob, position);
     }
 
-    public async Task<IMobEntity> SpawnMobAsync(IMobEntity mob, Vector3<int> position)
+    public async Task<MobEntity> SpawnMobAsync(MobEntity mob, Vector3<int> position)
     {
         mob.Position = position.ToVector3<double>();
         mob.Pitch = 0;
@@ -588,7 +554,7 @@ public class MinecraftServer : IServer, IDisposable
         _saveOnNextLoop = true;
     }
 
-    private async Task SaveAsync(CancellationToken cancellationToken)
+    public async Task SaveAsync(CancellationToken cancellationToken)
     {
         _logger.LogInformation("Saving everything...");
 

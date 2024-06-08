@@ -1,5 +1,6 @@
 using MineSharp.Content;
 using MineSharp.Core;
+using MineSharp.Sdk.Core;
 
 namespace MineSharp.Windows;
 

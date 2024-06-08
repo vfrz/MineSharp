@@ -2,6 +2,7 @@ using System.Buffers;
 using MineSharp.Content;
 using MineSharp.Core;
 using MineSharp.Extensions;
+using MineSharp.Sdk.Core;
 
 namespace MineSharp.Network.Packets;
 

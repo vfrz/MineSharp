@@ -1,5 +1,6 @@
 using System.Collections.Frozen;
 using MineSharp.Content.Blocks;
+using MineSharp.Sdk.Core;
 
 namespace MineSharp.Content;
 

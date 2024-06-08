@@ -1,4 +1,4 @@
-namespace MineSharp.Content;
+namespace MineSharp.Sdk.Core;
 
 public readonly record struct ItemStack(ItemId ItemId, byte Count = 1, short Metadata = 0)
 {

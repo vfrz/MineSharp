@@ -1,6 +1,6 @@
 using System.Numerics;
 
-namespace MineSharp.Core;
+namespace MineSharp.Sdk.Core;
 
 public readonly struct Vector3<T>(T x, T y, T z) : IEquatable<Vector3<T>> where T : INumber<T>
 {

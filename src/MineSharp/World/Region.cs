@@ -5,6 +5,7 @@ using MineSharp.Core;
 using MineSharp.Extensions;
 using MineSharp.Nbt;
 using MineSharp.Saves;
+using MineSharp.Sdk.Core;
 
 namespace MineSharp.World;
 

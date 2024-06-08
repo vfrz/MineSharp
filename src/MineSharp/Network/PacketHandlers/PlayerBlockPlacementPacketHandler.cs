@@ -2,6 +2,7 @@ using MineSharp.Content;
 using MineSharp.Content.Items;
 using MineSharp.Core;
 using MineSharp.Network.Packets;
+using MineSharp.Sdk.Core;
 using MineSharp.TileEntities;
 using MineSharp.World;
 

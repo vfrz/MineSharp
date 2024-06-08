@@ -4,6 +4,7 @@ using MineSharp.Entities.Metadata;
 using MineSharp.Network.Packets;
 using MineSharp.Saves;
 using MineSharp.Sdk;
+using MineSharp.Sdk.Core;
 using MineSharp.TileEntities;
 using MineSharp.Windows;
 using MineSharp.World;
@@ -47,7 +48,7 @@ public class Player : LivingEntity, IPlayer
                 : new EntityFlagsMetadata(entityFlags & ~EntityFlags.Crouched));
         }
     }
-    
+
     private HashSet<Vector2<int>> _loadedChunks = new();
 
     public IReadOnlySet<Vector2<int>> LoadedChunks => _loadedChunks;
@@ -176,6 +177,14 @@ public class Player : LivingEntity, IPlayer
         await BroadcastHoldItemAsync();
     }
 
+    public async Task TeleportAsync(Vector3<double> position)
+    {
+        Position = position;
+        Stance = position.Y + Height + YMinOffset;
+        await LoadChunkAsync(Chunk.GetChunkPositionForWorldPosition(Position));
+        await SendPositionAndLookAsync();
+    }
+
     public async Task ClearInventoryAsync()
     {
         Inventory.Clear();
@@ -286,7 +295,7 @@ public class Player : LivingEntity, IPlayer
 
         Respawning = true;
 
-        var spawnHeight = await Server.World.GetHighestBlockHeightAsync(new Vector2<int>(0, 0)) + 1.6200000047683716;
+        var spawnHeight = await Server.World.GetHighestBlockHeightAsync(new Vector2<int>(0, 0)) + Height + YMinOffset;
         Position = new Vector3<double>(0.5, spawnHeight, 0.5);
         Stance = Position.Y + Height;
         OnGround = true;
@@ -381,8 +390,8 @@ public class Player : LivingEntity, IPlayer
             Pitch = Pitch
         });
     }
-    
-        public async Task UnloadChunksAsync()
+
+    public async Task UnloadChunksAsync()
     {
         foreach (var chunkToUnload in _loadedChunks)
         {
@@ -470,6 +479,4 @@ public class Player : LivingEntity, IPlayer
 
         _loadedChunks = visibleChunks;
     }
-
-    public Vector2<int> GetCurrentChunk() => Chunk.GetChunkPositionForWorldPosition(Position);
 }

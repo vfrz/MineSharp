@@ -1,4 +1,4 @@
-namespace MineSharp.Content;
+namespace MineSharp.Sdk.Core;
 
 public enum ItemId : short
 {

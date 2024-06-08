@@ -6,10 +6,10 @@ namespace MineSharp.Entities;
 
 public class EntityManager
 {
-    public IEnumerable<IEntity> Entities => _entities.Values;
+    public ICollection<Entity> Entities => _entities.Values;
 
     private readonly ThreadSafeIdGenerator _idGenerator;
-    private readonly ConcurrentDictionary<int, IEntity> _entities;
+    private readonly ConcurrentDictionary<int, Entity> _entities;
     private readonly MinecraftServer _server;
 
     public EntityManager(MinecraftServer server)
@@ -17,21 +17,21 @@ public class EntityManager
         _server = server;
 
         _idGenerator = new ThreadSafeIdGenerator();
-        _entities = new ConcurrentDictionary<int, IEntity>();
+        _entities = new ConcurrentDictionary<int, Entity>();
     }
 
-    public void RegisterEntity(IEntity entity)
+    public void RegisterEntity(Entity entity)
     {
         entity.InitializeEntity(_idGenerator.NextId());
         _entities.TryAdd(entity.EntityId, entity);
     }
 
-    public void FreeEntity(IEntity entity)
+    public void FreeEntity(Entity entity)
     {
         _entities.Remove(entity.EntityId, out _);
     }
 
-    public bool TryGetEntity(int id, out IEntity? entity)
+    public bool TryGetEntity(int id, out Entity? entity)
     {
         return _entities.TryGetValue(id, out entity);
     }

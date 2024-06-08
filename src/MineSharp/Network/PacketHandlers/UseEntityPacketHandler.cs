@@ -1,6 +1,7 @@
 using MineSharp.Core;
 using MineSharp.Entities;
 using MineSharp.Network.Packets;
+using MineSharp.Sdk;
 
 namespace MineSharp.Network.PacketHandlers;
 

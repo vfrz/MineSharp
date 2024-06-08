@@ -1,6 +1,7 @@
 using MineSharp.Content;
 using MineSharp.Nbt;
 using MineSharp.Nbt.Tags;
+using MineSharp.Sdk.Core;
 
 namespace MineSharp.TileEntities;
 

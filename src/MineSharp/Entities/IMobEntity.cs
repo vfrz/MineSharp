@@ -1,5 +1,6 @@
 using MineSharp.Entities.Metadata;
 using MineSharp.Entities.Mobs;
+using MineSharp.Sdk;
 
 namespace MineSharp.Entities;
 

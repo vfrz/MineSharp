@@ -1,3 +1,5 @@
+using MineSharp.Sdk.Core;
+
 namespace MineSharp.Content.Items;
 
 public class DiamondHelmetItemInfo : ArmorItemInfo

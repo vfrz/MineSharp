@@ -1,3 +1,5 @@
+using MineSharp.Sdk.Core;
+
 namespace MineSharp.Content;
 
 public record ToolMaterial

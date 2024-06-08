@@ -8,7 +8,10 @@ public interface IServer
 
     public ILooper Looper { get; }
 
+    public IRemoteClient? GetRemoteClientByUsername(string username);
+    
     public Task BroadcastChatAsync(string message, IRemoteClient? except = null);
 
+    public Task SaveAsync(CancellationToken cancellationToken);
     public void Stop();
 }

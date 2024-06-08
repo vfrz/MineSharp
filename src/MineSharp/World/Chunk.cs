@@ -5,6 +5,7 @@ using MineSharp.Content;
 using MineSharp.Core;
 using MineSharp.Nbt;
 using MineSharp.Nbt.Tags;
+using MineSharp.Sdk.Core;
 using MineSharp.TileEntities;
 
 namespace MineSharp.World;

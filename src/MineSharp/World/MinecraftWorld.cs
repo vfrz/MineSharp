@@ -6,6 +6,7 @@ using MineSharp.Core;
 using MineSharp.Network.Packets;
 using MineSharp.Saves;
 using MineSharp.Sdk;
+using MineSharp.Sdk.Core;
 using MineSharp.TileEntities;
 using MineSharp.World.Generation;
 

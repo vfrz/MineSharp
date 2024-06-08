@@ -1,4 +1,7 @@
 using MineSharp.Core;
+using MineSharp.Sdk;
+using MineSharp.Sdk.Core;
+using MineSharp.World;
 
 namespace MineSharp.Entities;
 
@@ -12,5 +15,8 @@ public abstract class LivingEntity(MinecraftServer server) : Entity(server), ILi
     public short Health { get; protected set; }
     public abstract short MaxHealth { get; }
     public bool IsDead => Health == 0;
+
+    public Vector2<int> GetCurrentChunk() => Chunk.GetChunkPositionForWorldPosition(Position);
+
     public abstract Task SetHealthAsync(short health);
 }
