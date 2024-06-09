@@ -193,6 +193,7 @@ public class MinecraftServer : IServer, IDisposable
             {
                 server.Stop();
             }
+
             return true;
         });
 
@@ -397,26 +398,29 @@ public class MinecraftServer : IServer, IDisposable
 
     public async Task DisconnectAllPlayersAsync(string message)
     {
-        foreach (var remoteClient in RemoteClients)
+        await Parallel.ForEachAsync(RemoteClients, async (client, _) =>
         {
-            SavePlayer(remoteClient);
-        }
-
-        await BroadcastPacketAsync(new PlayerDisconnectPacket
-        {
-            Reason = message
+            SavePlayer(client);
+            await client.KickAsync(message);
         });
     }
 
     private async Task WaitForAllPlayersToBeDisconnectedAsync(TimeSpan timeout)
     {
-        await Task.Run(async () =>
+        try
         {
-            while (_remoteClients.Count > 0)
+            await Task.Run(async () =>
             {
-                await Task.Delay(20);
-            }
-        }).WaitAsync(timeout);
+                while (_remoteClients.Count > 0)
+                {
+                    await Task.Delay(20);
+                }
+            }).WaitAsync(timeout);
+        }
+        catch (TimeoutException)
+        {
+            _logger.LogWarning($"Failed to disconnect all players after {(int) timeout.TotalSeconds} second(s)");
+        }
     }
 
     private void SavePlayer(RemoteClient client)
@@ -517,10 +521,7 @@ public class MinecraftServer : IServer, IDisposable
         {
             if (PlayerCount >= Configuration.MaxPlayers)
             {
-                await remoteClient.SendPacketAsync(new PlayerDisconnectPacket
-                {
-                    Reason = $"Server is full: {_remoteClients.Count}/{Configuration.MaxPlayers}"
-                });
+                await remoteClient.KickAsync($"Server is full: {_remoteClients.Count}/{Configuration.MaxPlayers}");
                 _logger.LogInformation("Client {networkId} tried to connect but the server is full", remoteClient.NetworkId);
                 await remoteClient.DisconnectSocketAsync();
                 return;
@@ -547,10 +548,7 @@ public class MinecraftServer : IServer, IDisposable
             _logger.LogWarning("Client with network id: {0} has timed out", remoteClient.NetworkId);
             try
             {
-                await remoteClient.SendPacketAsync(new PlayerDisconnectPacket
-                {
-                    Reason = "Disconnected because you was afk"
-                });
+                await remoteClient.KickAsync("Disconnected because you was afk");
             }
             catch
             {

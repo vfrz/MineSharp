@@ -22,10 +22,7 @@ public class LoginRequestPacketHandler : IClientPacketHandler<LoginRequestPacket
         if (packet.ProtocolVersion != ServerConstants.ProtocolVersion)
         {
             var message = $"{ChatColors.Red}Incompatible Minecraft client, game version required: {ServerConstants.GameVersion}";
-            await context.RemoteClient.SendPacketAsync(new PlayerDisconnectPacket
-            {
-                Reason = message
-            });
+            await context.RemoteClient.KickAsync(message);
             return;
         }
 
@@ -38,10 +35,7 @@ public class LoginRequestPacketHandler : IClientPacketHandler<LoginRequestPacket
             if (context.Server.RemoteClients.Any(c => c.Player?.Username == packet.Username))
             {
                 var message = $"{ChatColors.Gold}A user with the same username is already connected, retry later.";
-                await context.RemoteClient.SendPacketAsync(new PlayerDisconnectPacket
-                {
-                    Reason = message
-                });
+                await context.RemoteClient.KickAsync(message);
                 return;
             }
 
