@@ -21,7 +21,7 @@
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\MineSharp\MineSharp.csproj" />
+      <ProjectReference Include="..\MineSharp.Server\MineSharp.Server.csproj" />
     </ItemGroup>
 
 </Project>

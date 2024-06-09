@@ -1,5 +1,3 @@
-using MineSharp.Sdk.Core;
-
 namespace MineSharp.Content.Items;
 
 public class BowlItemInfo : ItemInfo

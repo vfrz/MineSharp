@@ -1,10 +1,9 @@
 using System.Collections.Frozen;
 using MineSharp.Content.Blocks;
-using MineSharp.Sdk.Core;
 
 namespace MineSharp.Content;
 
-public class BlockInfoProvider
+public static class BlockInfoProvider
 {
     private static readonly FrozenDictionary<BlockId, BlockItemInfo> Data = typeof(BlockInfoProvider).Assembly.GetTypes()
         .Where(type => type.IsSubclassOf(typeof(BlockItemInfo)) && type is { IsAbstract: false, IsInterface: false })

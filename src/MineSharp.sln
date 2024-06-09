@@ -1,6 +1,6 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MineSharp", "MineSharp\MineSharp.csproj", "{47D81793-B950-48E7-BB29-DA1DFBB41496}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MineSharp.Server", "MineSharp.Server\MineSharp.Server.csproj", "{47D81793-B950-48E7-BB29-DA1DFBB41496}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MineSharp.Tests", "MineSharp.Tests\MineSharp.Tests.csproj", "{4286098A-C0EA-4D3E-9848-4075A1A81434}"
 EndProject
@@ -9,7 +9,9 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Repository", "Repository", 
 		..\README.md = ..\README.md
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MineSharp.Sdk", "MineSharp.Sdk\MineSharp.Sdk.csproj", "{DE33CDF4-1609-433B-9836-48CC44EEF6F9}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MineSharp", "MineSharp\MineSharp.csproj", "{DE33CDF4-1609-433B-9836-48CC44EEF6F9}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestPlugin", "TestPlugin\TestPlugin.csproj", "{02ADD504-FE26-40FA-8D5B-6B6097FE1BD2}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -29,5 +31,9 @@ Global
 		{DE33CDF4-1609-433B-9836-48CC44EEF6F9}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{DE33CDF4-1609-433B-9836-48CC44EEF6F9}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{DE33CDF4-1609-433B-9836-48CC44EEF6F9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{02ADD504-FE26-40FA-8D5B-6B6097FE1BD2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{02ADD504-FE26-40FA-8D5B-6B6097FE1BD2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{02ADD504-FE26-40FA-8D5B-6B6097FE1BD2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{02ADD504-FE26-40FA-8D5B-6B6097FE1BD2}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

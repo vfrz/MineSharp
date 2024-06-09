@@ -1,6 +1,5 @@
 using FluentAssertions;
 using MineSharp.Content;
-using MineSharp.Sdk.Core;
 
 namespace MineSharp.Tests.Content;
 

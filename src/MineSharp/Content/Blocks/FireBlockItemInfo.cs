@@ -1,5 +1,3 @@
-using MineSharp.Sdk.Core;
-
 namespace MineSharp.Content.Blocks;
 
 public class FireBlockItemInfo : BlockItemInfo

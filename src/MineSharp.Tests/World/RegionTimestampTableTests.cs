@@ -1,6 +1,5 @@
 using FluentAssertions;
-using MineSharp.Core;
-using MineSharp.Sdk.Core;
+using MineSharp.Numerics;
 using MineSharp.World;
 
 namespace MineSharp.Tests.World;

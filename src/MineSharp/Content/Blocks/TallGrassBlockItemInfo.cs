@@ -1,6 +1,5 @@
 using MineSharp.Content.Items;
 using MineSharp.Core;
-using MineSharp.Sdk.Core;
 
 namespace MineSharp.Content.Blocks;
 
