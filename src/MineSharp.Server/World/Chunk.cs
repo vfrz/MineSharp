@@ -136,6 +136,133 @@ public class Chunk : IBlockChunkData
         _skyLight[index] = skyLight;
     }
 
+    public void CalculateLight()
+    {
+        InitializeSkyLight();
+        PropagateLight(_skyLight);
+        InitializeBlockLight();
+        PropagateLight(_light);
+    }
+
+    private void InitializeSkyLight()
+    {
+        var queue = new Queue<Vector3<int>>();
+
+        for (var x = 0; x < ChunkWidth; x++)
+        {
+            for (var z = 0; z < ChunkWidth; z++)
+            {
+                byte currentLight = 15;
+                for (var y = ChunkHeight - 1; y >= 0; y--)
+                {
+                    var position = new Vector3<int>(x, y, z);
+                    var index = LocalToIndex(position);
+                    var blockInfo = BlockInfoProvider.Get(GetBlockId(position));
+
+                    currentLight = (byte) Math.Max(0, currentLight - blockInfo.Opacity);
+                    _skyLight[index] = currentLight;
+
+                    if (currentLight > 0)
+                    {
+                        queue.Enqueue(position);
+                    }
+                }
+            }
+        }
+
+        PropagateLight(_skyLight, queue);
+    }
+
+    private void InitializeBlockLight()
+    {
+        var queue = new Queue<Vector3<int>>();
+
+        for (var x = 0; x < ChunkWidth; x++)
+        {
+            for (var y = 0; y < ChunkHeight; y++)
+            {
+                for (var z = 0; z < ChunkWidth; z++)
+                {
+                    var position = new Vector3<int>(x, y, z);
+                    var index = LocalToIndex(position);
+                    var blockInfo = BlockInfoProvider.Get(GetBlockId(position));
+                    _light[index] = blockInfo.Emission;
+
+                    if (blockInfo.Emission > 0)
+                    {
+                        queue.Enqueue(position);
+                    }
+                }
+            }
+        }
+
+        PropagateLight(_light, queue);
+    }
+
+    // Directions for 6 neighbors (x±1, y±1, z±1)
+    private static readonly Vector3<int>[] Directions =
+    [
+        new (1, 0, 0),
+        new (-1, 0, 0),
+        new (0, 1, 0),
+        new (0, -1, 0),
+        new (0, 0, 1),
+        new (0, 0, -1)
+    ];
+
+    private void PropagateLight(NibbleArray lightMap, Queue<Vector3<int>> queue)
+    {
+        while (queue.Count > 0)
+        {
+            var position = queue.Dequeue();
+            var index = LocalToIndex(position);
+            var currentLight = lightMap[index];
+
+            foreach (var tuple in Directions)
+            {
+                var nx = position.X + tuple.X;
+                var ny = position.Y + tuple.Y;
+                var nz = position.Z + tuple.Z;
+
+                if (nx is >= 0 and < ChunkWidth && ny is >= 0 and < ChunkHeight && nz is >= 0 and < ChunkWidth)
+                {
+                    var newPosition = new Vector3<int>(nx, ny, nz);
+                    var newIndex = LocalToIndex(newPosition);
+                    var blockInfo = BlockInfoProvider.Get(GetBlockId(newPosition));
+                    var newLight = (byte) Math.Max(0, currentLight - 1 - blockInfo.Opacity);
+
+                    if (newLight > lightMap[newIndex])
+                    {
+                        lightMap[newIndex] = newLight;
+                        queue.Enqueue(newPosition);
+                    }
+                }
+            }
+        }
+    }
+
+    private void PropagateLight(NibbleArray lightMap)
+    {
+        var queue = new Queue<Vector3<int>>();
+        for (var x = 0; x < ChunkWidth; x++)
+        {
+            for (var y = 0; y < ChunkHeight; y++)
+            {
+                for (var z = 0; z < ChunkWidth; z++)
+                {
+                    var position = new Vector3<int>(x, y, z);
+                    var index = LocalToIndex(position);
+                    if (lightMap[index] > 0)
+                    {
+                        queue.Enqueue(position);
+                    }
+                }
+            }
+        }
+
+        PropagateLight(lightMap, queue);
+    }
+
     public int GetHighestBlockHeight(Vector2<int> localPosition)
     {
         for (var y = ChunkHeight - 1; y >= 0; y--)

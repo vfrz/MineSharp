@@ -19,4 +19,6 @@ public class LeavesBlockItemInfo : BlockItemInfo
             return [new ItemStack(ItemId.LeavesBlock, Metadata: blockMetadata)];
         return [];
     }
+
+    public override byte Opacity => 1;
 }

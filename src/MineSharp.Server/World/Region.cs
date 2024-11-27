@@ -86,13 +86,7 @@ public class Region : IDisposable
                     World.WorldGenerator.GenerateChunkTerrain(chunkPosition, chunk);
                     World.WorldGenerator.GenerateChunkDecorations(chunkPosition, chunk);
 
-                    //TODO Move light calculation somewhere else
-                    for (var x = 0; x < Chunk.ChunkWidth; x++)
-                    for (var y = 0; y < Chunk.ChunkHeight; y++)
-                    for (var z = 0; z < Chunk.ChunkWidth; z++)
-                    {
-                        chunk.SetLight(new Vector3<int>(x, y, z), 15, 15);
-                    }
+                    chunk.CalculateLight();
 
                     _regionLocationTable.AllocateNewChunk(chunkPosition);
 

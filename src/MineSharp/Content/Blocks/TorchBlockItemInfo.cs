@@ -10,4 +10,6 @@ public class TorchBlockItemInfo : BlockItemInfo
 
     public override ItemStack[] GetDroppedItems(ItemInfo? miningItemInfo, byte blockMetadata)
         => [new ItemStack(ItemId.TorchBlock)];
+
+    public override byte Emission => 14;
 }

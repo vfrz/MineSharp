@@ -89,7 +89,10 @@ public class MinecraftWorld : IWorld, IDisposable
     {
         var initialChunks = Chunk.GetChunksAround(Vector2<int>.Zero, Server.Configuration.VisibleChunksDistance);
         Server.GetLogger<MinecraftWorld>().LogInformation("Generating world...");
-        await Parallel.ForEachAsync(initialChunks, async (chunkPosition, _) => await GetOrCreateChunkAsync(chunkPosition));
+        await Parallel.ForEachAsync(initialChunks, new ParallelOptions
+        {
+            MaxDegreeOfParallelism = -1
+        }, async (chunkPosition, _) => await GetOrCreateChunkAsync(chunkPosition));
     }
 
     public async Task<Chunk> GetOrCreateChunkAsync(Vector2<int> chunkPosition)

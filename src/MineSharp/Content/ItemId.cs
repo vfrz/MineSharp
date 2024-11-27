@@ -5,6 +5,7 @@ public enum ItemId : short
     // Special
     Empty = -1,
     // Blocks
+    AirBlock = 0,
     StoneBlock = 1,
     GrassBlock = 2,
     DirtBlock = 3,

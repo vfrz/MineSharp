@@ -19,4 +19,6 @@ public class TallGrassBlockItemInfo : BlockItemInfo
 
         return [];
     }
+
+    public override byte Opacity => 0;
 }

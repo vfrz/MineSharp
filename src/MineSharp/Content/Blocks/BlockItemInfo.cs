@@ -13,4 +13,8 @@ public abstract class BlockItemInfo : ItemInfo
     public virtual bool HasTileEntity => false;
 
     public override byte StackMax => 64;
+
+    public virtual byte Opacity => 15;
+
+    public virtual byte Emission => 0;
 }
